@@ -1,0 +1,18 @@
+{
+  "_README": "Optional. Map faculty initials -> full names. connect.json only carries initials, so the app shows e.g. 'SWK' everywhere; if you add a mapping here it renders as 'SWK · Saharia Islam' in class blocks, chips and the faculty picker. Keys must match the initials exactly as they appear in the data (uppercase).",
+  "_how_to_get_names": "Ask your department for the initials list, or fill in what you know — unknown initials just keep showing as-is.",
+  "TBA": "To be announced",
+  "SWK": "",
+  "SHAH": "",
+  "TPZ": "",
+  "MHY": "",
+  "IBA": "",
+  "FGZ": "",
+  "ANK": "",
+  "MUNR": "",
+  "TAP": "",
+  "MMM": "",
+  "MIZN": "",
+  "AYO": "",
+  "HFN": ""
+}
