@@ -75,49 +75,9 @@ python3 -m http.server 8000      # or: npx serve .
 Double-clicking `index.html` works too (it fetches the live feed; `file://` may block the worker, in
 which case the search runs on the main thread).
 
-## Deploy on GitHub Pages
+## Domain
 
-1. Upload these files to the **repo root**:
-   `index.html`, `core.js`, `worker.js`, `snapshot.json`, `faculty-names.json`, `manifest.webmanifest`,
-   `favicon.svg`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`,
-   `apple-touch-icon.png`, `.nojekyll`
-2. **Settings → Pages → Source: Deploy from a branch → `main` / (root) → Save**.
-3. Open `https://<user>.github.io/<repo>/`.
-
-`.nojekyll` stops Jekyll from mangling the JSON and every path is relative, so it works from a project
-page or a user page.
-
-## Tests
-
-```bash
-node test.js                    # 63 engine checks: grouping, day window, filters, exams, view model, painter
-node tools/worker-test.js       # 18 checks on the worker protocol and exam blocking
-npm i jsdom                     # once
-node tools/browser-test.js      # 196 checks driving the real UI in jsdom
-SNAPSHOT_ONLY=1 node tools/browser-test.js    # same suite against the bundled snapshot
-
-# refresh the offline copy (also picks up a new semester)
-curl -o connect.json https://usis-cdn.eniamza.com/connect.json
-python3 tools/build-snapshot.py --in connect.json --out snapshot.json
-```
-
-## How it works
-
-1. **Normalise** — each feed item becomes events (class meetings + the paired lab's meetings) plus exam
-   records (`finalExamDate/StartTime/EndTime`, same for mid).
-2. **Group** — per course, sections sharing the sorted `day + start + end` signature become one pattern;
-   the pattern remembers every section inside it.
-3. **Filter** — locked patterns, chosen faculties, avoided faculty / times / days narrow each row.
-4. **Search** — a resumable depth-first enumeration over rows sorted by fewest candidates. Pairwise
-   incompatibility (class overlap *or* exam overlap) is precomputed into bitmaps, so a branch dies at the
-   first clash and any partial exceeding the max days is cut. Scores prefer fewer days, shorter days, fewer
-   gaps and optionally more section choices.
-5. **Render** — results stay as tiny `{ci, score}` descriptors and are materialised only for the page you
-   are reading; `buildView()` produces one model that drives the HTML grid, the day list, the exam table
-   *and* the PNG, so the export can't drift from the screen.
-
-Measured on the real feed: 3 courses (`CSE221 + MAT216 + CSE320`) → 2,400 combinations → 1,623 routines;
-5 courses → 192,000 combinations → 12,776 routines in ~50 ms.
+<https://prohor-rg.vercel.app/>
 
 ## Files
 
