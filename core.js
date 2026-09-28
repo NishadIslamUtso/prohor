@@ -429,31 +429,70 @@
     };
   }
 
+  // does an avoid-day / avoid-time filter kill this whole pattern?
+  function avoidKills(g, filters) {
+    filters = filters || {};
+    var avoidDays = filters.avoidDays || [], avoidSlots = filters.avoidSlots || [], i, k;
+    if (!g.events.length) return true;
+    for (i = 0; i < g.events.length; i++) {
+      var e = g.events[i];
+      if (avoidDays.length && avoidDays.indexOf(DAYS[e.day]) >= 0) return true;
+      for (k = 0; k < avoidSlots.length; k++) if (overlaps(e, avoidSlots[k])) return true;
+    }
+    return false;
+  }
+
   function candidatesFor(C, row, filters) {
     if (!C || !C.groups) return [];
     filters = filters || {};
     var picked = row && row.sections && row.sections.length ? row.sections : null;
     var facs = row && row.faculties && row.faculties.length ? row.faculties : null;
+    var only = row && row.onlySections && row.onlySections.length ? row.onlySections.map(String) : null;
     var avoid = filters.avoidFaculty || [];
-    var avoidDays = filters.avoidDays || [];
-    var avoidSlots = filters.avoidSlots || [];
     var out = [];
     (C.groups || []).forEach(function (g) {
       if (picked && picked.indexOf(g.key) < 0) return;
+      if (avoidKills(g, filters)) return;
       var secs = g.sections.filter(function (s) {
+        if (only && only.indexOf(String(s.sec)) < 0) return false;
         if (facs && !s.faculties.some(function (f) { return facs.indexOf(f) >= 0; })) return false;
         if (avoid.length && s.faculties.some(function (f) { return avoid.indexOf(f) >= 0; })) return false;
         return true;
       });
-      if (!secs.length || !g.events.length) return;
-      var i, e;
-      for (i = 0; i < g.events.length; i++) {
-        e = g.events[i];
-        if (avoidDays.length && avoidDays.indexOf(DAYS[e.day]) >= 0) return;
-        for (var k = 0; k < avoidSlots.length; k++) if (overlaps(e, avoidSlots[k])) return;
-      }
+      if (!secs.length) return;
       out.push(makeCandidate(g, C.code, secs));
     });
+    return out;
+  }
+
+  // Everything the "Sections" picker needs: every section of the course, each with the
+  // pattern it belongs to and whether the other controls still let it through.
+  function sectionChoices(C, row, filters) {
+    if (!C || !C.groups) return [];
+    row = row || {};
+    filters = filters || {};
+    var picked = row.sections && row.sections.length ? row.sections : null;
+    var facs = row.faculties && row.faculties.length ? row.faculties : null;
+    var avoid = filters.avoidFaculty || [];
+    var out = [];
+    C.groups.forEach(function (g) {
+      var groupOk = (!picked || picked.indexOf(g.key) >= 0) && !avoidKills(g, filters);
+      g.sections.forEach(function (s) {
+        var facOk = !facs || s.faculties.some(function (f) { return facs.indexOf(f) >= 0; });
+        var avOk = !(avoid.length && s.faculties.some(function (f) { return avoid.indexOf(f) >= 0; }));
+        out.push({
+          value: s.sec, sec: s.sec, code: C.code, label: s.label, groupKey: g.key,
+          faculty: s.faculty, faculties: s.faculties, room: s.room,
+          labCourse: s.labCourse, labRoom: s.labRoom, labFaculty: s.labFaculty,
+          pattern: g.label, credit: s.credit, name: s.name,
+          viable: groupOk && facOk && avOk,
+          reason: !groupOk ? (picked && picked.indexOf(g.key) < 0 ? "another time slot is locked" : "avoided time or day")
+                  : !facOk ? "taught by another faculty"
+                  : !avOk ? "faculty is on the avoid list" : ""
+        });
+      });
+    });
+    out.sort(function (a, b) { return String(a.sec).localeCompare(String(b.sec)); });
     return out;
   }
 
@@ -1011,7 +1050,7 @@
     DATA_URL: DATA_URL, SNAPSHOT_URL: SNAPSHOT_URL, REFRESH_MS: REFRESH_MS,
     DAYS: DAYS, DAY_SHORT: DAY_SHORT, DAY_LABEL: DAY_LABEL, TIME_SLOTS: TIME_SLOTS, LIGHT: L,
     fromApi: fromApi, buildIndex: buildIndex,
-    sectionOptions: sectionOptions, facultyOptions: facultyOptions, candidatesFor: candidatesFor,
+    sectionOptions: sectionOptions, facultyOptions: facultyOptions, sectionChoices: sectionChoices, avoidKills: avoidKills, candidatesFor: candidatesFor,
     createEnumerator: createEnumerator, orderRows: orderRows, buildRoutine: buildRoutine, generate: generate,
     conflicts: conflicts, scoreRoutine: scoreRoutine, candidateCompatible: candidateCompatible,
     weekGrid: weekGrid,

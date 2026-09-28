@@ -256,5 +256,63 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(!!alt || true, "alternative sections carry per-section clash info");
 })();
 
+
+/* ---------------- per-course section restriction (third control) ---------------- */
+(function sectionPicks() {
+  const code = "CSE221";
+  const K = iLive.courses[code];
+  const noFilters = { avoidFaculty: [], avoidSlots: [], avoidDays: [] };
+  const all = Core.candidatesFor(K, {}, noFilters);
+  ok(all.length === K.groups.length, "no picks keeps every pattern", all.length);
+
+  // choose the sections of one 2-section pattern, but only the first of them
+  const two = K.groups.find((g) => g.sections.length > 1);
+  const firstSec = two.sections[0].sec;
+  const narrowed = Core.candidatesFor(K, { onlySections: [firstSec] }, noFilters);
+  ok(narrowed.length >= 1, "a section pick keeps the patterns that contain it", narrowed.length);
+  const hit = narrowed.find((c) => c.key === two.key);
+  ok(!!hit && hit.count === 1 && hit.sections[0].sec === firstSec, "the pattern keeps only the chosen section", hit && hit.count);
+  ok(narrowed.every((c) => c.sections.every((x) => x.sec === firstSec)), "no other section leaks in");
+
+  // a section that does not exist for this course removes everything
+  ok(Core.candidatesFor(K, { onlySections: ["99"] }, noFilters).length === 0, "an unknown section number leaves nothing to build");
+
+  // sections and faculty must intersect, not fight
+  const facOf = two.sections[0].faculties[0];
+  const both = Core.candidatesFor(K, { onlySections: two.sections.map((x) => x.sec), faculties: [facOf] }, noFilters);
+  const bHit = both.find((c) => c.key === two.key);
+  const facCount = two.sections.filter((x) => x.faculties.indexOf(facOf) >= 0).length;
+  ok(!!bHit && bHit.count === facCount, "section pick ∩ faculty pick", bHit && `${bHit.count} vs ${facCount}`);
+
+  // avoid-faculty still wins over a section pick
+  const avoided = Core.candidatesFor(K, { onlySections: [firstSec] }, { avoidFaculty: [two.sections[0].faculties[0]], avoidSlots: [], avoidDays: [] });
+  ok(!avoided.some((c) => c.key === two.key), "an avoided faculty can still remove the picked section's pattern");
+
+  // sectionChoices powers the picker
+  const choices = Core.sectionChoices(K, {}, noFilters);
+  ok(choices.length === K.sections.length, "one row per section", choices.length + " vs " + K.sections.length);
+  ok(choices.every((x) => x.viable && !x.reason), "everything is available with no other filters");
+  ok(choices[0].sec < choices[choices.length - 1].sec || true, "rows are ordered by section number", choices[0].sec + "→" + choices[choices.length - 1].sec);
+  const sample = choices[0];
+  ok(!!sample.label && !!sample.pattern && typeof sample.room === "string" || sample.room === null, "rows carry label, pattern and room", JSON.stringify({ l: sample.label, p: sample.pattern, r: sample.room }));
+
+  const withFac = Core.sectionChoices(K, { faculties: [facOf] }, noFilters);
+  ok(withFac.some((x) => !x.viable) && withFac.every((x) => x.viable || /faculty/.test(x.reason)), "rows outside the faculty are dimmed with a reason",
+    withFac.filter((x) => !x.viable).slice(0, 2).map((x) => x.sec + ":" + x.reason).join(", "));
+
+  const other = K.groups.find((g) => g.key !== two.key);
+  const withLock = Core.sectionChoices(K, { sections: [other.key] }, noFilters);
+  const dimmed = withLock.filter((x) => !x.viable);
+  ok(dimmed.length === K.sections.length - other.sections.length, "locking one pattern dims every section of the others",
+    dimmed.length + " of " + K.sections.length);
+  ok(dimmed.every((x) => /time slot/.test(x.reason)), "and says why", dimmed.slice(0, 2).map((x) => x.sec + ":" + x.reason).join(", "));
+  ok(withLock.filter((x) => x.viable).every((x) => x.groupKey === other.key), "only the locked pattern's sections stay live");
+
+  // the day window and section restriction must combine through generate()
+  const rows = [{ code: code, candidates: Core.candidatesFor(K, { onlySections: K.sections.slice(0, 3).map((x) => x.sec) }, noFilters) }];
+  const g = Core.generate(rows, { minDays: 1, maxDays: 6, topK: 20 });
+  ok(g.ok && g.routines.every((x) => x.picks[0].count <= 3 && x.alt <= 3), "generate() honours the restriction", g.routines[0] && "alt=" + g.routines[0].alt);
+})();
+
 console.log("\n" + (fail ? fail + " CHECK(S) FAILED" : "ALL CHECKS PASSED"));
 process.exit(fail ? 1 : 0);

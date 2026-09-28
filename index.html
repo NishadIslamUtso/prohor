@@ -175,7 +175,7 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .course .code{font-weight:700;font-size:15px}
 .course .title{color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto}
 .course .head .icon-btn{margin-left:auto;width:30px;height:30px;flex:none}
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px}
 @media (max-width:520px){.controls{grid-template-columns:1fr}}
 .control{position:relative;min-width:0}
 .select-btn{width:100%;height:40px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--surface);display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 12px;font-size:14px;text-align:left;transition:border-color var(--dur-fast)}
@@ -417,7 +417,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     <!-- STEP 1 -->
     <section id="step1" aria-labelledby="h1">
       <div class="step-head"><h2 id="h1">1 · Pick your courses</h2><span class="count tnum" id="courseCount">0 of 6 courses</span></div>
-      <p class="step-desc">Search by code or title. Leave time slots on “All patterns” to consider every option, or lock the ones you want.</p>
+      <p class="step-desc">Search by code or title. Leave <b>Time slots</b>, <b>Sections</b> and <b>Faculty</b> on “All …” to consider every option, or narrow any of them.</p>
       <div class="combo">
         <svg class="ico"><use href="#i-search"/></svg>
         <input id="courseSearch" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="courseList" placeholder="Search a course — CSE221, Algorithms…" autocomplete="off">
@@ -771,15 +771,15 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     };
   }
   function courseState(code) {
-    var c = courseOf(code) || { locked: [], faculty: [] };
-    return { sections: c.locked || [], faculties: c.faculty || [] };
+    var c = courseOf(code) || { locked: [], faculty: [], secs: [] };
+    return { sections: c.locked || [], faculties: c.faculty || [], onlySections: c.secs || [] };
   }
   function viableGroups(code) {
     var Cc = K(code); if (!Cc) return [];
     return C.candidatesFor(Cc, courseState(code), avoidSpec());
   }
   function anyFilter() {
-    return state.courses.some(function (c) { return c.locked.length || c.faculty.length; }) ||
+    return state.courses.some(function (c) { return c.locked.length || c.faculty.length || c.secs.length; }) ||
       !!(state.prefs.avoidFac.length || state.prefs.avoidTime.length || state.prefs.avoidDay.length);
   }
   function patternLabel(g) {
@@ -833,11 +833,15 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       var vSections = viable.reduce(function (n, g) { return n + g.count; }, 0);
       var tsLabel = c.locked.length ? c.locked.length + " of " + Cc.groups.length + " patterns" : "All patterns (" + Cc.groups.length + ")";
       var facLabel = c.faculty.length ? c.faculty[0] + (c.faculty.length > 1 ? " +" + (c.faculty.length - 1) : "") : "Any";
+      var secLabel = c.secs.length ? c.secs.length + " of " + Cc.sections.length + " sections" : "All sections (" + Cc.sections.length + ")";
       var chips = c.locked.map(function (key) {
         var g = null;
         for (var q = 0; q < Cc.groups.length; q++) if (Cc.groups[q].key === key) g = Cc.groups[q];
         return '<span class="chip locked">' + esc(g ? patternLabel(g) : "pattern") +
           '<button class="rm" data-act="unlock" data-code="' + esc(c.code) + '" data-id="' + esc(key) + '" aria-label="Unlock this pattern">×</button></span>';
+      }).join("") + (c.secs || []).map(function (sn) {
+        return '<span class="chip locked">[' + esc(sn) + ']<button class="rm" data-act="unsec" data-code="' + esc(c.code) +
+          '" data-id="' + esc(sn) + '" aria-label="Stop restricting to section ' + esc(sn) + '">×</button></span>';
       }).join("");
       return '<article class="course" style="' + hueVars(i) + '" data-code="' + esc(c.code) + '">' +
         '<div class="head"><span class="hue-num">' + (i + 1) + '</span><span class="code">' + esc(c.code) + '</span>' +
@@ -846,11 +850,14 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
         '<div class="controls">' +
           '<div class="control"><span class="label" id="l-ts-' + esc(c.code) + '">Time slots</span>' +
             '<button class="select-btn" data-act="open-ts" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-ts-' + esc(c.code) + '"><span>' + esc(tsLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
+          '<div class="control"><span class="label" id="l-s-' + esc(c.code) + '">Sections</span>' +
+            '<button class="select-btn" data-act="open-sec" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-s-' + esc(c.code) + '"><span>' + esc(secLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
           '<div class="control"><span class="label" id="l-f-' + esc(c.code) + '">Faculty</span>' +
             '<button class="select-btn" data-act="open-fac" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-f-' + esc(c.code) + '"><span>' + esc(facLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
         '</div>' +
         (chips ? '<div class="chips">' + chips + "</div>" : "") +
         '<div class="caption">' + num(Cc.sections.length) + " sections · " + num(Cc.groups.length) + " patterns" +
+          ((c.secs || []).length ? " · <b>" + c.secs.length + " section" + (c.secs.length === 1 ? "" : "s") + " picked</b>" : "") +
           (anyFilter() ? " · <b>" + num(viable.length) + " pattern" + (viable.length === 1 ? "" : "s") + " · " + num(vSections) +
             " section" + (vSections === 1 ? "" : "s") + " match</b>" : "") +
         "</div></article>";
@@ -880,6 +887,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       var t = e.target;
       if (t.dataset.id != null) onToggle(t.dataset.id, t.checked);
       else if (t.dataset.f != null) onToggle(t.dataset.f, t.checked);
+      else if (t.dataset.s != null) onToggle(String(t.dataset.s), t.checked);
     });
     $(".ms-head input", el).addEventListener("input", function (e) {
       var q = e.target.value.toLowerCase();
@@ -893,7 +901,8 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
   }
   function syncBoxes(el, checked) {
     $$("input[type=checkbox]", el).forEach(function (i) {
-      i.checked = checked.indexOf(i.dataset.id != null ? i.dataset.id : i.dataset.f) >= 0;
+      var v = i.dataset.id != null ? i.dataset.id : (i.dataset.f != null ? i.dataset.f : i.dataset.s);
+      i.checked = checked.indexOf(v) >= 0 || checked.indexOf(String(v)) >= 0;
     });
   }
   function openTimeSlots(btn, code) {
@@ -933,6 +942,28 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
         if (on && at < 0) c.locked.push(id); else if (!on && at >= 0) c.locked.splice(at, 1);
       });
   }
+  function openSections(btn, code) {
+    closeMs();
+    var Cc = K(code), c = courseOf(code);
+    var choices = C.sectionChoices(Cc, { sections: c.locked, faculties: c.faculty }, avoidSpec());
+    var rows = choices.map(function (x) {
+      var on = c.secs.indexOf(String(x.sec)) >= 0;
+      return '<label class="ms-row' + (x.viable ? "" : " dim") + '" data-hay="' + esc((x.sec + " " + x.faculty + " " + (x.room || "") + " " + x.pattern).toLowerCase()) + '">' +
+        '<input type="checkbox" data-s="' + esc(x.sec) + '" ' + (on ? "checked" : "") + ">" +
+        '<span class="t"><span class="mono" style="font-weight:600">[' + esc(x.sec) + "]</span> " + esc(x.faculty) +
+        '<span class="sub">' + esc(x.pattern) + (x.room ? " · " + x.room : "") + (x.labRoom ? " · lab " + x.labRoom : "") + "</span></span>" +
+        '<span class="r">' + (x.viable ? (on ? "picked" : "available") : esc(x.reason)) + "</span></label>";
+    }).join("");
+    mountMs(btn, "Only these sections for " + code, "Search section, faculty or room…", rows,
+      '<button class="btn btn-ghost btn-sm" data-ms="clear">Clear</button><button class="btn btn-primary btn-sm" data-ms="done">Done</button>',
+      function (el, act) {
+        if (act === "clear") { c.secs = []; syncBoxes(el, []); }
+      },
+      function (sn, on) {
+        var at = c.secs.indexOf(sn);
+        if (on && at < 0) c.secs.push(sn); else if (!on && at >= 0) c.secs.splice(at, 1);
+      }, true);
+  }
   function openFaculty(btn, code) {
     closeMs();
     var Cc = K(code), c = courseOf(code);
@@ -962,6 +993,11 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       closeMs(false); afterChange();
     } else if (act === "open-ts") { if (openMs && openMs.btn === b) { closeMs(false); return; } openTimeSlots(b, code); }
     else if (act === "open-fac") { if (openMs && openMs.btn === b) { closeMs(false); return; } openFaculty(b, code); }
+    else if (act === "open-sec") { if (openMs && openMs.btn === b) { closeMs(false); return; } openSections(b, code); }
+    else if (act === "unsec") {
+      var cc = courseOf(code); cc.secs = cc.secs.filter(function (x) { return x !== b.dataset.id; });
+      closeMs(false); afterChange();
+    }
   });
 
   var matches = [], activeIdx = -1;
@@ -970,7 +1006,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     if (!state.ready) { toast("Section data is still loading — one moment"); return; }
     if (courseOf(code)) { search.value = ""; hideList(); return; }
     if (state.courses.length >= MAX_COURSES) { toast("A semester fits within " + MAX_COURSES + " courses"); return; }
-    state.courses.push({ code: code, locked: [], faculty: [] });
+    state.courses.push({ code: code, locked: [], faculty: [], secs: [] });
     search.value = ""; hideList(); afterChange(); toast(code + " added");
     if (window.innerWidth < 1024) setPrefsOpen(false);
   }
@@ -1181,6 +1217,11 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     if (!raw.length) return "has no scheduled sections in this feed";
     var noLock = C.candidatesFor(Cc, { sections: [], faculties: [] }, avoidSpec());
     if (!noLock.length) return "has no pattern left once the avoided times, days and faculty are removed";
+    var secsTxt = (c.secs || []).length ? "the section" + (c.secs.length > 1 ? "s" : "") + " [" + esc(c.secs.join(", ")) + "]" : "";
+    if (secsTxt && c.locked.length) return "the " + (c.locked.length === 1 ? "locked time slot" : c.locked.length + " locked time slots") +
+      " do not include " + secsTxt + " — unlock a time slot or pick a section that meets at it";
+    if (secsTxt && c.faculty.length) return secsTxt + " " + (c.secs.length > 1 ? "are" : "is") + " not taught by " + esc(c.faculty.join(" or ")) + " — widen one of the two picks";
+    if (secsTxt) return "none of " + secsTxt + " survives the avoid filters";
     if (c.locked.length) return "none of the " + c.locked.length + " locked pattern" + (c.locked.length > 1 ? "s" : "") + " still has a section";
     if (c.faculty.length) return "no section taught by " + esc(c.faculty.join(" or ")) + " fits the other filters";
     return "has no pattern that survives the filters";
@@ -1673,7 +1714,8 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
           if (!Cc) return;
           for (var i = 0; i < Cc.groups.length; i++) if (Cc.groups[i].key === k) idxs.push(i);
         });
-        return c.code + (idxs.length ? ":" + idxs.join(".") : "") + (c.faculty.length ? "!" + c.faculty.join(".") : "");
+        return c.code + (idxs.length ? ":" + idxs.join(".") : "") + (c.faculty.length ? "!" + c.faculty.join(".") : "") +
+          ((c.secs || []).length ? "~" + c.secs.join(".") : "");
       }).join(","));
     }
     if (state.prefs.dayMin > 1 || state.prefs.dayMax < 6) q.push("d=" + state.prefs.dayMin + "-" + state.prefs.dayMax);
@@ -1689,13 +1731,14 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     var hasData = !!state.index;
     state.courses = [];
     (p.get("c") || "").split(",").filter(Boolean).slice(0, MAX_COURSES).forEach(function (tok) {
-      var mm = tok.match(/^([A-Z0-9]+)(?::([\d.]+))?(?:!([\w.]+))?$/);
+      var mm = tok.match(/^([A-Z0-9]+)(?::([\d.]+))?(?:!([\w.]+))?(?:~([\w.]+))?$/);
       if (!mm) return;
-      var code = mm[1], Cc = hasData ? K(code) : null, locked = [], fac = [];
+      var code = mm[1], Cc = hasData ? K(code) : null, locked = [], fac = [], secs = [];
       if (Cc && mm[2]) locked = mm[2].split(".").map(Number).filter(function (i) { return Cc.groups[i]; }).map(function (i) { return Cc.groups[i].key; });
       else if (hasData && mm[2]) { /* pattern indexes from an older feed are dropped */ }
       if (mm[3]) fac = mm[3].split(".").filter(Boolean);
-      state.courses.push({ code: code, locked: locked, faculty: fac });
+      if (mm[4]) secs = mm[4].split(".").filter(Boolean);
+      state.courses.push({ code: code, locked: locked, faculty: fac, secs: secs });
     });
     if (p.get("d")) {
       var d = p.get("d").split("-").map(Number);
@@ -1719,7 +1762,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     }
     if (!readUrl() && s && Array.isArray(s.courses)) {
       state.courses = s.courses.slice(0, MAX_COURSES).map(function (c) {
-        return { code: (c.code || "").toUpperCase(), locked: c.locked || [], faculty: c.faculty || [] };
+        return { code: (c.code || "").toUpperCase(), locked: c.locked || [], faculty: c.faculty || [], secs: c.secs || [] };
       });
     }
     if (window.innerWidth < 1024 && state.courses.length) setPrefsOpen(false);
