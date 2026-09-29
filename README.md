@@ -1,6 +1,6 @@
 # Prohor — BRACU routine planner
 
-## Domain
+## Domain (To use t directly from your browser):
 
 <https://prohor-rg.vercel.app/>
 
@@ -173,47 +173,13 @@ python3 -m http.server 8000      # or: npx serve .
 Double-clicking `index.html` works too (it fetches the live feed; `file://` may block the worker, in
 which case the search runs on the main thread).
 
-## Deploy on Vercel (zero config)
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/prohor)
-
-`vercel.json` in this repo already pins the right settings (`framework: null`, `outputDirectory: "."`), so
-the deploy popup needs nothing:
-
-| Popup field | Value |
-| --- | --- |
-| Git Repo | your repo |
-| Branch to Deploy | `main` |
-| Project Name | `prohor` (becomes `prohor.vercel.app`) |
-| Root Directory | **`.`** — only change it if the files sit in a subfolder |
-| Framework Preset | **Other** |
-| Build Command | *(enable Override, leave the box empty — no build step)* |
-| Output Directory | **`.`** (already set by `vercel.json`) |
-| Install Command | *(enable Override, leave empty — there is no `package.json`)* |
-| Development Command | leave empty (or `npx serve .`) |
-| Environment Variables | none — the app calls the public Connect-CDN feed |
-
-CLI route instead: `npm i -g vercel`, then in the unzipped folder `vercel` for a preview and
-`vercel --prod` to publish. Answer the prompts: *Set up and deploy? Y* → pick your scope →
-*Link to existing project? N* → *Project name* `prohor` → *Where is your code? ./` →
-*Override settings? N*.
-
-Gotchas worth knowing:
-- Files must be at the **project root** (or set Root Directory). If you push them into a `prohor/`
-  folder in the repo, either move them up or point Root Directory at `prohor`.
-- `vercel.json` is inert on GitHub Pages, and `.nojekyll` is inert on Vercel — keeping both is fine.
-- If the site ever asks you to log in to view it, turn off **Settings ▸ Deployment Protection ▸
-  Vercel Authentication / Password Protection**.
-- Static only: no env vars, no server code. The one network call is
-  `https://usis-cdn.eniamza.com/connect.json`, which returns `access-control-allow-origin: *`, so it works
-  from any domain (it also falls back to `snapshot.json` when offline).
 
 ## Deploy on GitHub Pages
 
 1. Upload these files to the **repo root**:
    `index.html`, `core.js`, `worker.js`, `snapshot.json`, `faculty-names.json`, `manifest.webmanifest`,
    `favicon.svg`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`,
-   `apple-touch-icon.png`, `.nojekyll` (plus `vercel.json` if you use Vercel)
+   `apple-touch-icon.png`, `.nojekyll`
 2. **Settings → Pages → Source: Deploy from a branch → `main` / (root) → Save**.
 3. Open `https://<user>.github.io/<repo>/`.
 
@@ -276,4 +242,4 @@ Measured on the real feed: 3 courses (`CSE221 + MAT216 + CSE320`) → 2,400 comb
   2,083 sections publish exam slots, and **every** paired lab lists `TBA` as faculty — that's the source
   data, not a bug here.
 - `capacity`, `consumedSeat` and `prerequisiteCourses` are in the feed but not surfaced yet.
-- Feedback: <mailto:nishadislamutso@gmmail.com> · Code: <https://github.com/NishadIslamUtso>
+- Feedback: <https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=nishadislamutso@gmail.com&amp;su=Prohor%20routine%20planner%20feedback> · Code: <https://github.com/NishadIslamUtso>
