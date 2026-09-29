@@ -242,4 +242,4 @@ Measured on the real feed: 3 courses (`CSE221 + MAT216 + CSE320`) → 2,400 comb
   2,083 sections publish exam slots, and **every** paired lab lists `TBA` as faculty — that's the source
   data, not a bug here.
 - `capacity`, `consumedSeat` and `prerequisiteCourses` are in the feed but not surfaced yet.
-- Feedback: <https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=nishadislamutso@gmail.com&amp;su=Prohor%20routine%20planner%20feedback> · Code: <https://github.com/NishadIslamUtso>
+- [Send feedback on Gmail](https://mail.google.com/mail/?view=cm&fs=1&to=nishadislamutso@gmail.com&su=Prohor%20routine%20planner%20feedback) · [Code](https://github.com/NishadIslamUtso/prohor)
