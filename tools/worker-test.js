@@ -92,5 +92,28 @@ posted.length = 0;
 self.onmessage({ data: { type: "more", want: 5 } });
 ok(posted[posted.length - 1].type === "batch" || posted[posted.length - 1].type === "error", "unknown state still answers", posted[posted.length - 1].type);
 
-console.log("\n" + (fail ? fail + " CHECK(S) FAILED" : "ALL WORKER CHECKS PASSED"));
-process.exit(fail ? 1 : 0);
+/* ---------------- seat polling on the worker (no index rebuild) ---------------- */
+(async function seatPoll() {
+  const feedPath = [path.join(root, "..", "connect.json"), path.join(root, "connect.json")].find((p) => fs.existsSync(p));
+  const big = feedPath ? JSON.parse(fs.readFileSync(feedPath, "utf8")) : snap.sections;
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => big });
+  posted.length = 0;
+  await self.onmessage({ data: { type: "fetch-seats" } });
+  await new Promise((r) => setTimeout(r, 300));
+  const msg = posted.find((p) => p.type === "seats");
+  ok(!!msg, "the worker answers fetch-seats with a seats payload");
+  if (msg) {
+    ok(msg.rows.length === (Array.isArray(big) ? big.length : big.length), "one row per section", msg.rows.length);
+    const full = msg.rows.find((r) => r[2] != null && r[3] != null && r[3] === r[2]);
+    const over = msg.rows.find((r) => r[2] != null && r[3] != null && r[3] > r[2]);
+    ok(msg.rows.every((r) => r[4] == null || r[4] >= 0), "free seats never go negative even when over-subscribed", over ? JSON.stringify(over) : "no over-subscribed section");
+    ok(msg.rows.every((r) => Array.isArray(r) && r.length === 6 && typeof r[0] === "string"), "rows are compact [code, sec, cap, used, free, faculty]");
+    ok(Date.now() - msg.at < 60000, "and stamped with the poll time");
+  }
+  posted.length = 0;
+  self.onmessage({ data: { type: "init", rows: slimRows, prefs: { minDays: 1, maxDays: 6 } } });
+  ok(posted[posted.length - 1].type === "ready", "seat traffic never wedges the search worker");
+})().then(() => {
+  console.log("\n" + (fail ? fail + " CHECK(S) FAILED" : "ALL WORKER CHECKS PASSED"));
+  process.exit(fail ? 1 : 0);
+}).catch((e) => { console.log("SEAT POLL ERROR: " + ((e && e.stack) || e)); process.exit(2); });

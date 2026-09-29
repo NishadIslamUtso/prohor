@@ -135,6 +135,24 @@
 
   /* ---------------------------- record -> full section ------------------------ */
 
+  // [[courseCode, sectionName, capacity, consumedSeat, free, faculty], …] — the only fields
+  // the seat rail needs, so a refresh never rebuilds the full index.
+  function seatRows(raw) {
+    var items = Array.isArray(raw) ? raw : (raw && (raw.sections || raw.data || raw.content || raw.items)) || [];
+    var out = [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i] || {};
+      var code, sec, cap, used, fac;
+      if (it.c && !it.courseCode) { code = it.c; sec = it.sec; cap = it.cap; used = it.used; fac = it.f; }
+      else { code = it.courseCode; sec = it.sectionName; cap = it.capacity; used = it.consumedSeat; fac = it.faculties; }
+      if (!code) continue;
+      cap = cap == null ? null : +cap; used = used == null ? null : +used;
+      out.push([code, String(sec == null ? "?" : sec), cap, used,
+        cap == null || used == null ? null : Math.max(0, cap - used), String(fac || "TBA")]);
+    }
+    return out;
+  }
+
   function normalizeSection(rec) {
     var isLabCourse = (rec.ct === "LAB" || rec.ct === "STUDIO");
     var events = [], labs = [], i, e;
@@ -465,19 +483,23 @@
     return out;
   }
 
-  // Everything the "Sections" picker needs: every section of the course, each with the
-  // pattern it belongs to and whether the other controls still let it through.
+  // Every section of the course, each tagged with the pattern it belongs to and whether the
+  // other three controls (locked patterns, picked faculty, picked section numbers) still let it
+  // through. All four are consulted so each picker can grey out exactly what the *other*
+  // two picks make impossible — the constraint has to run in both directions.
   function sectionChoices(C, row, filters) {
     if (!C || !C.groups) return [];
     row = row || {};
     filters = filters || {};
     var picked = row.sections && row.sections.length ? row.sections : null;
     var facs = row.faculties && row.faculties.length ? row.faculties : null;
+    var only = row.onlySections && row.onlySections.length ? row.onlySections.map(String) : null;
     var avoid = filters.avoidFaculty || [];
     var out = [];
     C.groups.forEach(function (g) {
       var groupOk = (!picked || picked.indexOf(g.key) >= 0) && !avoidKills(g, filters);
       g.sections.forEach(function (s) {
+        var secOk = !only || only.indexOf(String(s.sec)) >= 0;
         var facOk = !facs || s.faculties.some(function (f) { return facs.indexOf(f) >= 0; });
         var avOk = !(avoid.length && s.faculties.some(function (f) { return avoid.indexOf(f) >= 0; }));
         out.push({
@@ -485,8 +507,9 @@
           faculty: s.faculty, faculties: s.faculties, room: s.room,
           labCourse: s.labCourse, labRoom: s.labRoom, labFaculty: s.labFaculty,
           pattern: g.label, credit: s.credit, name: s.name,
-          viable: groupOk && facOk && avOk,
+          viable: groupOk && secOk && facOk && avOk,
           reason: !groupOk ? (picked && picked.indexOf(g.key) < 0 ? "another time slot is locked" : "avoided time or day")
+                  : !secOk ? "not one of your picked sections"
                   : !facOk ? "taught by another faculty"
                   : !avOk ? "faculty is on the avoid list" : ""
         });
@@ -818,7 +841,7 @@
     var rows = [];
     for (i = lo; i <= hi; i++) {
       rows.push({ kind: "slot", period: i, a: TIME_SLOTS[i].start, b: TIME_SLOTS[i].end,
-                  label: fmtTimeShort(TIME_SLOTS[i].start), label2: fmtTimeShort(TIME_SLOTS[i].end) });
+                  label: fmtTime(TIME_SLOTS[i].start), label2: fmtTime(TIME_SLOTS[i].end) });
       if (i < hi) rows.push({ kind: "gap", period: i });
     }
     function rowOf(p) { return 2 * (p - lo) + 2; }              // +2 = header row in the CSS grid
@@ -835,7 +858,7 @@
       blocks.push({
         col: col, row: rowOf(first), rowSpan: Math.max(1, (last - first) * 2 + 1),
         code: sec.code, label: ev.kind === "LAB" ? (sec.labCourse || (sec.code + "L")) : (sec.code + " · [" + sec.sec + "]"),
-        time: fmtTimeShort(ev.start) + " – " + fmtTimeShort(ev.end),
+        time: fmtTime(ev.start) + " – " + fmtTime(ev.end),
         room: ev.room || "—", faculty: ev.faculty || "TBA",
         lab: ev.kind === "LAB", clash: clash,
         hue: opts.hueOf ? opts.hueOf(sec.code) : 0,
@@ -853,7 +876,7 @@
         var x = null;
         (p.chosen.exams || []).forEach(function (z) { if (z.kind === kind) x = z; });
         if (!x) return null;
-        return { date: x.date, time: fmtTimeShort(x.start) + " – " + fmtTimeShort(x.end), clock: fmtTime(x.start) + " – " + fmtTime(x.end), clash: clashInfo[p.code + "|" + kind] || false };
+        return { date: x.date, time: fmtTime(x.start) + " – " + fmtTime(x.end), clock: fmtTime(x.start) + " – " + fmtTime(x.end), clash: clashInfo[p.code + "|" + kind] || false };
       }
       return {
         code: p.code, hue: opts.hueOf ? opts.hueOf(p.code) : pi, sec: p.chosen.sec, fac: p.chosen.faculty,
@@ -1050,7 +1073,7 @@
     DATA_URL: DATA_URL, SNAPSHOT_URL: SNAPSHOT_URL, REFRESH_MS: REFRESH_MS,
     DAYS: DAYS, DAY_SHORT: DAY_SHORT, DAY_LABEL: DAY_LABEL, TIME_SLOTS: TIME_SLOTS, LIGHT: L,
     fromApi: fromApi, buildIndex: buildIndex,
-    sectionOptions: sectionOptions, facultyOptions: facultyOptions, sectionChoices: sectionChoices, avoidKills: avoidKills, candidatesFor: candidatesFor,
+    sectionOptions: sectionOptions, facultyOptions: facultyOptions, sectionChoices: sectionChoices, avoidKills: avoidKills, seatRows: seatRows, candidatesFor: candidatesFor,
     createEnumerator: createEnumerator, orderRows: orderRows, buildRoutine: buildRoutine, generate: generate,
     conflicts: conflicts, scoreRoutine: scoreRoutine, candidateCompatible: candidateCompatible,
     weekGrid: weekGrid,

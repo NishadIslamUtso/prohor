@@ -14,7 +14,7 @@
     if (transfer) self.postMessage(msg, transfer); else self.postMessage(msg);
   }
 
-  self.onmessage = function (ev) {
+  self.onmessage = async function (ev) {
     var m = ev.data || {};
     try {
       if (m.type === "init") {
@@ -43,6 +43,15 @@
         return;
       }
       if (m.type === "ping") { post({ type: "pong" }); return; }
+      // Seat rail: this worker instance only fetches + trims, so seat polling can never
+      // queue behind (or interleave with) an enumeration running in the search worker.
+      if (m.type === "fetch-seats") {
+        var res = await fetch(m.url || C.DATA_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        var raw = await res.json();
+        post({ type: "seats", at: Date.now(), rows: C.seatRows(raw) });
+        return;
+      }
     } catch (e) {
       post({ type: "error", message: String((e && e.message) || e) });
     }

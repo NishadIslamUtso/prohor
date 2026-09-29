@@ -19,7 +19,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&family=Tiro+Bangla&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&family=Tiro+Bangla&display=swap" media="print" onload="this.media='all'" rel="stylesheet">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&family=Tiro+Bangla&display=swap" rel="stylesheet"></noscript>
 <style>
 /* =============================== TOKENS (Merul Indigo) =============================== */
 :root{
@@ -132,7 +133,7 @@ a{color:var(--primary-text)}
 .hdr-right{margin-left:auto;display:flex;align-items:center;gap:6px;position:relative}
 .text-btn{height:36px;padding:0 10px;border-radius:var(--radius-sm);font-weight:500;color:var(--text-2)}
 .text-btn:hover{background:var(--surface-2);color:var(--text)}
-.popover{position:absolute;top:calc(100% + 8px);right:0;width:340px;max-width:calc(100vw - 32px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:14px;z-index:60}
+.popover{position:absolute;top:calc(100% + 8px);right:0;width:340px;max-width:calc(100vw - 32px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:14px;z-index:74}
 .popover h4{font-size:13px;font-weight:600;margin-bottom:8px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}
 .kv dt{color:var(--text-3)}.kv dd{margin:0}
@@ -183,14 +184,23 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .select-btn[aria-expanded="true"]{border-color:var(--primary-text);box-shadow:var(--focus-ring)}
 .select-btn span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .select-btn .caret{width:14px;height:14px;color:var(--text-3);flex:none}
-.ms{position:absolute;top:calc(100% + 6px);left:0;width:min(420px,calc(100vw - 48px));background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);z-index:45;display:flex;flex-direction:column;max-height:380px}
+.ms{position:absolute;top:calc(100% + 6px);left:0;width:min(420px,calc(100vw - 24px));background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);z-index:72;display:flex;flex-direction:column;max-height:380px;overflow:hidden}
 .ms.right{left:auto;right:0}
+.ms.up{top:auto;bottom:calc(100% + 6px)}     /* opens upward when the seats band owns the lower half */
+.listbox{z-index:72}
+.combo{position:relative}
 .ms-head{padding:10px 12px;border-bottom:1px solid var(--border)}
 .ms-head h4{font-size:13px;font-weight:600;margin-bottom:6px}
 .ms-head input{width:100%;height:34px;border:1px solid var(--border);border-radius:var(--radius-xs);padding:0 10px;background:var(--surface-2)}
-.ms-body{overflow:auto;padding:6px}
+.ms-body{overflow:auto;padding:6px;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .ms-group{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);padding:8px 8px 4px}
 .ms-row{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;padding:8px;border-radius:var(--radius-sm);cursor:pointer}
+@media (max-width:520px){
+  .ms-head{padding:8px 10px}.ms-head input{height:32px}
+  .ms-row{padding:6px 7px;gap:8px}
+  .ms-foot{padding:6px 8px;gap:5px}
+  .ms-note{font-size:10.5px;line-height:1.35}
+}
 .ms-row:hover{background:var(--surface-2)}
 .ms-row input{width:16px;height:16px;accent-color:var(--primary);margin:0}
 .ms-row .t{font-size:13.5px;font-variant-numeric:tabular-nums}
@@ -198,7 +208,14 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .ms-row .r{font-size:12px;color:var(--text-3);text-align:right;font-variant-numeric:tabular-nums}
 .ms-row .r .mono{color:var(--text-2)}
 .ms-row.dim{opacity:.5}
-.ms-foot{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border);align-items:center}
+.ms-row.dim input{pointer-events:none}
+.ms-row.dim input:checked{pointer-events:auto}
+.ms-row.dim:has(input:checked){opacity:.75}
+.ms-row.dim:hover{background:transparent}
+.ms-row.dim .r{color:var(--danger);opacity:.85}
+.ms-foot{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border);align-items:center;flex-wrap:wrap}
+.ms-note{font-size:11px;color:var(--text-3);width:100%;order:-1}
+.ms-note b{color:var(--text-2)}
 .ms-foot .btn-primary{margin-left:auto}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
 .caption{font-size:12.5px;color:var(--text-3);margin-top:10px;font-variant-numeric:tabular-nums}
@@ -322,29 +339,32 @@ details.alt[open] summary::before{transform:rotate(90deg)}
 .dl-item .t{color:var(--text-3);width:96px;flex:none;font-size:12px}
 .dl-item i{width:8px;height:8px;border-radius:2px;background:var(--line);flex:none;align-self:center}
 .dl-free{color:var(--text-3);font-size:12px}
-.pager{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-top:8px;flex-wrap:wrap}
+.pager{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-top:8px;flex-wrap:wrap;min-width:0}
+.pager .r{min-width:0}
 .pager .txt{font-size:13px;color:var(--text-2);font-variant-numeric:tabular-nums}
-.pager .r{display:flex;gap:8px;align-items:center}
+.pager .r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;min-width:0}
 .zero{border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;background:var(--surface)}
 .zero b{display:block;font-size:15px;margin-bottom:6px}
 .zero ul{margin:8px 0 0;padding-left:18px;color:var(--text-2)}
 
 /* footer, dialog, toast */
-footer.wrap{padding:0 24px 120px;font-size:12.5px;color:var(--text-3);line-height:1.6}
+footer.wrap{padding:0 24px 4px;font-size:12.5px;color:var(--text-3);line-height:1.6}   /* the page pane already pads for the sticky bar */
 dialog{border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;background:var(--surface);color:var(--text);box-shadow:var(--shadow-lg);width:min(480px,calc(100vw - 32px))}
 dialog::backdrop{background:var(--backdrop)}
 dialog h3{font-size:18px;font-weight:600;margin-bottom:8px}
 dialog ol{padding-left:20px;color:var(--text-2);margin:10px 0}
 dialog li{margin:6px 0}dialog li b{color:var(--text)}
 dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--border);border-radius:4px;padding:1px 6px;background:var(--surface-2)}
-#toasts{position:fixed;left:24px;bottom:104px;z-index:70;display:flex;flex-direction:column;gap:8px}
+#toasts{position:fixed;left:24px;bottom:104px;z-index:76;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{pointer-events:none}
 .toast{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-md);border-radius:10px;padding:10px 14px;font-size:13px;animation:up 200ms var(--ease-out)}
 @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 @media print{
   :root{--bg:#fff;--surface:#fff;--surface-2:#F0F2F9;--border:#E1E4EF;--text:#131630;--text-2:#4B5170;--text-3:#7A8099}
-  .app-header,.columns,.action-bar,footer,.results-head,.legend,.pager,details.alt,.r-actions{display:none !important}
+  .app-header,.columns,.action-bar,footer,.results-head,.legend,.pager,details.alt,.r-actions,.seats-layer{display:none !important}
   main.wrap{padding:0}.results{margin:0}.routine{break-inside:avoid;box-shadow:none}
+  body.seats-open .wrap,body.seats-open .action-bar{padding-right:24px;padding-bottom:0}
   .print-hdr{display:flex !important;align-items:center;gap:10px;margin:0 0 12px;font-family:var(--font-display);font-size:22px}
   .print-hdr svg{color:var(--primary-text)}
 }
@@ -364,7 +384,235 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
 .rgrid{min-width:min(100%,760px)}
 @media (max-width:520px){.routine{padding:12px}.r-head{gap:6px}.badge{font-size:11.5px;padding:0 8px}}
 @media print{.results .badge.b-neutral{background:var(--surface);border:1px solid var(--border)}.grid-wrap{border:0}}
+@media (max-width:1023px){ body.seats-open .routine,body.seats-open .panel{min-width:0} }
+
+/* =============================== SEATS SPLIT PANEL =============================== */
+/* One mode only: the panel splits the screen with the page and the divider between them is
+   draggable. Wide screens sit side by side, narrow ones stack (page on top, panel below) —
+   same handle, same keyboard control, no dock/float/pin-bar choice to figure out. */
+body{--rail-w:430px;--rail-h:320px}      /* the split: JS keeps both in range and in sync */
+@supports (height:100dvh){ body{--rail-vh:100dvh} }
+.seats-layer{position:fixed;inset:0;z-index:65;pointer-events:none}
+.seats-layer[hidden]{display:none}
+.rail{position:absolute;top:0;right:0;bottom:0;width:var(--rail-w);height:100%;max-height:none;pointer-events:auto;
+  border:0;border-left:1px solid var(--border);border-radius:0;box-shadow:var(--shadow-lg);
+  transform:translateX(101%);transition:transform var(--dur-base) var(--ease-out);
+  padding:16px 16px calc(14px + env(safe-area-inset-bottom));overscroll-behavior:contain}
+.seats-layer.open .rail{transform:none}
+.seats-layer.dragging .rail,.seats-layer.dragging .rail-grip{transition:none}
+.rail-grip{position:absolute;top:0;bottom:0;right:var(--rail-w);width:18px;margin-right:-9px;z-index:66;
+  pointer-events:auto;cursor:col-resize;display:grid;place-items:center;background:none;border:0;padding:0}
+.rail-grip::before{content:"";width:4px;height:44px;border-radius:4px;background:var(--border-strong);
+  transition:background var(--dur-fast) var(--ease-out),height var(--dur-fast) var(--ease-out)}
+.rail-grip:hover::before,.rail-grip:focus-visible::before,.seats-layer.dragging .rail-grip::before{background:var(--primary-text);height:76px}
+.rail-grip:focus-visible{outline:none}
+.seats-layer:not(.open) .rail-grip{opacity:0;pointer-events:none}
+/* the two page buttons belong to the panel header at every width; folding is a narrow-screen tool */
+.rail-h .pagebtn{display:none}
+body.seats-open .rail-h .pagebtn:not([hidden]),body.view-seats .rail-h .pagebtn:not([hidden]){display:inline-flex}
+body.view-seats .rail-h #railPop,body.view-seats .rail-h #railWin{display:none !important}
+#railBack{display:none}
+@media (min-width:1024px){
+  body.seats-open .wrap{padding-right:calc(var(--rail-w) + 24px)}
+  body.seats-open .action-bar{padding-right:calc(var(--rail-w) + 48px)}
+}
+/* a picker must stay inside the page column, not run under the side one */
+@media (min-width:1024px){ body.seats-open .ms{width:min(420px,calc(100vw - var(--rail-w) - 56px))} }
+/* above the band, below the popovers: the bar and the toasts must stay tappable */
+body.seats-open .action-bar{z-index:66}
+#toasts{z-index:75}
+.rail-x{margin-left:auto;flex:none}
+.seats-toggle .sc{font-variant-numeric:tabular-nums;color:var(--text-3);font-weight:500}
+.seats-toggle[aria-expanded="true"]{border-color:var(--primary-text);background:var(--primary-soft);color:var(--primary-text)}
+.seats-toggle .dotmini{width:7px;height:7px;border-radius:50%;background:var(--success)}
+/* colour-coded labels inside seat rows */
+.k-day{color:var(--primary-text);font-weight:600}
+.k-time{color:var(--text-2);font-variant-numeric:tabular-nums}
+.k-lab{color:var(--htext);background:var(--hbg);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-weight:600}
+.k-mid{color:var(--warning);font-weight:600}
+.k-fin{color:var(--danger);font-weight:600}
+.k-date{color:var(--text-2)}
+.k-none{color:var(--text-3);font-style:italic}
+.srow .exs{display:flex;gap:6px 10px;flex-wrap:wrap;width:100%}
+.srow .dt{display:inline-flex;gap:4px;align-items:baseline;white-space:nowrap}
+.srow .cc{font-family:var(--font-mono);font-weight:600;font-size:11.5px}
+/* Narrow screens: a real two-pane split — body becomes the column, each pane scrolls itself,
+   so the band can never sit on top of the page (that is what made both halves unusable). */
+@media (max-width:1023px){
+  /* the split is the scroll container now: the root must not be able to scroll, or a
+     scrollIntoView (listboxes, pickers) shoves the whole split — band included — off screen */
+  html:has(body.seats-open){position:fixed;inset:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+  body.seats-open{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+  body.seats-open .app-header{flex:0 0 auto;position:static;z-index:3}
+  body.seats-open .wrap{padding-right:24px}
+  body.seats-open html{scroll-behavior:auto}
+  body.seats-open main.wrap{flex:1 1 auto;align-self:stretch;min-height:0;min-width:0;width:auto;max-width:none;margin:0;
+    overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:20px 20px 24px;overscroll-behavior:contain}
+  body.seats-open .action-bar{position:static;flex:0 0 auto;padding-right:0;pointer-events:none;z-index:4}
+  body.seats-open .action-bar .inner{margin:0 16px 12px;width:auto}
+  body.seats-open .seats-layer{position:relative;inset:auto;flex:0 0 auto;height:var(--rail-h);min-width:0;z-index:5}
+  body.seats-open .app-header,body.seats-open .action-bar{min-width:0}
+  body.seats-open .app-header .wrap{padding-left:12px;padding-right:12px}
+  body.seats-open .action-bar .inner{width:auto;margin:0 12px 10px;padding-right:12px}
+  body.seats-open .hdr-right{min-width:0;flex-wrap:wrap;justify-content:flex-end;row-gap:4px}
+  body.seats-open .columns,body.seats-open .routine,body.seats-open .panel,body.seats-open #resultsBody>*{min-width:0;max-width:100%}
+  body.seats-open .grid-wrap{min-width:0;max-width:100%}
+  body.seats-open .rgrid{min-width:min(100%,760px)}
+  .rail{left:0;right:0;top:0;bottom:0;width:auto;height:auto;border-left:0;border-top:1px solid var(--border);
+    border-radius:0;box-shadow:var(--shadow-lg);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+  .rail-grip{top:-15px;bottom:auto;left:0;right:0;width:auto;height:30px;margin:0;cursor:row-resize}
+  .rail-grip::before{width:56px;height:5px}
+  .rail-grip:hover::before,.rail-grip:focus-visible::before,.seats-layer.dragging .rail-grip::before{width:88px;height:5px}
+  body.seats-open #toasts{top:64px;bottom:auto;left:12px;right:12px}   /* out of both panes' way */
+  body.seats-open #toasts .toast{text-align:left}
+  /* slimmed band = status strip only, so the page can have the whole screen back with one drag */
+  .seats-layer.slim .rail-body,.seats-layer.slim .rail-search,.seats-layer.slim .rail-foot{display:none}
+  .seats-layer.tight .rail-foot{display:none}
+  .seats-layer.tight .rail-body{margin-top:4px}
+  .seats-layer.slim .rail-live .peek{display:flex}
+  .rail-live .peek{display:none;gap:6px;align-items:center;width:100%;font-size:11.5px;color:var(--text-2);
+    flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding-bottom:2px}
+  .rail-live .peek i{font-style:normal;display:inline-flex;gap:4px;align-items:center;border:1px solid var(--border);
+    border-left:3px solid var(--line);border-radius:var(--radius-sm);padding:0 5px;background:var(--surface-2)}
+  .rail-live .peek i b{font-family:var(--font-mono);font-weight:600}
+  .rail-live .peek i em{font-style:normal;color:var(--success);font-weight:600}
+  .rail-live .peek i.low em{color:var(--warning)}
+  .rail-live .peek i.full em{color:var(--text-3)}
+  .seats-layer.slim .rail{padding-bottom:10px;overflow:hidden}
+  .seats-layer.slim .rail-live{margin-top:4px;flex-wrap:wrap}
+  .seats-layer.slim .rail-h h2{flex:none}
+  .seats-layer.slim .rail-h{padding-right:0}
+  .seats-layer.slim .rail-h h2{font-size:13.5px}
+  .seats-layer.slim .rail-h .sub{font-size:11px}
+  body.seats-open .rail-h .more,body.seats-open .rail-live .more{display:inline-flex}
+  .rail-live{gap:4px 8px}
+}
+@media (min-width:1024px){ .rail-grip{touch-action:none} }
+.rail-grip{touch-action:none;-webkit-user-select:none;user-select:none}
+body.rail-resizing{-webkit-user-select:none;user-select:none;cursor:col-resize}
+@media (max-width:1023px){ body.rail-resizing{cursor:row-resize} }
+/* ---- seats as its own page (?view=seats): no band, no split — the panel IS the document ---- */
+body.view-seats main.wrap,body.view-seats .action-bar{display:none}
+body.view-seats .seats-layer{position:static;inset:auto;pointer-events:auto;height:auto;max-width:1000px;margin:0 auto;padding:0 24px}
+body.view-seats .rail{position:static;height:auto;width:auto;max-width:none;border:0;border-radius:0;box-shadow:none;
+  transform:none !important;transition:none;padding:0;background:transparent}
+body.view-seats .rail-grip,body.view-seats #seatsClose,body.view-seats .rail-h #railMore,body.view-seats .rail-live .peek{display:none !important}
+body.view-seats .rail-h{padding-right:0}
+body.view-seats #railBack{display:inline-flex}
+body.view-seats .rail-h #railBack{margin-left:auto}
+body.view-seats .rail-h .rail-x + .pagebtn,body.view-seats .rail-h #railBack~.pagebtn{margin-left:8px}
+.rail-top{flex:none}
+body.view-seats .rail-top{position:sticky;top:57px;z-index:3;background:var(--bg);margin:0 -24px;padding:12px 24px 8px;
+  border-bottom:1px solid var(--border)}
+body.view-seats .rail-h{gap:5px 10px}
+body.view-seats .rail-h h2{font-size:17px}
+body.view-seats .rail-live{margin-top:3px}
+@media (max-width:600px){ body.view-seats .rail-h .sub{display:none} }
+/* scrolling through a long section list should never lose the course it belongs to */
+body.view-seats .sgroup>h4{position:sticky;top:var(--stick,132px);z-index:1;background:var(--bg);
+  margin:0;padding:6px 0 5px;border-bottom:1px solid var(--border)}
+body.view-seats .sgroup{margin-top:0;padding-top:6px}
+@media (min-width:980px){
+  /* a big screen reads better in two columns; the pinned box keeps the full width */
+  body.view-seats .rail-body{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;align-items:start}
+  body.view-seats .rail-body>.seatbox.pinned{grid-column:1 / -1}
+  body.view-seats .rail-body>.seatbox{margin-bottom:14px}
+}
+body.view-seats .rail-search{margin:9px 0 0}
+body.view-seats .rail-body{overflow:visible;max-height:none;margin-top:10px}
+body.view-seats .seatbox{padding:12px 14px}
+body.view-seats .rail-foot{padding-bottom:10px}
+@media (max-width:640px){ body.view-seats .seats-layer{padding:0 12px} body.view-seats .rail-top{margin:0 -12px;padding:10px 12px 7px} }
+html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-bottom:24px}   /* scrollIntoView must not tuck a row under the sticky bars */
+@media print{ body.view-seats .seats-layer{display:block !important;position:static} }
+/* =============================== SEATS RAIL =============================== */
+.rail{background:var(--surface);display:flex;flex-direction:column;min-width:0}
+.rail-h{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;min-width:0}
+.rail-h h2{flex:none}
+.rail-h .sub{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-h .more,.rail-h .rail-x{flex:none;margin-left:0}
+.rail-h .rail-x{margin-left:auto}      /* the close control always sits at the end of its line */
+.rail-h a.more{text-decoration:none}
+.rail-h h2{font-size:15px;font-weight:600;margin:0;letter-spacing:-.01em}
+.rail-h .sub{font-size:12px;color:var(--text-3)}
+.rail-live{display:flex;align-items:center;gap:4px 8px;font-size:11.5px;color:var(--text-3);margin-top:4px;flex-wrap:wrap}
+.rail-live .more{margin-left:auto}
+.rail-h{gap:4px 8px}
+.rail-live .dot{width:7px;height:7px;box-shadow:none;background:var(--success)}
+.rail-live[data-state="busy"] .dot{background:var(--primary);animation:pulse 1.1s ease-in-out infinite}
+.rail-live[data-state="paused"] .dot{background:var(--text-3)}
+.rail-live[data-state="error"] .dot{background:var(--danger)}
+.rail-search{position:relative;margin:8px 0 2px}
+.rail-search input{width:100%;height:36px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  background:var(--surface-2);padding:0 30px 0 30px;font-size:13px}
+.rail-search input:focus{outline:none;border-color:var(--primary-text);box-shadow:var(--focus-ring);background:var(--surface)}
+.rail-search svg{position:absolute;left:9px;top:10px;width:15px;height:15px;color:var(--text-3)}
+.rail-search .clr,.combo .clr{position:absolute;right:6px;top:7px;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:var(--text-3)}
+.combo .clr{top:50%;transform:translateY(-50%);right:10px;width:26px;height:26px;background:var(--surface-2)}
+.combo .clr:hover{background:var(--surface-3);color:var(--text)}
+.combo.has-text .kbd,.combo.has-text #searchKbd{display:none}
+.combo .listbox{max-height:min(330px,60vh)}
+@media (max-width:1023px){
+  body.seats-open .combo .listbox{max-height:calc(var(--rail-top, 100vh) - 190px)}
+  body.seats-open .popover{max-height:calc(var(--rail-top, 100vh) - 120px);overflow:auto}
+}
+.rail-search .clr:hover{background:var(--surface-2);color:var(--text)}
+.rail-body{overflow:auto;margin:8px -4px 0;padding:0 4px;flex:1;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.rail-h{position:relative}
+.rail-h .more,.rail-live .more{display:none;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--primary-text);
+  background:var(--primary-soft);border:1px solid var(--border);border-radius:var(--radius-pill);padding:1px 8px;cursor:pointer}
+.rail-h .more:hover{background:var(--surface-3)}
+.seatbox{border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 11px;margin-bottom:10px;background:var(--surface)}
+.seatbox.pinned{border-color:var(--primary);background:var(--primary-soft)}
+.seatbox>h3{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-3);margin:0 0 6px}
+.seatbox>h3 .k{font-size:10px;color:var(--text-3);background:var(--surface-2);border-radius:var(--radius-pill);padding:1px 7px;letter-spacing:0}
+.seatbox>h3 .at{margin-left:auto;font-size:11px;letter-spacing:0;text-transform:none;color:var(--text-3);font-variant-numeric:tabular-nums}
+.seatbox .why{font-size:11.5px;color:var(--text-3);margin:-2px 0 8px}
+.sgroup{margin:8px 0 0}
+.sgroup>h4{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;margin:0 0 4px}
+.sgroup>h4 .sw{width:9px;height:9px;border-radius:3px;background:var(--line);flex:none}
+.sgroup>h4 .n{margin-left:auto;font-size:11px;color:var(--text-3);font-weight:500;font-variant-numeric:tabular-nums}
+.srow{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;padding:6px;border-radius:var(--radius-sm);
+  border:1px solid transparent;font-size:12px}
+.srow:hover{background:var(--surface-2)}
+.srow .sec{font-family:var(--font-mono);font-weight:600;font-size:12px}
+.srow .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:baseline;min-width:0}
+.srow .f{font-family:var(--font-mono);font-size:11px;color:var(--text-2)}
+.srow .t{font-size:11.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.srow .e{font-size:11px;color:var(--text-3)}
+.srow .meta{flex-direction:column;gap:2px;align-items:flex-start}
+.srow .right{display:flex;align-items:center;gap:4px}
+.seat{font-size:11px;font-weight:600;padding:2px 7px;border-radius:var(--radius-pill);white-space:nowrap;
+  font-variant-numeric:tabular-nums;background:var(--success-soft);color:var(--success)}
+.seat.low{background:var(--warning-soft);color:var(--warning)}
+.seat.full{background:var(--surface-3);color:var(--text-3)}
+.seat.over{background:var(--danger-soft);color:var(--danger)}
+.seat.unknown{background:var(--surface-2);color:var(--text-3)}
+.pinbtn{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--text-3);flex:none}
+.pinbtn:hover{background:var(--surface-3);color:var(--text)}
+.pinbtn[aria-pressed="true"]{color:var(--primary-text);background:var(--primary-soft)}
+.pinbtn svg{width:13px;height:13px}
+.srow.inuse{border-color:var(--line);background:var(--hbg)}
+.srow .use{font-size:10px;color:var(--text-3)}
+.coursebtn{display:flex;width:100%;align-items:center;gap:8px;padding:6px 7px;border-radius:var(--radius-sm);font-size:12.5px;text-align:left}
+.coursebtn:hover{background:var(--surface-2)}
+.coursebtn .code{font-family:var(--font-mono);font-weight:600}
+.coursebtn .nm{color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.coursebtn .n{font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.coursebtn svg{width:13px;height:13px;color:var(--text-3);transition:transform var(--dur-fast)}
+.coursebtn[aria-expanded="true"] svg{transform:rotate(90deg)}
+.courses{max-height:none}
+.rail-empty{font-size:12px;color:var(--text-3);padding:8px 4px}
+.rail-foot{font-size:11px;color:var(--text-3);padding-top:8px;border-top:1px solid var(--border);margin-top:6px;line-height:1.45}
+@media (max-width:520px){
+  .srow{grid-template-columns:auto 1fr;gap:5px}.srow .right{grid-column:2}
+  .srow .meta{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:1px 7px}
+  .srow .exs{gap:6px}
+  .srow{padding:7px 6px}
+}
 </style>
+</head>
 <body>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -389,6 +637,8 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
   <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
   <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
   <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5M9 3h6l1 7 3 3H5l3-3 1-7Z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></symbol>
   <symbol id="i-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></symbol>
 </svg>
@@ -406,6 +656,8 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
         <h4>Section data</h4>
         <dl class="kv" id="dataKv"><dt>Status</dt><dd>loading…</dd></dl>
         <div class="pop-foot"><span>Always confirm in BRACU Connect before pre-advising.</span><button class="btn btn-secondary btn-sm" id="refreshBtn"><svg width="14" height="14"><use href="#i-refresh"/></svg>Refresh</button></div></div>
+      <button class="pill seats-toggle" id="seatsBtn" aria-expanded="false" aria-controls="seatsLayer" title="Seats &amp; sections — opens beside your work, drag its edge to resize">
+        <svg width="14" height="14"><use href="#i-users"/></svg><span class="full">Seats</span><span class="sc tnum" id="seatsCount">—</span></button>
       <button class="text-btn howto" id="howBtn">How it works</button>
       <button class="icon-btn" id="themeBtn" aria-label="Switch to dark theme"><svg><use href="#i-moon"/></svg></button>
     </div>
@@ -416,12 +668,13 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
   <div class="columns">
     <!-- STEP 1 -->
     <section id="step1" aria-labelledby="h1">
-      <div class="step-head"><h2 id="h1">1 · Pick your courses</h2><span class="count tnum" id="courseCount">0 of 6 courses</span></div>
-      <p class="step-desc">Search by code or title. Leave <b>Time slots</b>, <b>Sections</b> and <b>Faculty</b> on “All …” to consider every option, or narrow any of them.</p>
+      <div class="step-head"><h2 id="h1">Pick your courses</h2><span class="count tnum" id="courseCount">0 of 6 courses</span></div>
+      <p class="step-desc">Search by code or title. Leave <b>Time slots</b>, <b>Sections</b> and <b>Faculty</b> on “All …” to consider every option, or narrow any of them. Everything is saved on this device, so the page works even if the feed is slow.</p>
       <div class="combo">
         <svg class="ico"><use href="#i-search"/></svg>
         <input id="courseSearch" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="courseList" placeholder="Search a course — CSE221, Algorithms…" autocomplete="off">
-        <span class="kbd">/</span>
+        <span class="kbd" id="searchKbd">/</span>
+        <button class="clr" id="searchClr" hidden aria-label="Close this list and clear the search"><svg width="13" height="13"><use href="#i-x"/></svg></button>
         <div class="listbox" id="courseList" role="listbox" hidden></div>
       </div>
       <div id="courses" class="courses"></div>
@@ -429,9 +682,9 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
 
     <!-- STEP 2 -->
     <aside id="step2" class="panel prefs" aria-labelledby="h2">
-      <button class="prefs-toggle" id="prefsToggle" aria-expanded="true"><span>2 · Set your preferences <span class="faint" id="prefsActive"></span></span><svg width="16" height="16"><use href="#i-chev"/></svg></button>
+      <button class="prefs-toggle" id="prefsToggle" aria-expanded="true"><span>Set your preferences <span class="faint" id="prefsActive"></span></span><svg width="16" height="16"><use href="#i-chev"/></svg></button>
       <div class="prefs-body">
-        <div class="step-head" style="margin-bottom:2px"><h2 id="h2">2 · Set your preferences</h2></div>
+        <div class="step-head" style="margin-bottom:2px"><h2 id="h2">Set your preferences</h2></div>
         <p class="step-desc" style="margin-bottom:10px">Constraints filter routines out; the switches change how they’re ranked.</p>
 
         <div class="pref-section">
@@ -473,15 +726,22 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
         <div class="pref-section" style="padding-bottom:0"><button class="btn btn-ghost btn-sm" id="resetPrefs">Reset preferences</button></div>
       </div>
     </aside>
+
+
   </div>
 
   <!-- STEP 3 -->
   <section id="step3" class="results" aria-labelledby="h3" tabindex="-1">
-    <div class="step-head"><h2 id="h3">3 · Compare routines</h2></div>
+    <div class="step-head"><h2 id="h3">Compare routines</h2></div>
     <p class="step-desc" id="resultsDesc">Generate to see every conflict-free routine that fits your preferences.</p>
     <div id="resultsBody"></div>
     <div class="sr-only" aria-live="polite" id="live"></div>
   </section>
+  <footer class="wrap">
+  Prohor is an unofficial student project and is not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag behind the portal — always confirm in BRACU Connect before pre-advising. · <a href="https://github.com/NishadIslamUtso" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+  <a id="feedbackLink" href="https://mail.google.com/mail/?view=cm&fs=1&to=nishadislamutso@gmail.com&su=Prohor%20routine%20planner%20feedback" target="_blank" rel="noopener noreferrer">Send feedback on Gmail</a>
+  (<a href="mailto:nishadislamutso@gmail.com?subject=Prohor%20routine%20planner%20feedback">or via your mail app</a>)
+</footer>
 </main>
 
 <div class="action-bar" id="actionBar">
@@ -491,20 +751,47 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     <button class="btn btn-primary" id="genBtn" disabled title="Add at least one course">Generate routines <span class="kbd">⌘↵</span></button>
   </div>
 </div>
+  <!-- SEATS PANEL — an adjustable split view: drag the handle (or use the arrow keys) to size it -->
+  <div id="seatsLayer" class="seats-layer" hidden>
+    <div class="rail-grip" id="railGrip" role="separator" tabindex="0" aria-orientation="vertical"
+      aria-label="Resize the seats panel — drag, or press the arrow keys; tap to fold it to a strip; double-click resets the size" title="Drag to resize · tap to fold · double-click to reset"></div>
+    <aside id="rail" class="rail" role="region" aria-labelledby="railH">
+    <div class="rail-top">
+    <div class="rail-h"><h2 id="railH">Seats &amp; sections</h2><span class="sub" id="railSub">—</span>
+      <button class="more" id="railMore" aria-expanded="true" title="Fold the panel down to a status strip">Hide sections</button>
+      <a class="more pagebtn backbtn" id="railBack" hidden href="./" title="Back to the routine planner"><svg width="11" height="11" style="transform:rotate(90deg)"><use href="#i-chev"/></svg>Planner</a>
+      <button class="more pagebtn" id="railPop" title="Turn this panel into its own page. The planner stays open in the same tab — use Back to come home.">Open as page</button>
+      <button class="more pagebtn" id="railWin" title="Open the seats page in a new window, so you can watch seats while you plan">New window</button>
+      <button class="icon-btn rail-x" id="seatsClose" aria-label="Close the seats panel"><svg><use href="#i-x"/></svg></button></div>
+    <div class="rail-live" id="railLive" data-state="idle">
+    <span class="dot"></span><span id="seatAgo">not polled yet</span>
+    <span class="peek" id="railPeek" hidden></span>
+    <button class="link-btn" id="seatPause" aria-pressed="false">Pause</button>
+    <button class="link-btn" id="seatNow">Check now</button>
+    </div>
+    <div class="rail-search">
+    <svg><use href="#i-search"/></svg>
+    <input id="seatSearch" type="text" placeholder="Filter course, code, section, faculty, room…" autocomplete="off" aria-label="Filter the seat lists">
+    <button class="clr" id="seatClr" hidden aria-label="Clear the seat filter"><svg width="13" height="13"><use href="#i-x"/></svg></button>
+    </div>
+    </div>
+    <div class="rail-body" id="railBody"></div>
+    <div class="rail-foot" id="railFoot"></div>
+    </aside>
+  </div>
 
-<footer class="wrap">
-  Prohor is an unofficial student project and is not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag behind the portal — always confirm in BRACU Connect before pre-advising. · <a href="https://github.com/NishadIslamUtso" target="_blank" rel="noopener noreferrer">GitHub</a> ·
-  <a id="feedbackLink" href="https://mail.google.com/mail/?view=cm&fs=1&to=nishadislamutso@gmail.com&su=Prohor%20routine%20planner%20feedback" target="_blank" rel="noopener noreferrer">Send feedback on Gmail</a>
-  (<a href="mailto:nishadislamutso@gmail.com?subject=Prohor%20routine%20planner%20feedback">or via your mail app</a>)
-</footer>
 
 <dialog id="howDlg">
   <h3>How Prohor works</h3>
   <p class="muted">A <em>prohor</em> (প্রহর) is one-eighth of a day. Pick yours in three steps:</p>
   <ol>
-    <li><b>Pick your courses.</b> Search, add up to six. Lock time slots or faculty per course if you care.</li>
+    <li><b>Pick your courses.</b> Search, add up to six. Lock time slots or faculty or sections per course if you care.</li>
     <li><b>Set your preferences.</b> How many days on campus, exam-clash checks, times and days to avoid.</li>
     <li><b>Compare routines.</b> Every conflict-free combination, ranked. Download any as PNG.</li>
+    <li><b>Watch seats.</b> Open <i>Seats</i> for a panel that splits the screen with the page — drag the handle
+      between them to size it, tap it to fold the panel to a strip. Pin up to 50 sections and their seat counts
+      stay at the top. Or press <i>Open as page</i> / <i>New window</i> and the seats become their own page
+      (<span class="kbd">?view=seats</span>) that you can park on another screen while you keep planning.</li>
   </ol>
   <p class="muted" style="font-size:13px">Shortcuts: <span class="kbd">/</span> focus course search · <span class="kbd">Ctrl/⌘ + Enter</span> generate</p>
   <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" id="howClose">Got it</button></div>
@@ -530,7 +817,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     courses: [],
     prefs: { dayMin: 1, dayMax: 6, examClash: true, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] },
     view: "grid", sort: "best", pageSize: 50, page: 1,
-    results: null, picks: {}, search: null, blockedNote: ""
+    results: null, picks: {}, search: null, blockedNote: "", droppedUrl: ""
   };
 
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -542,7 +829,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
   }
   function num(n) { return (n || 0).toLocaleString("en-US"); }
   function fmt12(min) { return C.fmtTime(min).replace(/^0(\d)/, "$1"); }
-  function fmt24(min) { return C.fmtTimeShort(min); }
+  function fmt24(min) { return C.fmtTime(min); }   // one clock everywhere: 12-hour with AM/PM
   function dur(m) { var h = Math.floor(m / 60), mm = m % 60; return ((h ? h + " h" : "") + (mm ? " " + mm + " m" : "")).trim() || "0 m"; }
   function hueVars(i) { var n = (i % 8) + 1; return "--line:var(--c" + n + "-line);--hbg:var(--c" + n + "-bg);--htext:var(--c" + n + "-text)"; }
   function hueOf(code) {
@@ -556,8 +843,10 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
   function K(code) { return state.index && state.index.courses[code]; }
   function uniq(a) { var s = {}, o = []; a.forEach(function (x) { if (!s[x]) { s[x] = 1; o.push(x); } }); return o; }
   function toast(msg) {
+    var box = $("#toasts");
     var t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
-    $("#toasts").appendChild(t);
+    while (box.children.length >= 2) box.removeChild(box.firstChild);      // a burst must not bury the page
+    box.appendChild(t);
     setTimeout(function () { t.style.opacity = "0"; t.style.transition = "opacity 200ms"; setTimeout(function () { t.remove(); }, 220); }, 3200);
   }
   function say(msg) { var l = $("#live"); if (l) l.textContent = msg; }
@@ -614,13 +903,20 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     $("#dataKv").innerHTML = kv.map(function (r) { return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>"; }).join("");
     var o = String(M.origin || "") + " " + String(M.label || "");
     var word = /stale/.test(o) ? "Stale copy" : /snapshot/.test(o) ? "Offline copy" : /cache/.test(o) ? "Cached" : "Live";
-    setPill(M.warn ? "warn" : "ok", word + " · <span class=\"tnum\">" + num(I.count) + "</span> sections · updated " + ago(M.at) +
+    setPill(M.warn ? "warn" : "ok", word + " · <span class=\"tnum\">" + num(I.count) + "</span> section" + (I.count === 1 ? "" : "s") + " · updated " + ago(M.at) +
       (M.warn ? "" : " · auto-refresh in <span class=\"tnum\">" + nextRefresh() + "</span>"));
-    $("#courseCount").textContent = state.courses.length + " of " + MAX_COURSES + " courses";
+    updateCourseCount();
+  }
+  function updateCourseCount() {                 // the one writer for that label
+    var el2 = $("#courseCount");
+    if (!el2) return;
+    el2.textContent = state.courses.length >= MAX_COURSES
+      ? "6 of 6 — remove one to add another" : state.courses.length + " of " + MAX_COURSES + " courses";
   }
   function parseFeed(raw) {
-    var sections = Array.isArray(raw) ? C.fromApi(raw) : (raw.sections || []);
+    var sections = Array.isArray(raw) ? C.fromApi(raw) : ((raw && raw.sections) || []);
     if (!sections.length) throw new Error("response contained no usable sections");
+    if (sections.length < 50) throw new Error("only " + sections.length + " sections came through — that is not the real feed");
     var f = sections[0] || {};
     return {
       sections: sections, start: f.start || null, end: f.end || null,
@@ -632,13 +928,31 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     state.index = C.buildIndex(sections);
     state.meta = meta;
     state.ready = true;
+    if (state.pins && state.pins.length) {          // a section the feed dropped must not hold a pin slot
+      var lived = state.pins.length;
+      state.pins = state.pins.filter(function (x) { return !!findSec(x.code, x.sec); });
+      if (state.pins.length !== lived) save();
+    }
     renderData();
+    indexSeats();
     afterChange();
+    renderRail();                   // fill the seats rail straight away, not one frame later
     if (first && state.pending) { state.pending = false; setGen(false); generate(); }
     if (state.search) { state.search.stale = true; renderStatus(); }
   }
 
   var inflight = null;
+  async function loadSnapshotInto(label) {
+    var r = await fetch(C.SNAPSHOT_URL, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    var snap = await r.json();
+    var p = parseFeed(snap);
+    adopt(p.sections, {
+      origin: "bundled snapshot.json", at: Date.parse((snap.meta && snap.meta.generatedAt) || "") || null,
+      start: p.start, end: p.end, session: p.session, warn: true, label: label
+    });
+    return p.sections.length;
+  }
   function loadData(force) {
     if (inflight && !force) return inflight;
     inflight = (async function () {
@@ -651,40 +965,39 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
         revalidate();
         return;
       }
-      await fetchLive(cached);
+      // 1) cached copy of any age → the page is usable right now
+      if (cached && cached.sections && cached.sections.length) {
+        var p1 = parseFeed({ sections: cached.sections });
+        adopt(p1.sections, { origin: "device cache (stale)", at: cached.at, start: p1.start, end: p1.end, session: p1.session, warn: true, label: "cached, checking for updates" });
+      }
+      // 2) the bundled snapshot while the network is still thinking, so the pickers never sit empty
+      var upgraded = false;
+      var early = setTimeout(function () {
+        if (state.ready && cached) return;                     // stale cache already painted
+        loadSnapshotInto("offline copy (live feed is slow)").catch(function () { });
+      }, 1400);
+      try {
+        var res = await fetch(C.DATA_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        var p = parseFeed(await res.json());
+        var at = Date.now();
+        store.set(CACHE_KEY, { at: at, sections: p.sections });
+        adopt(p.sections, { origin: "usis-cdn.eniamza.com/connect.json", at: at, start: p.start, end: p.end, session: p.session, label: "live" });
+        upgraded = true;
+      } catch (e1) {
+        if (!state.ready) {
+          try { await loadSnapshotInto("offline copy · live feed failed (" + String((e1 && e1.message) || e1).slice(0, 26) + ")"); upgraded = true; }
+          catch (e2) {
+            if (!state.ready) {
+              setPill("bad", "no data available · <button class=\"link-btn\" id=\"retryData\">retry</button>");
+              var rb = $("#retryData"); if (rb) rb.onclick = function () { loadData(true); };
+            }
+          }
+        }
+      } finally { clearTimeout(early); }
+      if (!upgraded && !state.ready) { try { await loadSnapshotInto("offline copy"); } catch (e) { } }
     })().catch(function () { });
     return inflight;
-  }
-  async function fetchLive(cached) {
-    try {
-      var res = await fetch(C.DATA_URL, { cache: "no-store" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      var p = parseFeed(await res.json());
-      var at = Date.now();
-      store.set(CACHE_KEY, { at: at, sections: p.sections });
-      adopt(p.sections, { origin: "usis-cdn.eniamza.com/connect.json", at: at, start: p.start, end: p.end, session: p.session, label: "live" });
-    } catch (e1) {
-      try {
-        setPill("warn", "live feed unreachable · using the bundled copy…");
-        var r2 = await fetch(C.SNAPSHOT_URL, { cache: "no-store" });
-        if (!r2.ok) throw new Error("HTTP " + r2.status);
-        var snap = await r2.json();
-        var p2 = parseFeed(snap);
-        adopt(p2.sections, {
-          origin: "bundled snapshot.json", at: Date.parse((snap.meta && snap.meta.generatedAt) || "") || null,
-          start: p2.start, end: p2.end, session: p2.session, warn: true,
-          label: "offline copy · live feed failed (" + String((e1 && e1.message) || e1).slice(0, 26) + ")"
-        });
-      } catch (e3) {
-        if (cached && cached.sections && cached.sections.length) {
-          var p3 = parseFeed({ sections: cached.sections });
-          adopt(p3.sections, { origin: "device cache (stale)", at: cached.at, start: p3.start, end: p3.end, session: p3.session, warn: true, label: "stale cache" });
-        } else {
-          setPill("bad", "no data available · <button class=\"link-btn\" id=\"retryData\">retry</button>");
-          var rb = $("#retryData"); if (rb) rb.onclick = function () { loadData(true); };
-        }
-      }
-    }
   }
   async function revalidate() {
     try {
@@ -728,7 +1041,13 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       return dbp;
     }
     function lg(k) { try { return JSON.parse(localStorage.getItem(CACHE_DB + ":" + k) || "null"); } catch (e) { return null; } }
-    function ls(k, v) { try { localStorage.setItem(CACHE_DB + ":" + k, JSON.stringify(v)); } catch (e) { } }
+    function ls(k, v) {
+      try {
+        var j = JSON.stringify(v);
+        if (j.length > 1400000) return;               // too big for localStorage: rely on IndexedDB
+        localStorage.setItem(CACHE_DB + ":" + k, j);
+      } catch (e) { }
+    }
     return {
       get: function (k) {
         return db().then(function (d) {
@@ -736,7 +1055,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
             if (!d) return res(lg(k));
             try {
               var t = d.transaction("kv").objectStore("kv").get(k);
-              t.onsuccess = function () { res(t.result || null); };
+              t.onsuccess = function () { res(t.result || lg(k)); };
               t.onerror = function () { res(lg(k)); };
             } catch (e) { res(lg(k)); }
           });
@@ -800,8 +1119,10 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
   /* ================================== step 1 ================================== */
 
   function renderCourses() {
+    if (openMs) closeMs("silent");
+    updateCourseCount();
     var wrap = $("#courses");
-    $("#courseCount").textContent = state.courses.length + " of " + MAX_COURSES + " courses";
+    updateCourseCount();
     $("#courseSearch").disabled = !state.ready || state.courses.length >= MAX_COURSES;
     if (!state.ready) {
       var wait_ = state.courses.length
@@ -821,58 +1142,76 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
         " — a full semester). Sections that meet at identical days and times count as one pattern.</div></div>";
       return;
     }
-    wrap.innerHTML = state.courses.map(function (c, i) {
-      var Cc = K(c.code);
-      if (!Cc) {
-        return '<article class="course" style="' + hueVars(i) + '" data-code="' + esc(c.code) + '"><div class="head"><span class="hue-num">' + (i + 1) +
-          '</span><span class="code">' + esc(c.code) + '</span><span class="title faint">not in this feed</span>' +
-          '<button class="icon-btn" data-act="remove" data-code="' + esc(c.code) + '" aria-label="Remove ' + esc(c.code) + '"><svg><use href="#i-x"/></svg></button></div>' +
-          '<div class="caption">Search above for the right course code.</div></article>';
-      }
-      var viable = viableGroups(c.code);
-      var vSections = viable.reduce(function (n, g) { return n + g.count; }, 0);
-      var tsLabel = c.locked.length ? c.locked.length + " of " + Cc.groups.length + " patterns" : "All patterns (" + Cc.groups.length + ")";
-      var facLabel = c.faculty.length ? c.faculty[0] + (c.faculty.length > 1 ? " +" + (c.faculty.length - 1) : "") : "Any";
-      var secLabel = c.secs.length ? c.secs.length + " of " + Cc.sections.length + " sections" : "All sections (" + Cc.sections.length + ")";
-      var chips = c.locked.map(function (key) {
-        var g = null;
-        for (var q = 0; q < Cc.groups.length; q++) if (Cc.groups[q].key === key) g = Cc.groups[q];
-        return '<span class="chip locked">' + esc(g ? patternLabel(g) : "pattern") +
-          '<button class="rm" data-act="unlock" data-code="' + esc(c.code) + '" data-id="' + esc(key) + '" aria-label="Unlock this pattern">×</button></span>';
-      }).join("") + (c.secs || []).map(function (sn) {
-        return '<span class="chip locked">[' + esc(sn) + ']<button class="rm" data-act="unsec" data-code="' + esc(c.code) +
-          '" data-id="' + esc(sn) + '" aria-label="Stop restricting to section ' + esc(sn) + '">×</button></span>';
-      }).join("");
-      return '<article class="course" style="' + hueVars(i) + '" data-code="' + esc(c.code) + '">' +
-        '<div class="head"><span class="hue-num">' + (i + 1) + '</span><span class="code">' + esc(c.code) + '</span>' +
-          '<span class="title">' + esc(Cc.name || "") + '</span>' +
-          '<button class="icon-btn" data-act="remove" data-code="' + esc(c.code) + '" aria-label="Remove ' + esc(c.code) + '"><svg><use href="#i-x"/></svg></button></div>' +
-        '<div class="controls">' +
-          '<div class="control"><span class="label" id="l-ts-' + esc(c.code) + '">Time slots</span>' +
-            '<button class="select-btn" data-act="open-ts" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-ts-' + esc(c.code) + '"><span>' + esc(tsLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
-          '<div class="control"><span class="label" id="l-s-' + esc(c.code) + '">Sections</span>' +
-            '<button class="select-btn" data-act="open-sec" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-s-' + esc(c.code) + '"><span>' + esc(secLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
-          '<div class="control"><span class="label" id="l-f-' + esc(c.code) + '">Faculty</span>' +
-            '<button class="select-btn" data-act="open-fac" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-f-' + esc(c.code) + '"><span>' + esc(facLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
-        '</div>' +
-        (chips ? '<div class="chips">' + chips + "</div>" : "") +
-        '<div class="caption">' + num(Cc.sections.length) + " sections · " + num(Cc.groups.length) + " patterns" +
-          ((c.secs || []).length ? " · <b>" + c.secs.length + " section" + (c.secs.length === 1 ? "" : "s") + " picked</b>" : "") +
-          (anyFilter() ? " · <b>" + num(viable.length) + " pattern" + (viable.length === 1 ? "" : "s") + " · " + num(vSections) +
-            " section" + (vSections === 1 ? "" : "s") + " match</b>" : "") +
-        "</div></article>";
+    wrap.innerHTML = state.courses.map(courseCardHtml).join("");
+  }
+  function courseCardHtml(c, i) {
+    var Cc = K(c.code);
+    if (!Cc) {
+      return '<article class="course" style="' + hueVars(i) + '" data-code="' + esc(c.code) + '"><div class="head"><span class="hue-num">' + (i + 1) +
+        '</span><span class="code">' + esc(c.code) + '</span><span class="title faint">not in this feed</span>' +
+        '<button class="icon-btn" data-act="remove" data-code="' + esc(c.code) + '" aria-label="Remove ' + esc(c.code) + '"><svg><use href="#i-x"/></svg></button></div>' +
+        '<div class="caption">Search above for the right course code.</div></article>';
+    }
+    var viable = viableGroups(c.code);
+    var vSections = viable.reduce(function (n, g) { return n + g.count; }, 0);
+    var tsLabel = c.locked.length ? c.locked.length + " of " + Cc.groups.length + " patterns" : "All patterns (" + Cc.groups.length + ")";
+    var facLabel = c.faculty.length ? c.faculty[0] + (c.faculty.length > 1 ? " +" + (c.faculty.length - 1) : "") : "Any";
+    var secLabel = (c.secs || []).length ? c.secs.length + " of " + Cc.sections.length + " sections" : "All sections (" + Cc.sections.length + ")";
+    var chips = c.locked.map(function (key) {
+      var g = null;
+      for (var q = 0; q < Cc.groups.length; q++) if (Cc.groups[q].key === key) g = Cc.groups[q];
+      return '<span class="chip locked">' + esc(g ? patternLabel(g) : "pattern") +
+        '<button class="rm" data-act="unlock" data-code="' + esc(c.code) + '" data-id="' + esc(key) + '" aria-label="Unlock this pattern">&times;</button></span>';
+    }).join("") + (c.secs || []).map(function (sn) {
+      return '<span class="chip locked">[' + esc(sn) + ']<button class="rm" data-act="unsec" data-code="' + esc(c.code) +
+        '" data-id="' + esc(sn) + '" aria-label="Stop restricting to section ' + esc(sn) + '">&times;</button></span>';
     }).join("");
+    return '<article class="course" style="' + hueVars(i) + '" data-code="' + esc(c.code) + '">' +
+      '<div class="head"><span class="hue-num">' + (i + 1) + '</span><span class="code">' + esc(c.code) + '</span>' +
+        '<span class="title">' + esc(Cc.name || "") + '</span>' +
+        '<button class="icon-btn" data-act="remove" data-code="' + esc(c.code) + '" aria-label="Remove ' + esc(c.code) + '"><svg><use href="#i-x"/></svg></button></div>' +
+      '<div class="controls">' +
+        '<div class="control"><span class="label" id="l-ts-' + esc(c.code) + '">Time slots</span>' +
+          '<button class="select-btn" data-act="open-ts" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-ts-' + esc(c.code) + '"><span>' + esc(tsLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
+        '<div class="control"><span class="label" id="l-s-' + esc(c.code) + '">Sections</span>' +
+          '<button class="select-btn" data-act="open-sec" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-s-' + esc(c.code) + '"><span>' + esc(secLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
+        '<div class="control"><span class="label" id="l-f-' + esc(c.code) + '">Faculty</span>' +
+          '<button class="select-btn" data-act="open-fac" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-f-' + esc(c.code) + '"><span>' + esc(facLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
+      '</div>' +
+      (chips ? '<div class="chips">' + chips + '</div>' : "") +
+      '<div class="caption">' + num(Cc.sections.length) + " sections · " + num(Cc.groups.length) + " patterns" +
+        ((c.secs || []).length ? ' · <b>' + c.secs.length + " section" + (c.secs.length === 1 ? "" : "s") + " picked</b>" : "") +
+        (anyFilter() ? ' · <b>' + num(viable.length) + " pattern" + (viable.length === 1 ? "" : "s") + " · " + num(vSections) +
+          " section" + (vSections === 1 ? "" : "s") + " match</b>" : "") +
+      '</div></article>';
   }
 
   var openMs = null;
-  function closeMs(rerender) {
-    if (!openMs) return;
-    openMs.el.remove();
-    if (openMs.btn) openMs.btn.setAttribute("aria-expanded", "false");
-    openMs = null;
-    if (rerender !== false) { renderCourses(); updateSummary(); save(); }
+  function cardEl(code) {
+    return document.querySelector('#courses .course[data-code="' + String(code).replace(/[^A-Za-z0-9]/g, "") + '"]');
   }
-  function mountMs(btn, title, ph, rowsHtml, footHtml, onAct, onToggle, alignRight) {
+  // "silent" = just dismiss, touch nothing else. The default path refreshes only that one card,
+  // so the popover anchor is never replaced underneath itself (that was the "won't open" bug).
+  function closeMs(mode) {
+    if (!openMs) return;
+    var code = openMs.code, node = openMs.el, btn = openMs.btn;
+    openMs = null;
+    if (node && node.parentNode) node.parentNode.removeChild(node);
+    try { if (btn && btn.isConnected) btn.setAttribute("aria-expanded", "false"); } catch (e) { }
+    if (mode === "silent") return;
+    if (mode === "all") { renderCourses(); updateSummary(); save(); return; }
+    refreshCard(code); updateSummary(); save();
+  }
+  function refreshCard(code) {
+    var idx = -1;
+    state.courses.forEach(function (c, i) { if (c.code === code) idx = i; });
+    var old = cardEl(code);
+    if (idx < 0 || !state.ready || !K(state.courses[idx] ? state.courses[idx].code : "") || !old) { renderCourses(); return; }
+    var tmp = document.createElement("div");
+    tmp.innerHTML = courseCardHtml(state.courses[idx], idx);
+    if (tmp.firstElementChild) old.parentNode.replaceChild(tmp.firstElementChild, old);
+  }
+  function mountMs(btn, title, ph, rowsHtml, footHtml, onAct, onToggle, alignRight, code) {
     var el = document.createElement("div");
     el.className = "ms" + (alignRight ? " right" : "");
     el.setAttribute("role", "dialog");
@@ -880,14 +1219,21 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     el.innerHTML = '<div class="ms-head"><h4>' + esc(title) + '</h4><input type="text" placeholder="' + esc(ph) + '" aria-label="' + esc(ph) + '"></div>' +
       '<div class="ms-body">' + (rowsHtml || '<div class="caption" style="padding:8px">Nothing left after your filters.</div>') + "</div>" +
       '<div class="ms-foot">' + footHtml + "</div>";
-    btn.parentElement.appendChild(el);
+    (btn.parentElement || btn).appendChild(el);
     btn.setAttribute("aria-expanded", "true");
-    openMs = { el: el, btn: btn };
+    openMs = { el: el, btn: btn, code: code };
+    fitMs(el, btn);                 // never let the seats band clip a picker
     el.addEventListener("change", function (e) {
       var t = e.target;
-      if (t.dataset.id != null) onToggle(t.dataset.id, t.checked);
-      else if (t.dataset.f != null) onToggle(t.dataset.f, t.checked);
-      else if (t.dataset.s != null) onToggle(String(t.dataset.s), t.checked);
+      if (t.dataset.id == null && t.dataset.f == null && t.dataset.s == null) return;
+      var row = t.closest ? t.closest(".ms-row") : null;
+      var key = t.dataset.id != null ? t.dataset.id : (t.dataset.f != null ? t.dataset.f : t.dataset.s);
+      if (row && row.classList.contains("dim") && t.checked) {   // impossible with the other picks: refuse to add, never trap a tick
+        t.checked = false;
+        toast(row.getAttribute("data-why") || "That option clashes with your other picks");
+        return;
+      }
+      onToggle(String(key), t.checked);
     });
     $(".ms-head input", el).addEventListener("input", function (e) {
       var q = e.target.value.toLowerCase();
@@ -905,98 +1251,161 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       i.checked = checked.indexOf(v) >= 0 || checked.indexOf(String(v)) >= 0;
     });
   }
-  function openTimeSlots(btn, code) {
-    closeMs();
-    var Cc = K(code), c = courseOf(code);
-    var groups = C.sectionOptions(Cc, c.faculty.length ? c.faculty : null);
-    var byPair = {};
-    groups.forEach(function (o) {
-      var days = {};
-      o.group.events.forEach(function (e) { days[e.day] = 1; });
-      var pair = Object.keys(days).map(Number).sort(function (a, b) { return a - b; }).map(function (d) { return C.DAY_ABBR[d]; }).join(" + ");
-      (byPair[pair] = byPair[pair] || []).push(o);
+  
+  
+  
+  // which of a course's options survive the *other two* controls plus the avoid filters.
+  // Every dimension is judged against the other two — picking sections narrows the time
+  // slots and the faculty list just as much as they narrow the sections.
+  function vetoInfo(code) {
+    var Cc = K(code), c = courseOf(code) || { locked: [], faculty: [], secs: [] };
+    var secs = (c.secs || []).map(String);
+    var info = { groups: {}, facs: {}, secs: {} };
+    if (!Cc) return info;
+    // time slots: ruled by the picked faculty and the picked sections
+    C.sectionChoices(Cc, { sections: [], faculties: c.faculty, onlySections: secs }, avoidSpec()).forEach(function (x) {
+      var t = info.groups[x.groupKey] || (info.groups[x.groupKey] = { n: 0, total: 0, why: "" });
+      t.total++;
+      if (x.viable) t.n++; else if (!t.why) t.why = x.reason;
     });
+    // faculty: ruled by the locked time slots and the picked sections
+    C.sectionChoices(Cc, { sections: c.locked, faculties: [], onlySections: secs }, avoidSpec()).forEach(function (x) {
+      x.faculties.forEach(function (f) {
+        var t = info.facs[f] || (info.facs[f] = { n: 0, total: 0, why: "" });
+        t.total++;
+        if (x.viable) t.n++; else if (!t.why) t.why = x.reason;
+      });
+    });
+    // sections: ruled by the locked time slots and the picked faculty
+    C.sectionChoices(Cc, { sections: c.locked, faculties: c.faculty }, avoidSpec()).forEach(function (x) {
+      info.secs[String(x.sec)] = { v: x.viable, why: x.reason };
+    });
+    return info;
+  }
+  function msNote(viable, total, stale) {
+    return '<div class="ms-note"><b>' + viable + "</b> of " + total + " available" +
+      (total - viable ? " · greyed rows clash with your other picks" : "") +
+      (stale ? " · " + stale + " of your current picks no longer " + (stale === 1 ? "fits" : "fit") +
+        " — untick " + (stale === 1 ? "it" : "them") + " to free the rest" : "") + "</div>";
+  }
+  function openTimeSlots(btn, code) {
+    closeMs("silent");
+    // re-resolve the live button: the card markup may have been patched since the click
+    var live = cardEl(code) && cardEl(code).querySelector('[data-act="open-ts"]');
+    if (live) btn = live;
+    var Cc = K(code), c = courseOf(code), info = vetoInfo(code);
+    var secs = (c.secs || []).map(String);
+    var byPair = {};
+    Cc.groups.forEach(function (g) {
+      var days = {};
+      g.events.forEach(function (e) { days[e.day] = 1; });
+      var pair = Object.keys(days).map(Number).sort(function (a, b) { return a - b; }).map(function (d) { return C.DAY_ABBR[d]; }).join(" + ");
+      (byPair[pair] = byPair[pair] || []).push(g);
+    });
+    var viable = 0;
+    Cc.groups.forEach(function (g) { if ((info.groups[g.key] || { n: 0 }).n) viable++; });
+    var stale = c.locked.filter(function (k) { return !(info.groups[k] || { n: 0 }).n; }).length;
     var body = Object.keys(byPair).sort().map(function (pair) {
-      return '<div class="ms-group">' + esc(pair) + "</div>" + byPair[pair].map(function (o) {
-        var g = o.group;
+      return '<div class="ms-group">' + esc(pair) + "</div>" + byPair[pair].map(function (g) {
+        var v = info.groups[g.key] || { n: 0, total: 0, why: "clashes with your other picks" };
         var cls = g.events.filter(function (e) { return e.kind !== "LAB"; });
         var lab = g.events.filter(function (e) { return e.kind === "LAB"; });
-        var facs = [];
-        o.sections.forEach(function (s) { facs.push(s.faculty); });
-        var hay = (pair + " " + o.label + " " + uniq(facs).join(" ") + " " + o.sub).toLowerCase();
-        return '<label class="ms-row" data-hay="' + esc(hay) + '"><input type="checkbox" data-id="' + esc(g.key) + '" ' + (c.locked.indexOf(g.key) >= 0 ? "checked" : "") + ">" +
+        var facs = g.sections.map(function (x) { return x.faculty; });
+        var hay = (pair + " " + g.label + " " + uniq(facs).join(" ") + " " + g.secNames.join(" ")).toLowerCase();
+        return '<label class="ms-row' + (v.n ? "" : " dim") + '" data-why="' + esc(v.why || "clashes with your other picks") + '" data-hay="' + esc(hay) + '">' +
+          '<input type="checkbox" data-id="' + esc(g.key) + '" ' + (c.locked.indexOf(g.key) >= 0 ? "checked" : "") + ">" +
           '<span class="t">' + esc(cls.map(function (e) { return C.DAY_ABBR[e.day] + " " + fmt24(e.start) + "–" + fmt24(e.end); }).join(", ")) +
           (lab.length ? '<span class="sub">Lab · ' + esc(lab.map(function (e) { return C.DAY_ABBR[e.day] + " " + fmt24(e.start) + "–" + fmt24(e.end); }).join(", ")) + "</span>" : "") +
-          '</span><span class="r">' + o.sections.length + " section" + (o.sections.length > 1 ? "s" : "") +
-          "<br><span class=\"mono\">" + esc(uniq(facs).join(", ")) + "</span></span></label>";
+          '</span><span class="r">' + (secs.length && v.n !== g.sections.length ? v.n + " of " : "") + g.sections.length + " section" + (g.sections.length > 1 ? "s" : "") +
+          "<br><span class=\"mono\">" + esc(uniq(facs).join(", ")) + "</span>" + (v.n ? "" : "<br>" + esc(v.why)) + "</span></label>";
       }).join("");
     }).join("");
-    mountMs(btn, "Lock time slots for " + code, "Filter patterns…", body,
-      '<button class="btn btn-ghost btn-sm" data-ms="all">Select all</button><button class="btn btn-ghost btn-sm" data-ms="clear">Clear</button><button class="btn btn-primary btn-sm" data-ms="done">Done</button>',
+    mountMs(btn, "Time slots for " + code, "Filter patterns…", body,
+      '<button class="btn btn-ghost btn-sm" data-ms="all">Select all</button><button class="btn btn-ghost btn-sm" data-ms="clear">Clear</button><button class="btn btn-primary btn-sm" data-ms="done">Done</button>' + msNote(viable, Cc.groups.length, stale),
       function (el, act) {
-        if (act === "all") { c.locked = groups.map(function (o) { return o.value; }); syncBoxes(el, c.locked); }
+        if (act === "all") { c.locked = Cc.groups.filter(function (g) { return (info.groups[g.key] || { n: 0 }).n; }).map(function (g) { return g.key; }); syncBoxes(el, c.locked); }
         if (act === "clear") { c.locked = []; syncBoxes(el, []); }
       },
       function (id, on) {
         var at = c.locked.indexOf(id);
         if (on && at < 0) c.locked.push(id); else if (!on && at >= 0) c.locked.splice(at, 1);
-      });
+      }, false, code);
+  }
+  function openFaculty(btn, code) {
+    closeMs("silent");
+    // re-resolve the live button: the card markup may have been patched since the click
+    var live = cardEl(code) && cardEl(code).querySelector('[data-act="open-fac"]');
+    if (live) btn = live;
+    var Cc = K(code), c = courseOf(code), info = vetoInfo(code);
+    var secs = (c.secs || []).map(String);
+    var counts = {};
+    Cc.sections.forEach(function (s) { s.faculties.forEach(function (f) { counts[f] = (counts[f] || 0) + 1; }); });
+    var names = Object.keys(counts).sort(function (a, b) { return a.localeCompare(b); });
+    var viable = names.filter(function (f) { return (info.facs[f] || { n: 0 }).n; }).length;
+    var stale = c.faculty.filter(function (f) { return !(info.facs[f] || { n: 0 }).n; }).length;
+    var rows = names.map(function (f) {
+      // when sections are picked, the honest reason is the section list, not the timetable
+      var v = info.facs[f] || { n: 0, why: "no section of this faculty fits your picks" };
+      if (!v.n && secs.length) v = { n: 0, why: "none of your picked sections" };
+      return '<label class="ms-row' + (v.n ? "" : " dim") + '" data-why="' + esc(v.why) + '" data-hay="' + esc((f + " " + (state.names[f] || "")).toLowerCase()) + '">' +
+        '<input type="checkbox" data-f="' + esc(f) + '" ' + (c.faculty.indexOf(f) >= 0 ? "checked" : "") + ">" +
+        '<span class="t"><span class="mono" style="font-weight:600">' + esc(f) + '</span><span class="sub">' + esc(state.names[f] || "") + "</span></span>" +
+        '<span class="r">' + (secs.length && v.n ? v.n + " of " : "") + counts[f] + " section" + (counts[f] > 1 ? "s" : "") + (v.n ? "" : "<br>" + esc(v.why)) + "</span></label>";
+    }).join("");
+    mountMs(btn, "Only these faculty for " + code, "Search initials or name…", rows,
+      '<button class="btn btn-ghost btn-sm" data-ms="clear">Clear</button><button class="btn btn-primary btn-sm" data-ms="done">Done</button>' + msNote(viable, names.length, stale),
+      function (el, act) { if (act === "clear") { c.faculty = []; syncBoxes(el, []); } },
+      function (f, on) {
+        var at = c.faculty.indexOf(f);
+        if (on && at < 0) c.faculty.push(f); else if (!on && at >= 0) c.faculty.splice(at, 1);
+      }, true, code);
   }
   function openSections(btn, code) {
-    closeMs();
-    var Cc = K(code), c = courseOf(code);
-    var choices = C.sectionChoices(Cc, { sections: c.locked, faculties: c.faculty }, avoidSpec());
-    var rows = choices.map(function (x) {
-      var on = c.secs.indexOf(String(x.sec)) >= 0;
-      return '<label class="ms-row' + (x.viable ? "" : " dim") + '" data-hay="' + esc((x.sec + " " + x.faculty + " " + (x.room || "") + " " + x.pattern).toLowerCase()) + '">' +
-        '<input type="checkbox" data-s="' + esc(x.sec) + '" ' + (on ? "checked" : "") + ">" +
-        '<span class="t"><span class="mono" style="font-weight:600">[' + esc(x.sec) + "]</span> " + esc(x.faculty) +
-        '<span class="sub">' + esc(x.pattern) + (x.room ? " · " + x.room : "") + (x.labRoom ? " · lab " + x.labRoom : "") + "</span></span>" +
-        '<span class="r">' + (x.viable ? (on ? "picked" : "available") : esc(x.reason)) + "</span></label>";
+    closeMs("silent");
+    // re-resolve the live button: the card markup may have been patched since the click
+    var live = cardEl(code) && cardEl(code).querySelector('[data-act="open-sec"]');
+    if (live) btn = live;
+    var Cc = K(code), c = courseOf(code), info = vetoInfo(code);
+    var secs = (c.secs || []).map(String);
+    var all = Cc.sections.slice().sort(function (a, b) { return String(a.sec).localeCompare(String(b.sec), undefined, { numeric: true }); });
+    var viable = all.filter(function (s) { return (info.secs[String(s.sec)] || { v: false }).v; }).length;
+    var stale = secs.filter(function (sn) { return !(info.secs[sn] || { v: false }).v; }).length;
+    var rows = all.map(function (s) {
+      var v = info.secs[String(s.sec)] || { v: false, why: "clashes with your other picks" };
+      var row = sectionRow(code, s.sec) || {};
+      return '<label class="ms-row' + (v.v ? "" : " dim") + '" data-why="' + esc(v.why) + '" data-hay="' + esc(row.hay || (code + " " + s.sec)) + '">' +
+        '<input type="checkbox" data-s="' + esc(String(s.sec)) + '" ' + (c.secs.indexOf(String(s.sec)) >= 0 ? "checked" : "") + ">" +
+        '<span class="t"><span class="mono" style="font-weight:600">[' + esc(String(s.sec)) + "]</span> " + esc(s.faculty) +
+        '<span class="sub">' + esc(row.pattern || "no schedule") + (s.room ? " · " + s.room : "") + (s.labRoom ? " · lab " + s.labRoom : "") + "</span></span>" +
+        '<span class="r">' + (v.v ? (c.secs.indexOf(String(s.sec)) >= 0 ? "picked" : "available") : esc(v.why)) + "</span></label>";
     }).join("");
     mountMs(btn, "Only these sections for " + code, "Search section, faculty or room…", rows,
-      '<button class="btn btn-ghost btn-sm" data-ms="clear">Clear</button><button class="btn btn-primary btn-sm" data-ms="done">Done</button>',
+      '<button class="btn btn-ghost btn-sm" data-ms="all">Select all</button><button class="btn btn-ghost btn-sm" data-ms="clear">Clear</button><button class="btn btn-primary btn-sm" data-ms="done">Done</button>' + msNote(viable, all.length, stale),
       function (el, act) {
+        if (act === "all") { c.secs = all.filter(function (s) { return (info.secs[String(s.sec)] || { v: false }).v; }).map(function (s) { return String(s.sec); }); syncBoxes(el, c.secs); }
         if (act === "clear") { c.secs = []; syncBoxes(el, []); }
       },
       function (sn, on) {
         var at = c.secs.indexOf(sn);
         if (on && at < 0) c.secs.push(sn); else if (!on && at >= 0) c.secs.splice(at, 1);
-      }, true);
+      }, true, code);
   }
-  function openFaculty(btn, code) {
-    closeMs();
-    var Cc = K(code), c = courseOf(code);
-    var counts = {};
-    Cc.sections.forEach(function (s) { s.faculties.forEach(function (f) { counts[f] = (counts[f] || 0) + 1; }); });
-    var rows = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b); }).map(function (f) {
-      return '<label class="ms-row" data-hay="' + esc((f + " " + (state.names[f] || "")).toLowerCase()) + '"><input type="checkbox" data-f="' + esc(f) + '" ' + (c.faculty.indexOf(f) >= 0 ? "checked" : "") + ">" +
-        '<span class="t"><span class="mono" style="font-weight:600">' + esc(f) + '</span><span class="sub">' + esc(state.names[f] || "") + "</span></span>" +
-        '<span class="r">' + counts[f] + " section" + (counts[f] > 1 ? "s" : "") + "</span></label>";
-    }).join("");
-    mountMs(btn, "Only these faculty for " + code, "Search initials or name…", rows,
-      '<button class="btn btn-ghost btn-sm" data-ms="clear">Clear</button><button class="btn btn-primary btn-sm" data-ms="done">Done</button>',
-      function (el, act) { if (act === "clear") { c.faculty = []; syncBoxes(el, []); } },
-      function (f, on) {
-        var at = c.faculty.indexOf(f);
-        if (on && at < 0) c.faculty.push(f); else if (!on && at >= 0) c.faculty.splice(at, 1);
-      }, true);
-  }
+
   $("#courses").addEventListener("click", function (e) {
     var b = e.target.closest("[data-act]"); if (!b) return;
     var act = b.dataset.act, code = b.dataset.code;
     if (act === "remove") {
       state.courses = state.courses.filter(function (c) { return c.code !== code; });
-      closeMs(false); afterChange(); toast(code + " removed");
+      closeMs("silent"); afterChange(); toast(code + " removed");
     } else if (act === "unlock") {
       courseOf(code).locked = courseOf(code).locked.filter(function (k) { return k !== b.dataset.id; });
-      closeMs(false); afterChange();
-    } else if (act === "open-ts") { if (openMs && openMs.btn === b) { closeMs(false); return; } openTimeSlots(b, code); }
-    else if (act === "open-fac") { if (openMs && openMs.btn === b) { closeMs(false); return; } openFaculty(b, code); }
-    else if (act === "open-sec") { if (openMs && openMs.btn === b) { closeMs(false); return; } openSections(b, code); }
+      closeMs("silent"); afterChange();
+    } else if (act === "open-ts") { if (openMs && openMs.btn === b) { closeMs(); return; } openTimeSlots(b, code); }
+    else if (act === "open-fac") { if (openMs && openMs.btn === b) { closeMs(); return; } openFaculty(b, code); }
+    else if (act === "open-sec") { if (openMs && openMs.btn === b) { closeMs(); return; } openSections(b, code); }
     else if (act === "unsec") {
       var cc = courseOf(code); cc.secs = cc.secs.filter(function (x) { return x !== b.dataset.id; });
-      closeMs(false); afterChange();
+      closeMs("silent"); afterChange();
     }
   });
 
@@ -1026,8 +1435,10 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     }).join("") : '<div class="option" style="grid-template-columns:1fr;color:var(--text-3)">No course matches “' + esc(q) + "”</div>";
     list.hidden = false;
     search.setAttribute("aria-expanded", "true");
+    fitOverlays();
+    if (syncSearchBtn) syncSearchBtn();
   }
-  function hideList() { list.hidden = true; search.setAttribute("aria-expanded", "false"); activeIdx = -1; }
+  function hideList() { list.hidden = true; search.setAttribute("aria-expanded", "false"); activeIdx = -1; syncSearchBtn(); }
   function moveActive(d) {
     var opts = $$(".option:not(.added)", list).filter(function (o) { return o.dataset.code; });
     if (!opts.length) return;
@@ -1037,8 +1448,28 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     opts[activeIdx].scrollIntoView({ block: "nearest" });
     search.setAttribute("aria-activedescendant", opts[activeIdx].id);
   }
-  search.addEventListener("input", function () { showList(search.value); });
-  search.addEventListener("focus", function () { showList(search.value); });
+  function syncSearchBtn() {
+    var combo = $(".combo"); if (!combo) return;
+    var has = !!(search.value || "").trim();
+    combo.classList.toggle("has-text", has);
+    var clr = $("#searchClr"); if (clr) clr.hidden = !(has || !list.hidden);
+  }
+  var suppressFocus = false;
+  function openList() {
+    if (search.disabled) return;
+    if (suppressFocus) { suppressFocus = false; return; }
+    showList(search.value);
+    syncSearchBtn();
+  }
+  search.addEventListener("input", openList);
+  search.addEventListener("focus", openList);
+  search.addEventListener("click", openList);
+  $("#searchClr").addEventListener("click", function () {
+    suppressFocus = true;
+    search.value = ""; hideList(); syncSearchBtn();
+    try { search.focus({ preventScroll: true }); } catch (e) { }
+    setTimeout(function () { suppressFocus = false; }, 0);
+  });
   search.addEventListener("keydown", function (e) {
     if (e.key === "ArrowDown") { e.preventDefault(); moveActive(1); }
     else if (e.key === "ArrowUp") { e.preventDefault(); moveActive(-1); }
@@ -1270,9 +1701,9 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       rows: built.rows, prefs: prefs, ord: C.orderRows(built.rows), items: [], picks: {},
       running: true, done: false, once: false, all: false, stale: false,
       scanned: 0, tried: 0, valid: 0, space: 0, stats: { examBlockedPairs: 0, pairs: 0 },
-      mode: null, worker: null, en: null, renderedCount: -1
+      mode: null, worker: null, en: null, renderedCount: -1, sig: currentSig()
     };
-    state.results = []; state.picks = {}; state.page = 1;
+    state.results = []; state.picks = {}; state.page = 1; state.railPage = [];
     setGen(true, "Searching…");
     $("#progBar").style.width = "0";
     renderResults();
@@ -1307,7 +1738,13 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       if (why === "done") sp.done = true;
       setGen(false);
       $("#prog").hidden = true;
+      if (sp.pendingAdvance) {
+        sp.pendingAdvance = false;
+        var pg = Math.max(1, Math.ceil(sp.items.length / state.pageSize));
+        if (state.page < pg) state.page++;
+      }
       renderResults();
+      saveResults();
       say(num(sp.valid) + " routine" + (sp.valid === 1 ? "" : "s") + " found" + (sp.done ? "" : " so far"));
     }
     function onBatch(m) {
@@ -1315,12 +1752,29 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       if (m.done) { stop("done"); return false; }
       return true;
     }
+    // one batch per user action — unless they explicitly asked for everything
     function decideNext(delay) {
       if (!sp.running || state.search !== sp) return;
-      if (sp.once) { sp.once = false; stop("cap"); return; }
-      if (!sp.all && sp.items.length >= MAX_COLLECT) { stop("cap"); return; }
+      if (!sp.all) { sp.once = false; sp.wantMore = 0; stop("page"); return; }
+      if (sp.items.length >= MAX_COLLECT) { sp.all = false; stop("cap"); return; }
+      sp.wantMore = 1e9;
       if (delay) setTimeout(sp.resume, delay); else sp.resume();
     }
+    function requestMore(all) {
+      if (sp.running) return;
+      sp.running = true;
+      sp.all = !!all;
+      sp.once = !all;
+      sp.wantMore = all ? 1e9 : (state.page + 1) * state.pageSize;
+      if (sp.restored) {                       // saved pages: rebuild the enumerator and re-derive the same order
+        sp.en = sp.en || C.createEnumerator(sp.rows, sp.prefs);
+        sp.items = []; sp.renderedCount = -1; sp.restored = false;
+      }
+      setGen(true, all ? "Searching everything…" : "Finding " + state.pageSize + " more…");
+      $("#prog").hidden = false;
+      sp.resume();
+    }
+    sp.requestMore = requestMore;
     sp.decideNext = decideNext; sp.stop = stop;
 
     if (typeof Worker === "function") {
@@ -1333,13 +1787,13 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
           if (state.search !== sp) return;
           if (m.type === "ready") {
             sp.space = m.space; sp.stats = m.stats || sp.stats;
-            sp.resume = function () { try { w.postMessage({ type: "more", want: sp.once ? state.pageSize : CHUNK, budgetMs: sp.once ? 1500 : (window.innerWidth < 720 ? 120 : 240) }); } catch (e) { startMain(); } };
+            sp.resume = function () { try { w.postMessage({ type: "more", want: sp.wantMore || (sp.once ? state.pageSize : CHUNK), budgetMs: sp.once ? 1500 : (window.innerWidth < 720 ? 120 : 240) }); } catch (e) { startMain(); } };
             sp.resume();
           } else if (m.type === "batch") { if (onBatch(m)) decideNext(30); }
           else if (m.type === "error") { toast("Search worker: " + m.message); startMain(); }
         };
         w.postMessage({ type: "init", rows: slimRows(built.rows), prefs: prefs });
-        sp.resume = function () { try { w.postMessage({ type: "more", want: sp.once ? state.pageSize : CHUNK, budgetMs: 240 }); } catch (e) { startMain(); } };
+        sp.resume = function () { try { w.postMessage({ type: "more", want: sp.wantMore || (sp.once ? state.pageSize : CHUNK), budgetMs: sp.wantMore ? 0 : 240 }); } catch (e) { startMain(); } };
         try { writeUrl(); } catch (e) { }
         return;
       } catch (e) { sp.worker = null; sp.mode = null; }
@@ -1354,8 +1808,8 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       sp.resume = function () {
         if (!sp.running || state.search !== sp) return;
         var r = sp.en.next({
-          want: sp.once ? state.pageSize : (sp.items.length ? CHUNK : state.pageSize),
-          budgetMs: sp.items.length ? (window.innerWidth < 720 ? 40 : 90) : 900, sort: false
+          want: sp.wantMore || (sp.once ? state.pageSize : (sp.items.length ? CHUNK : state.pageSize)),
+          budgetMs: sp.wantMore ? (sp.all ? 1200 : 900) : (sp.items.length ? (window.innerWidth < 720 ? 40 : 90) : 900), sort: false
         });
         if (onBatch(r)) decideNext(16);
       };
@@ -1403,9 +1857,10 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     if (desc && state.results && state.results.length) {
       desc.innerHTML = "<b class=\"tnum\" style=\"color:var(--text)\">" + num(sp.valid) + " routine" + (sp.valid === 1 ? "" : "s") + " found</b> · " +
         (sp.done ? "search complete · <span class=\"tnum\">" + num(sp.space) + "</span> combinations checked"
-          : "search running · <span class=\"tnum\">" + num(sp.tried) + "</span> of <span class=\"tnum\">" + num(sp.space) + "</span> combinations checked") +
+        : (sp.running ? "searching · " : "next batch ready · ") + "<span class=\"tnum\">" + num(sp.tried) + "</span> of <span class=\"tnum\">" + num(sp.space) + "</span> combinations checked") +
         (sp.stats && sp.stats.examBlockedPairs ? " · <span class=\"tnum\">" + num(sp.stats.examBlockedPairs) + "</span> pairings blocked by exam clashes" : "") +
-        (sp.stale ? " · <span style=\"color:var(--warning)\">settings changed since</span>" : "");
+        (sp.stale ? " · <span style=\"color:var(--warning)\">settings changed since</span>" : "") +
+        (sp.restored ? " · <span style=\"color:var(--text-2)\">kept on this device</span>" : "");
     } else if (desc && state.results && !state.results.length) {
       desc.innerHTML = state.blockedNote ||
         ("0 routines found · <span class=\"tnum\">" + num(sp.tried || sp.space || 0) + "</span> combination" + (((sp.tried || sp.space || 0) === 1) ? "" : "s") + " checked");
@@ -1421,18 +1876,20 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       '<div class="r"><select class="select" data-pg="size" aria-label="Routines per page">' +
       [10, 25, 50].map(function (n) { return '<option value="' + n + '"' + (n === state.pageSize ? " selected" : "") + ">" + n + "</option>"; }).join("") + "</select>" +
       '<button class="btn btn-secondary btn-sm" data-pg="prev"' + (state.page === 1 ? " disabled" : "") + ">◀ Prev</button>" +
-      '<button class="btn btn-secondary btn-sm" data-pg="next"' + (start + state.pageSize >= total ? " disabled" : "") + ">Next ▶</button>" + extra + "</div>";
+      '<button class="btn btn-secondary btn-sm" data-pg="next"' + (start + state.pageSize >= total && sp.done ? " disabled" : "") + ">Next ▶</button>" + extra + "</div>";
   }
   $("#resultsBody").addEventListener("click", function (e) {
     var pg = e.target.closest("[data-pg]");
     if (pg) {
       var sp = state.search;
-      var act = pg.dataset.pg, pages = Math.max(1, Math.ceil((state.results || []).length / state.pageSize));
-      if (act === "prev" && state.page > 1) { state.page--; renderResults(); }
-      else if (act === "next" && state.page < pages) { state.page++; renderResults(); }
+      var act = pg.dataset.pg, loaded = sp ? sp.items.length : 0;
+      var pages = Math.max(1, Math.ceil(loaded / state.pageSize));
+      if (act === "prev" && state.page > 1) { state.page--; renderResults(); saveResults(); }
+      else if (act === "next" && state.page < pages) { state.page++; renderResults(); saveResults(); }
       else if (act === "size") return;
-      else if (act === "more" && sp && !sp.running) { sp.running = true; sp.once = true; sp.all = false; setGen(true, "Finding " + state.pageSize + " more…"); sp.resume(); }
-      else if (act === "all" && sp && !sp.running) { sp.running = true; sp.once = false; sp.all = true; setGen(true, "Searching everything…"); sp.resume(); }
+      else if (act === "next" && sp && !sp.done && !sp.running) { sp.pendingAdvance = true; sp.requestMore(false); }
+      else if (act === "more" && sp && !sp.running && !sp.done) { sp.requestMore(false); }
+      else if (act === "all" && sp && !sp.running && !sp.done) { sp.requestMore(true); }
       return;
     }
     var sz = e.target.closest("[data-pg=size]");
@@ -1476,7 +1933,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       if (det) det.open = true;
       art.replaceWith(node);
       say("Section swapped");
-      save();
+      save(); saveResults();
     }
   });
 
@@ -1492,7 +1949,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     var list = sortedItems(), total = list.length;
     var start = (state.page - 1) * state.pageSize;
     var page = list.slice(start, start + state.pageSize);
-    body.innerHTML = '<div class="results-head">' +
+    var head = '<div class="results-head">' +
       '<div class="ctl"><label class="faint" style="font-size:13px" for="sortSel">Sort</label>' +
       '<select class="select" id="sortSel">' + [["best", "Best overall"], ["days", "Fewest days"], ["gaps", "Fewest gaps"], ["late", "Latest start"], ["early", "Earliest finish"], ["choices", "Most section choices"]]
         .map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === state.sort ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
@@ -1501,11 +1958,30 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       '<div class="ctl"><button class="btn btn-secondary btn-sm" id="copyLink"><svg width="14" height="14"><use href="#i-link"/></svg>Copy link</button>' +
       '<button class="btn btn-secondary btn-sm" id="printAll">Print all</button></div></div>' +
       '<div class="legend"><i style="background:var(--c1-line)"></i><i style="background:var(--c2-line)"></i><i style="background:var(--c3-line)"></i>' +
-      "colour = course · hatched = lab · red ring = exam clash · TBA = faculty not published yet</div>" +
-      page.map(function (it, i) { return routineHtml(materialise(it), it._gi, start + i + 1, start + i + 1 === 1 && state.sort === "best"); }).join("") +
-      '<div class="pager" id="pager"></div>';
+      "colour = course · hatched = lab · red ring = exam clash · TBA = faculty not published yet</div>";
+    // collect which sections this page shows so the seats rail can follow the paging
+    var acc = state.courses.map(function (c) { return { code: c.code, seen: {} }; });
+    var html = page.map(function (it, i) {
+      var r = materialise(it);
+      r.picks.forEach(function (p, ci) {
+        var slot = acc[ci]; if (!slot) return;
+        p.sections.forEach(function (s) {
+          var row = sectionRow(p.code, s.sec); if (!row) return;
+          var k = String(s.sec);
+          if (!slot.seen[k]) slot.seen[k] = { r: row, inUse: 0 };
+          if (s === p.chosen) slot.seen[k].inUse++;
+        });
+      });
+      return routineHtml(r, it._gi, start + i + 1, start + i + 1 === 1 && state.sort === "best");
+    }).join("");
+    state.railPage = acc.map(function (g, gi) {
+      var rows = Object.keys(g.seen).sort().map(function (k) { return { r: g.seen[k].r, inUse: g.seen[k].inUse > 0 }; });
+      return { code: g.code, hue: gi, rows: rows };
+    }).filter(function (g) { return g.rows.length; });
+    body.innerHTML = head + html + '<div class="pager" id="pager"></div>';
     $("#sortSel").onchange = function () { state.sort = this.value; state.page = 1; renderResults(); save(); };
     renderStatus();
+    queueRail();
   }
   function placeholderHtml(msg) {
     return '<div class="placeholder"><b>' + esc(msg || "Your routines will appear here.") + "</b>" +
@@ -1523,6 +1999,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
       if (state.prefs.examClash) hints.push("turn off “Check exam clashes” — clashing exams then get flagged instead of rejecting the routine");
       state.courses.forEach(function (c) {
         if (c.locked.length) hints.push("unlock time slots for " + esc(c.code));
+        if ((c.secs || []).length) hints.push("widen the section" + (c.secs.length > 1 ? "s" : "") + " [" + esc(c.secs.join(", ")) + "] on " + esc(c.code));
         if (c.faculty.length) hints.push("drop the faculty filter on " + esc(c.code));
       });
     }
@@ -1661,9 +2138,683 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     }, 20);
   }
 
+
+  /* ============================== seats rail (inside the drawer) ==============================
+     Tracks free seats. Its own worker, its own timer, and it only ever writes to #railBody —
+     a seat refresh can never delay or disturb a running search. */
+
+  /* ------------------------ seats panel: one adjustable split view ------------------------
+     The panel always shares the screen with the page: beside it on wide screens, below it on
+     narrow ones. The handle between the two is draggable (and keyboard-resizable), and the size
+     you leave it at is remembered. No dock / float / pin-bar modes to choose between. */
+  var LS_DRAWER = "prohor.seatsMode", LS_RAIL = "prohor.railSize";
+  // the sticky chrome sits above the page's scroll port, so scrollIntoView needs its real height
+  function stickInset() {
+    if (!SEATS_VIEW) return;
+    var top = document.querySelector(".rail-top");
+    var px = top ? Math.round(top.getBoundingClientRect().bottom + 10) : 0;
+    if (px > 40) document.documentElement.style.setProperty("--stick", px + "px");
+  }
+  function toggleRailSlim() {
+    if (!state.rail) readRailPrefs();
+    var L = railLimit("h");
+    if (railSlim()) {
+      state.rail.h = railClamp("h", state.rail.was || L.def);
+    } else {
+      state.rail.was = state.rail.h;
+      state.rail.h = L.lo;
+      toast("Folded — tap the handle to unfold");
+    }
+    applyRailSize(); saveRailPrefs(); renderRail();
+  }
+  var RAIL_MIN_W = 300, RAIL_MIN_H = 96, RAIL_SLIM = 118, PIN_MAX = 50;
+  var SEATS_VIEW = false;                                            // set from ?view=seats at boot
+  var SEATS_LOADED = /[?&]view=seats\b/.test(location.search);       // opened as a page, not toggled
+  function railStacked() { return !SEATS_VIEW && window.innerWidth < 1024; }   // page above, panel below
+  function railAxis() { return railStacked() ? "h" : "w"; }
+  function railLimit(kind) {
+    if (kind === "h") {
+      var vh = window.innerHeight || 800;
+      // never let the band take so much that the page cannot hold a header, a card and the buttons
+      return { lo: RAIL_MIN_H, hi: Math.max(220, vh - 260), def: Math.min(340, Math.max(210, Math.round(vh * 0.42))) };
+    }
+    var vw = window.innerWidth || 1280;
+    return { lo: RAIL_MIN_W, hi: Math.max(RAIL_MIN_W + 40, vw - 460), def: Math.min(560, Math.max(RAIL_MIN_W, vw >= 1280 ? 430 : 380)) };
+  }
+  function railSlim() { return railStacked() && state.rail && state.rail.h <= RAIL_SLIM; }
+  function railClamp(kind, v) {
+    var L = railLimit(kind);
+    v = Math.round(Number(v));
+    if (!isFinite(v) || v === 0) return L.def;      // unset, not "smaller than the minimum"
+    return Math.min(L.hi, Math.max(L.lo, v));
+  }
+  function readRailPrefs() {
+    var o = {};
+    try { o = JSON.parse(localStorage.getItem(LS_RAIL) || "{}") || {}; } catch (e) { }
+    state.rail = { w: railClamp("w", o.w), h: railClamp("h", o.h) };
+  }
+  function saveRailPrefs() { try { localStorage.setItem(LS_RAIL, JSON.stringify(state.rail)); } catch (e) { } }
+  function applyRailSize() {
+    if (!state.rail) readRailPrefs();
+    document.body.style.setProperty("--rail-w", state.rail.w + "px");
+    document.body.style.setProperty("--rail-h", state.rail.h + "px");
+    // --rail-top = the y of the split, so page overlays can size themselves to the band that is left
+    var top = railStacked() ? Math.max(160, (window.innerHeight || 800) - state.rail.h) : (window.innerHeight || 800);
+    document.body.style.setProperty("--rail-top", top + "px");
+    var layer = $("#seatsLayer");
+    if (layer) {
+      if (SEATS_VIEW) { layer.classList.remove("slim", "tight"); }    // a page has nothing to fold
+      var slim = railSlim();
+      layer.classList.toggle("slim", slim);
+      layer.classList.toggle("tight", railStacked() && state.rail.h < Math.round((window.innerHeight || 800) * 0.56));
+      var more = $("#railMore");
+      if (more) { more.textContent = slim ? "Show sections" : "Hide sections"; more.title = slim ? "Give the panel its rows back" : "Shrink the panel to a status strip"; }
+      if (more) more.setAttribute("aria-expanded", String(!slim));
+    }
+    if (!railSlim()) state.rail.was = state.rail.h;
+    var g = $("#railGrip");
+    if (!g) return;
+    var kind = railAxis(), L = railLimit(kind), px = state.rail[kind];
+    g.setAttribute("aria-orientation", railStacked() ? "horizontal" : "vertical");
+    g.setAttribute("aria-valuemin", String(L.lo));
+    g.setAttribute("aria-valuemax", String(L.hi));
+    g.setAttribute("aria-valuenow", String(px));
+    g.setAttribute("aria-valuetext", px + " pixels");
+  }
+  function seatsHelp() {
+    if (SEATS_VIEW) return "This is its own page — pin it, resize the window, keep it open beside the planner.";
+    return railStacked() ? "Drag the handle to resize · tap it to fold." : "Drag the handle between the page and this panel to resize it.";
+  }
+  function railSize() { return state.rail[railAxis()]; }
+  function setRailSize(px, live) {
+    var kind = railAxis();
+    state.rail[kind] = railClamp(kind, px);
+    applyRailSize();
+    if (!live) saveRailPrefs();
+    if (openMs && openMs.el) fitMs(openMs.el, openMs.btn);        // a popover may need to flip the other way
+    fitOverlays();
+  }
+  // the course dropdown and the data popover must fit in the page band too, not under the seats panel
+  function fitOverlays() {
+    var covering = railStacked() && $("#seatsLayer") && !$("#seatsLayer").hidden;
+    var box = covering ? pageBox() : { top: 0, bottom: window.innerHeight || 800 };
+    var band = box.bottom;
+    var lb = $("#courseList");
+    if (lb && !lb.hidden) {
+      var r = lb.getBoundingClientRect();
+      var anchor = (search && search.getBoundingClientRect) ? search.getBoundingClientRect() : null;
+      if (!covering) lb.style.removeProperty("max-height");
+      else if (anchor && anchor.bottom) lb.style.maxHeight = Math.max(120, Math.min(330, band - anchor.bottom - 14)) + "px";
+    }
+    var lp = $("#livePop");
+    if (lp && !lp.hidden) {
+      var pb = $("#livePill") && $("#livePill").getBoundingClientRect();
+      if (!covering) lp.style.removeProperty("max-height");
+      else if (pb && pb.bottom) lp.style.maxHeight = Math.max(140, Math.min(440, band - pb.bottom - 12)) + "px";
+    }
+  }
+  // the box an overlay may occupy: the page pane when the screen is split, the viewport otherwise
+  function pageBox() {
+    var vh = window.innerHeight || 800;
+    if (SEATS_VIEW) return { top: 56, bottom: vh - 8 };               // no band to dodge: the panel is the page
+    var split = railStacked() && $("#seatsLayer") && !$("#seatsLayer").hidden;
+    var m = document.querySelector("main");
+    var b = split && m && m.getBoundingClientRect ? m.getBoundingClientRect() : null;
+    if (b && b.bottom > 140 && b.height > 140) return { top: b.top + 4, bottom: b.bottom - 4 };
+    return { top: 60, bottom: split ? Math.max(200, vh - (state.rail ? state.rail.h : 320)) : vh - 6 };
+  }
+  // a picker is useless if it lands under the band: measure, cap its height, and open upward when needed
+  function fitMs(el, btn) {
+    if (!el || !el.style || !btn || !btn.getBoundingClientRect) return;
+    var r = btn.getBoundingClientRect();
+    if (!r.bottom) return;                                        // no layout (jsdom, print): leave it alone
+    var box = pageBox();
+    var below = box.bottom - r.bottom - 14, above = r.top - box.top - 10;
+    var up = below < 230 && above > below;
+    var room = Math.round(Math.max(180, Math.min(430, up ? above : below)));
+    el.classList.toggle("up", up);
+    el.style.maxHeight = room + "px";
+    if (up) el.style.top = "auto"; else el.style.removeProperty("top");
+    // the list is what matters: the head and the footer (which carries the note) must never
+    // squeeze it below two rows, so a tight popover drops its note first
+    var head = el.querySelector(".ms-head"), foot = el.querySelector(".ms-foot"), list = el.querySelector(".ms-body");
+    var chrome = (head ? head.offsetHeight : 40) + (foot ? foot.offsetHeight : 46) + 6;
+    var want = room - chrome;
+    if (list && want < 150) {
+      var note = el.querySelector(".ms-note");
+      if (note) { note.style.display = "none"; foot = el.querySelector(".ms-foot"); chrome = (head ? head.offsetHeight : 40) + (foot ? foot.offsetHeight : 26) + 6; want = room - chrome; }
+    }
+    if (list) list.style.maxHeight = Math.max(132, want) + "px";
+    el.style.maxHeight = Math.max(chrome + 132, Math.min(room, chrome + Math.max(132, want))) + "px";
+    try { el.scrollIntoView({ block: "nearest" }); } catch (e) { }
+  }
+  function setSeatsMode(mode, persist) {
+    var layer = $("#seatsLayer");
+    if (!layer) return;
+    mode = mode === "closed" ? "closed" : "open";
+    if (SEATS_VIEW) mode = "open";        // the panel IS the page here: closing it would blank the tab
+    var wasOpen = state.seats.mode === "open";
+    var mainEl = document.querySelector("main");
+    // Turning the split on moves scrolling from the document into the page pane (and back out
+    // again), so carry the reader's place across both ways — otherwise opening the seats throws
+    // them to the top of the page, and closing it loses wherever they had scrolled.
+    var paneTop = mainEl ? Math.round(mainEl.getBoundingClientRect().top + (window.scrollY || 0)) : 0;
+    var docY = Math.round(window.scrollY || 0);
+    var paneY = mainEl ? mainEl.scrollTop : 0;
+    var stackedNow = railStacked();
+    state.seats.mode = mode;
+    applyRailSize();
+    layer.hidden = mode === "closed";
+    if (mode === "closed") layer.classList.remove("open");
+    else { void layer.offsetWidth; layer.classList.add("open"); }
+    document.body.classList.toggle("seats-open", mode === "open" && !SEATS_VIEW);   // a page never wears the split's clothes
+    $("#seatsBtn").setAttribute("aria-expanded", String(mode === "open"));
+    if (stackedNow && mainEl) {
+      try {
+        if (mode === "open") mainEl.scrollTop = Math.max(0, docY - paneTop);
+        else if (wasOpen) {
+          mainEl.scrollTop = paneY;
+          var back = paneY + paneTop;
+          var restore = function () { try { window.scrollTo(0, back); } catch (e) { } };
+          if (window.requestAnimationFrame) requestAnimationFrame(restore); else restore();
+        }
+      } catch (e) { }
+    }
+    fitOverlays();             // a closed band frees the page again, an open one narrows it
+    stickInset();
+    if (mode === "open") {
+      renderRail();            // paint the lists at once — never wait on the first seat tick
+      // focus the filter only where the panel owns a side column: on a phone this would throw
+      // the soft keyboard over the page the user is still working on
+      if (!railStacked()) setTimeout(function () { try { $("#seatSearch").focus({ preventScroll: true }); } catch (e) { } }, 200);
+    }
+    else setTimeout(function () { if (!layer.classList.contains("open")) layer.hidden = true; }, 260);
+    if (typeof seatCadence === "function") seatCadence();
+    if (persist !== false) { try { localStorage.setItem(LS_DRAWER, mode); } catch (e) { } }
+  }
+  function toggleSeats() { if (SEATS_VIEW) { setSeatsView(false); return; } setSeatsMode(state.seats.mode === "open" ? "closed" : "open"); }
+  function seatsPageUrl() {
+    var u = new URLSearchParams(location.search);
+    u.set("view", "seats");
+    return location.pathname + "?" + u.toString();
+  }
+  function openSeatsWindow() {
+    var url = seatsPageUrl(), w = null;
+    try { w = window.open(url, "_blank", "noopener"); } catch (e) { }
+    if (!w) { toast("The browser blocked the new window — opening the seats page in this tab"); location.href = url; }
+    else toast("Seats opened in a new window — it follows this tab as you plan");
+  }
+  // the panel as a page: same document, same state, no band and no split
+  function setSeatsView(on, push) {
+    SEATS_VIEW = !!on;
+    document.body.classList.toggle("view-seats", SEATS_VIEW);
+    document.title = SEATS_VIEW ? "Seats & sections · Prohor" : "Prohor · BRACU routine planner";
+    var sb = $("#seatsBtn");
+    if (sb) sb.title = SEATS_VIEW ? "Seats & sections — this is the seats page; tap to go back to the planner"
+                                  : "Seats & sections — opens beside your work, drag its edge to resize";
+    var back = $("#railBack"); if (back) { back.hidden = !SEATS_VIEW; }
+    var more = $("#railMore"); if (more) more.style.display = "";
+    var layer = $("#seatsLayer");
+    if (SEATS_VIEW) {
+      state.seats.mode = "open";
+      document.body.classList.remove("seats-open");
+      if (layer) { layer.hidden = false; void layer.offsetWidth; layer.classList.add("open"); }
+      applyRailSize(); renderRail();
+      if (typeof seatCadence === "function") seatCadence();
+      toast("Seats as a page — tap Seats again to go back");
+    } else {
+      if (layer) layer.classList.remove("slim", "tight");
+      setSeatsMode("open");
+    }
+    if (push !== false) { try { writeUrl(); } catch (e) { } }
+  }
+  $("#railPop").addEventListener("click", function (e) { e.stopPropagation(); setSeatsView(true); });
+  $("#railWin").addEventListener("click", function (e) { e.stopPropagation(); openSeatsWindow(); });
+  $("#railBack").addEventListener("click", function (e) {
+    e.preventDefault();
+    if (!SEATS_LOADED) { setSeatsView(false); return; }               // toggled in this tab: undo it
+    try { window.close(); } catch (err) { }
+    setTimeout(function () { location.href = location.pathname; }, 60);   // a real window: close it, else go home
+  });
+  window.addEventListener("storage", function (e) {                   // the planner and the seats page stay in step
+    if (!e || e.key !== LS_STATE || !e.newValue) return;
+    var o = null;
+    try { o = JSON.parse(e.newValue); } catch (err) { return; }
+    if (!o) return;
+    if (Array.isArray(o.pins)) state.pins = o.pins.filter(function (x) { return x && x.code && x.sec != null; }).slice(0, 50);
+    if (SEATS_VIEW && Array.isArray(o.courses)) {
+      state.courses = o.courses.slice(0, MAX_COURSES).map(function (c) {
+        return { code: (c.code || "").toUpperCase(), locked: c.locked || [], faculty: c.faculty || [], secs: c.secs || [] };
+      });
+      renderCourses(); updateSummary();
+    }
+    renderRail();
+  });
+  $("#seatsBtn").addEventListener("click", function (e) { e.stopPropagation(); toggleSeats(); });
+  $("#seatsClose").addEventListener("click", function () { setSeatsMode("closed"); try { $("#seatsBtn").focus(); } catch (e) { } });
+  $("#railMore").addEventListener("click", function (e) { e.stopPropagation(); toggleRailSlim(); });
+  window.addEventListener("resize", function () {
+    stickInset();
+    if (state.rail) setRailSize(railSize(), true);          // keep the split legal for the new viewport
+    fitOverlays();
+    if (!state.seats || state.seats.mode !== "open") return;
+    renderRail();
+  });
+  // the handle: drag it, double-click it for the default size, or nudge it with the arrow keys
+  (function railDrag() {
+    var grip = $("#railGrip");
+    if (!grip) return;
+    var drag = null, skipClick = false;
+    function point(ev) {
+      var t = ev.touches && ev.touches[0];
+      return { x: t ? t.clientX : (Number(ev.clientX) || 0), y: t ? t.clientY : (Number(ev.clientY) || 0) };
+    }
+    function start(ev) {
+      if (ev.button != null && ev.button !== 0) return;
+      var p = point(ev);
+      drag = { x: p.x, y: p.y, size: railSize(), horiz: !railStacked(), moved: false };
+      skipClick = false;                      // a new press clears any pending drag-click
+      var layer = $("#seatsLayer");
+      if (layer) layer.classList.add("dragging");
+      document.body.classList.add("rail-resizing");
+      try { ev.preventDefault(); } catch (e) { }
+    }
+    function move(ev) {
+      if (!drag) return;
+      var p = point(ev);
+      // pulling the handle away from the panel's edge makes the panel bigger
+      var delta = drag.horiz ? (drag.x - p.x) : (drag.y - p.y);
+      if (delta) drag.moved = true;
+      setRailSize(drag.size + delta, true);
+      try { ev.preventDefault(); } catch (e) { }
+    }
+    function end() {
+      if (!drag) return;
+      var moved = drag.moved;
+      drag = null;
+      if (moved) skipClick = true;
+      var layer = $("#seatsLayer");
+      if (layer) layer.classList.remove("dragging");
+      document.body.classList.remove("rail-resizing");
+      saveRailPrefs();
+      if (moved && layer && !layer.hidden) renderRail();
+    }
+    grip.addEventListener("mousedown", start);
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", end);
+    grip.addEventListener("touchstart", start, { passive: false });
+    window.addEventListener("touchmove", move, { passive: false });
+    window.addEventListener("touchend", end);
+    // a drag ends with a click too, so the gesture that moved swallows exactly the next one —
+    // a time window would also swallow a genuine tap that follows a resize
+    grip.addEventListener("click", function () {
+      if (skipClick) { skipClick = false; return; }
+      if (!railStacked()) { toast("On a wide screen drag the handle sideways to size the panel"); return; }
+      toggleRailSlim();
+    });
+    grip.addEventListener("dblclick", function () {
+      var kind = railAxis();
+      state.rail[kind] = railLimit(kind).def; applyRailSize(); saveRailPrefs();
+      toast(railStacked() ? "Panel back to its default height" : "Panel back to its default width");
+    });
+    grip.addEventListener("keydown", function (e) {
+      var step = e.shiftKey ? 80 : 24, cur = railSize();
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") setRailSize(cur + step);
+      else if (e.key === "ArrowRight" || e.key === "ArrowDown") setRailSize(cur - step);
+      else if (e.key === "Home") { var kind = railAxis(); setRailSize(railLimit(kind).def); }
+      else return;
+      e.preventDefault();
+    });
+  })();
+  // pinned sections: any section of any course, up to 50, always kept at the top of the panel
+  function pinToggle(code, sec) {
+    var at = -1;
+    state.pins.forEach(function (x, i) { if (x.code === code && String(x.sec) === String(sec)) at = i; });
+    if (at >= 0) { state.pins.splice(at, 1); toast(code + " [" + sec + "] unpinned"); }
+    else {
+      if (state.pins.length >= PIN_MAX) { toast("You can keep track of " + PIN_MAX + " sections at most — unpin one first"); return false; }
+      state.pins.push({ code: code, sec: String(sec) });
+      toast(code + " [" + sec + "] pinned · " + state.pins.length + " of " + PIN_MAX);
+    }
+    save(); renderRail();
+    return true;
+  }
+  var SEAT_MS = 30000, SEAT_MS_OPEN = 8000, SEAT_MAX_BACKOFF = 480000;
+  var seatWorker = null, seatBusy = false, seatTimer = null, rowCache = {};
+  state.seats = { map: {}, at: null, error: null, paused: false, backoff: SEAT_MS, lastTry: 0, query: "", open: {}, showAll: false, mode: "closed" };
+  state.pins = [];
+  state.railPage = [];
+  state.rail = { w: 430, h: 320, was: 320 };
+
+  function secKey(code, sec) { return code + "|" + sec; }
+  function findSec(code, sec) {
+    var Cc = K(code); if (!Cc) return null;
+    for (var i = 0; i < Cc.sections.length; i++) if (String(Cc.sections[i].sec) === String(sec)) return Cc.sections[i];
+    return null;
+  }
+  function seatOf(code, sec) {
+    var m = state.seats.map[secKey(code, sec)];
+    if (m) return m;
+    var s = findSec(code, sec);
+    if (!s || s.cap == null || s.used == null) return null;
+    return { cap: +s.cap, used: +s.used, free: Math.max(0, s.cap - s.used), over: s.used > s.cap ? s.used - s.cap : 0 };
+  }
+  function indexSeats() {
+    rowCache = {};
+    var map = {};
+    if (!state.index) { state.seats.map = map; return; }
+    state.index.codes.forEach(function (code) {
+      state.index.courses[code].sections.forEach(function (s) {
+        var cap = s.cap == null ? null : +s.cap, used = s.used == null ? null : +s.used;
+        map[secKey(code, s.sec)] = { cap: cap, used: used, free: cap == null || used == null ? null : Math.max(0, cap - used), over: cap == null || used == null ? 0 : Math.max(0, used - cap) };
+      });
+    });
+    state.seats.map = map;
+  }
+  function sectionRow(code, sec) {
+    var key = code + "|" + sec;
+    if (rowCache[key]) return rowCache[key];
+    var s = findSec(code, sec);
+    if (!s) return (rowCache[key] = null);
+    var Cc = K(code), pat = "no schedule", g = null;
+    if (Cc) for (var i = 0; i < Cc.groups.length; i++) {
+      var gg = Cc.groups[i];
+      for (var j = 0; j < gg.sections.length; j++) if (gg.sections[j] === s) { g = gg; break; }
+      if (g) break;
+    }
+    if (g) pat = patternLabel(g);
+    var fin = null, mid = null;
+    (s.exams || []).forEach(function (x) { if (x.kind === "FINAL") fin = x; else if (x.kind === "MID") mid = x; });
+    function dayChips(list) {
+      var by = {};
+      list.forEach(function (e) { (by[e.day] = by[e.day] || []).push(e); });
+      return Object.keys(by).map(Number).sort(function (x, y) { return x - y; }).map(function (day) {
+        var l = by[day];
+        var lo = Math.min.apply(null, l.map(function (q) { return q.start; }));
+        var hi = Math.max.apply(null, l.map(function (q) { return q.end; }));
+        return '<span class="dt"><span class="k-day">' + C.DAY_ABBR[day] + '</span> <span class="k-time">' + fmt12(lo) + "–" + fmt12(hi) + "</span></span>";
+      }).join(" · ");
+    }
+    var clsL = g ? g.events.filter(function (e) { return e.kind !== "LAB"; }) : [];
+    var labL = g ? g.events.filter(function (e) { return e.kind === "LAB"; }) : [];
+    var patHtml = clsL.length ? dayChips(clsL) : '<span class="k-none">no class meetings</span>';
+    if (labL.length) patHtml += ' <span class="k-lab">Lab</span> ' + dayChips(labL);
+    function examChip(kind, x) {
+      return '<span class="dt"><span class="' + (kind === "MID" ? "k-mid" : "k-fin") + '">' + (kind === "MID" ? "Mid" : "Fin") + "</span> " +
+        '<span class="k-date">' + esc(C.fmtDate(x.date).replace(/^\w+, /, "")) + '</span> <span class="k-time">' + fmt12(x.start) + "</span></span>";
+    }
+    var exHtml = (mid ? examChip("MID", mid) : "") + (fin ? (mid ? "&nbsp; " : "") + examChip("FINAL", fin) : "");
+    if (!exHtml) exHtml = '<span class="k-none">no exam slot published</span>';
+    var exam = (mid ? "Mid " + C.fmtDate(mid.date) + " " + fmt12(mid.start) + " " : "") + (fin ? "Fin " + C.fmtDate(fin.date) + " " + fmt12(fin.start) : "");
+    var facNames = s.faculties.map(function (f) { return state.names[f] || ""; }).filter(Boolean).join(" ");
+    var tip = s.label + " · " + s.faculty + (facNames ? " (" + facNames + ")" : "") + " · " + (s.room || "no room") +
+      (s.labCourse ? " · lab " + s.labCourse + " " + (s.labRoom || "") : "") +
+      (fin ? " · final " + C.fmtDate(fin.date) + " " + fmt12(fin.start) + "–" + fmt12(fin.end) : "") +
+      (mid ? " · mid " + C.fmtDate(mid.date) + " " + fmt12(mid.start) + "–" + fmt12(mid.end) : "");
+    var hay = [code, Cc && Cc.name || "", sec, s.faculty, facNames, s.room || "", s.labRoom || "", s.labCourse || "", pat, exam].join(" ").toLowerCase();
+    return (rowCache[key] = {
+      code: code, sec: String(sec), faculty: s.faculty, names: facNames, room: s.room, labRoom: s.labRoom,
+      pattern: pat, patternHtml: patHtml, examHtml: exHtml, exam: exam, tip: tip, hay: hay, hue: hueOf(code)
+    });
+  }
+  function seatPill(code, sec) {
+    var st = seatOf(code, sec);
+    if (!st || st.free == null) return '<span class="seat unknown" title="no seat figures in the feed for this section">–</span>';
+    var cls = st.free <= 0 ? (st.over ? "over" : "full") : (st.free <= 3 ? "low" : "");
+    var label = st.free <= 0 ? (st.over ? "full · +" + st.over + " over" : "full") : st.free + " free";
+    return '<span class="seat ' + cls + '" title="capacity ' + st.cap + " · enrolled " + st.used + '">' + label + "</span>";
+  }
+  function seatRow(r, inUse, showCode) {
+    var pinned = state.pins.some(function (x) { return x.code === r.code && x.sec === r.sec; });
+    return '<div class="srow' + (inUse ? " inuse" : "") + '" style="' + hueVars(r.hue) + '" title="' + esc(r.tip) + '">' +
+      '<button class="pinbtn" data-pin="' + esc(r.code + "|" + r.sec) + '" aria-pressed="' + pinned +
+        '" aria-label="' + (pinned ? "Unpin" : "Pin") + " " + esc(r.code) + " section " + esc(r.sec) + '" title="' +
+        (pinned ? "Unpin this section" : "Pin this section — it keeps its seat count at the top of the panel") +
+        " · " + state.pins.length + " of " + PIN_MAX + " pinned" + '"><svg><use href="#i-pin"/></svg></button>' +
+      '<div class="meta">' + (showCode ? '<span class="cc">' + esc(r.code) + "</span>" : "") +
+      '<span class="sec">[' + esc(r.sec) + ']</span><span class="f">' + esc(r.faculty) + "</span>" +
+      '<span class="t">' + (r.patternHtml || esc(r.pattern)) + '</span><span class="exs">' + (r.examHtml || esc(r.exam)) + "</span>" +
+      (inUse ? '<span class="use">on this page</span>' : "") + "</div>" +
+      '<div class="right">' + seatPill(r.code, r.sec) + "</div></div>";
+  }
+  function qMatch(row) { return !state.seats.query || row.hay.indexOf(state.seats.query) >= 0; }
+  function bySec(rows) { return rows.slice().sort(function (a, b) { return String(a.sec).localeCompare(String(b.sec)); }); }
+  function groupHtml(title, sub, rows, hue) {
+    if (!rows.length) return "";
+    return '<div class="sgroup"' + (hue != null ? ' style="' + hueVars(hue) + '"' : "") + "><h4>" +
+      (hue != null ? '<span class="sw"></span>' : "") + esc(title) +
+      (sub ? ' <span class="faint" style="font-weight:400">' + esc(sub) + "</span>" : "") +
+      '<span class="n">' + rows.length + " section" + (rows.length === 1 ? "" : "s") + "</span></h4>" +
+      rows.map(function (x) { return seatRow(x.r, x.inUse); }).join("") + "</div>";
+  }
+  function renderRail() {
+    var body = $("#railBody");
+    if (!body) return;
+    if (!state.index) { body.innerHTML = '<div class="rail-empty">Waiting for section data…</div>'; $("#railSub").textContent = "—"; return; }
+    var out = [], i;
+    // pinned sections — any course, any number up to PIN_MAX, always the first box
+    if (state.pins.length) {
+      var pr = state.pins.map(function (x) { return sectionRow(x.code, x.sec); }).filter(Boolean)
+        .sort(function (a, b) {
+          return String(a.code).localeCompare(String(b.code)) || String(a.sec).localeCompare(String(b.sec), undefined, { numeric: true });
+        });
+      if (pr.length) out.push('<div class="seatbox pinned"><h3><svg width="12" height="12"><use href="#i-pin"/></svg>Pinned' +
+        '<span class="at">' + pr.length + " of " + PIN_MAX + ' · <button class="link-btn" data-clearpins>clear all</button></span></h3>' +
+        '<div class="why">Kept at the top of this panel and refreshed with everything else.</div>' +
+        pr.map(function (r) { return seatRow(r, false, true); }).join("") + "</div>");
+    }
+    // 1) the sections on the routine page being read
+    if (state.railPage.length) {
+      var b = state.railPage.map(function (g) {
+        var rows = g.rows.filter(function (x) { return qMatch(x.r); }).map(function (x) { return { r: x.r, inUse: x.inUse > 0 }; });
+        return rows.length ? groupHtml(g.code, "", rows, g.hue) : "";
+      }).join("");
+      if (b) out.push('<div class="seatbox"><h3>On this routine page<span class="at">page ' + state.page + "</span></h3>" +
+        '<div class="why">Sections shown by the ' + state.pageSize + " routines on page " + state.page + " — they change as you page through.</div>" + b + "</div>");
+    }
+    // 2) every section of the chosen courses
+    if (state.courses.length) {
+      var b2 = state.courses.map(function (c, ci) {
+        var Cc = K(c.code); if (!Cc) return "";
+        var rows = bySec(Cc.sections.map(function (s) { return sectionRow(c.code, s.sec); }).filter(Boolean))
+          .filter(qMatch).map(function (r) { return { r: r, inUse: false }; });
+        return rows.length ? groupHtml(c.code, Cc.name || "", rows, ci) : "";
+      }).join("");
+      if (b2) out.push('<div class="seatbox"><h3>Your courses<span class="at">' + state.courses.length + " selected</span></h3>" +
+        '<div class="why">All sections of the courses you added, in section-number order.</div>' + b2 + "</div>");
+    }
+    // 3) the whole catalogue, alphabetical, expandable
+    var codes = state.index.codes, shown = 0, matched = [];
+    if (state.seats.query) {
+      codes.forEach(function (code) {
+        var Cc = state.index.courses[code];
+        var hit = (code + " " + (Cc.name || "")).toLowerCase().indexOf(state.seats.query) >= 0;
+        var rows = Cc.sections.map(function (s) { return sectionRow(code, s.sec); }).filter(Boolean).filter(qMatch);
+        if (hit || rows.length) matched.push({ code: code, name: Cc.name || "", rows: hit ? null : rows, all: Cc });
+      });
+    }
+    var list = state.seats.query ? matched : codes.map(function (code) { var Cc = state.index.courses[code]; return { code: code, name: Cc.name || "", rows: null, all: Cc }; });
+    // keep the DOM bounded: a query must not expand every one of 500+ courses
+    var EXPAND_CAP = 12, ROW_CAP = 300;
+    var cap = state.seats.showAll ? list.length : Math.min(list.length, state.seats.query ? 60 : 120);
+    var expanded = 0, rowsTotal = 0;
+    var rows3 = list.slice(0, cap).map(function (m) {
+      var open = state.seats.open[m.code] || (state.seats.query && m.rows && expanded < EXPAND_CAP && rowsTotal < ROW_CAP);
+      var inner = "";
+      if (open) {
+        expanded++;
+        var secs = bySec(m.rows || m.all.sections.map(function (s) { return sectionRow(m.code, s.sec); }).filter(Boolean))
+          .filter(qMatch).map(function (r) { return { r: r, inUse: false }; });
+        rowsTotal += secs.length;
+        inner = secs.length ? '<div class="sgroup">' + secs.map(function (x) { return seatRow(x.r, false); }).join("") + "</div>" : '<div class="rail-empty">no section matches the filter</div>';
+      }
+      return '<div class="coursebtn" role="button" tabindex="0" data-course="' + esc(m.code) + '" aria-expanded="' + (!!open) + '">' +
+        '<svg><use href="#i-chev"/></svg><span class="code">' + esc(m.code) + '</span><span class="nm">' + esc(m.name) + "</span>" +
+        '<span class="n">' + m.all.sections.length + " sec</span></div>" + inner;
+    }).join("");
+    var more = list.length > cap ? '<button class="btn btn-ghost btn-sm" data-showall>Show all ' + list.length + " courses</button>" : "";
+    out.push('<div class="seatbox"><h3>All courses<span class="at">' + list.length + (state.seats.query ? " match" : "") + "</span></h3>" +
+      '<div class="why">Every course in the feed, A→Z. Open one to see its sections and seats.</div>' +
+      (rows3 || '<div class="rail-empty">Nothing matches “' + esc(state.seats.query) + '”.</div>') +
+      (state.seats.query && list.length > cap ? '<div class="rail-empty">' + (list.length - cap) + ' more matching course' + (list.length - cap === 1 ? "" : "s") + ' — open one from the list or refine the search.</div>' : "") + more + "</div>");
+    body.innerHTML = out.join("");
+    renderPeek();
+    var known = 0, freeTotal = 0;
+    for (i in state.seats.map) { var v = state.seats.map[i]; if (v.free != null) { known++; if (v.free > 0) freeTotal++; } }
+    var narrow = railStacked();
+    $("#railSub").textContent = num(known) + " tracked" +
+      (narrow ? "" : " · " + num(freeTotal) + " open · " + num(state.pins.length) + " pinned");
+    stickInset();
+    var sc = $("#seatsCount"); if (sc) sc.textContent = known ? num(known) : "—";
+    railClock();
+  }
+  // the one-line pinned summary the folded band shows instead of the rows
+  function renderPeek() {
+    var el2 = $("#railPeek");
+    if (!el2) return;
+    // only meaningful in the stacked band, where it is what you see when folded
+    if (!state.pins.length || !railStacked()) { el2.hidden = true; el2.innerHTML = ""; return; }
+    var parts = state.pins.slice(0, 24).map(function (x) {
+      var st = seatOf(x.code, x.sec);
+      var free = st && st.free != null ? st.free : null;
+      var cls = free == null ? "" : (free <= 0 ? (st.over ? "full low" : "full") : (free <= 3 ? "low" : ""));
+      return "<i class=\"" + cls + "\" style=\"" + hueVars(hueOf(x.code)) + "\"><b>" + esc(x.code) + " [" + esc(x.sec) + "]</b>" +
+        "<em>" + (free == null ? "–" : (free <= 0 ? (st.over ? "+" + st.over + " over" : "full") : free + " free")) + "</em></i>";
+    });
+    if (state.pins.length > 24) parts.push("<span class=\"faint\" style=\"flex:none\">+" + (state.pins.length - 24) + " more</span>");
+    el2.hidden = false;
+    el2.innerHTML = parts.join("");
+  }
+  function railFootText() {
+    var every = Math.round((state.seats.every || SEAT_MS) / 1000);
+    return "Free seats = capacity − enrolled from the same live feed, refreshed every " + every + " s " +
+      (state.seats.mode === "closed" ? "in the background" : "while this panel is open") +
+      " in its own worker, so searching and paging are never blocked. " + seatsHelp();
+  }
+  function railClock() {
+    var el2 = $("#seatAgo"); if (!el2) return;
+    var live = $("#railLive");
+    if (state.seats.paused) { live.setAttribute("data-state", "paused"); el2.textContent = "paused"; return; }
+    if (state.seats.error) { live.setAttribute("data-state", "error"); el2.textContent = "retry in " + Math.round(state.seats.backoff / 1000) + " s (" + state.seats.error + ")"; return; }
+    live.setAttribute("data-state", seatBusy ? "busy" : "idle");
+    var foot = $("#railFoot"); if (foot) foot.textContent = railFootText();
+    var every = Math.round((state.seats.every || SEAT_MS) / 1000);
+    el2.textContent = state.seats.at
+      ? "seats updated " + Math.max(0, Math.round((Date.now() - state.seats.at) / 1000)) + " s ago · every " + (every || 0) + " s"
+      : "first seat check…";
+  }
+  var railQueued = false;
+  function queueRail() {
+    if (railQueued) return;
+    railQueued = true;
+    var run = function () { railQueued = false; renderRail(); };
+    // never fight the search loop or a paint: render when the browser is idle
+    if (state.searchRunning && window.requestIdleCallback) requestIdleCallback(run, { timeout: 800 });
+    else if (window.requestAnimationFrame) requestAnimationFrame(run);
+    else setTimeout(run, 80);
+  }
+  function seatFail(msg) {
+    state.seats.error = String(msg || "failed").slice(0, 40);
+    state.seats.backoff = Math.min(SEAT_MAX_BACKOFF, (state.seats.backoff || SEAT_MS) * 2);
+    railClock();
+  }
+  function applySeats(rows, at) {
+    if (!rows || !rows.length) { seatFail("empty feed"); return; }
+    var next = {};
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i], free = r[4] == null ? null : r[4];
+      next[secKey(r[0], r[1])] = { cap: r[2], used: r[3], free: free, over: r[2] != null && r[3] != null && r[3] > r[2] ? r[3] - r[2] : 0 };
+    }
+    state.seats.map = next; state.seats.at = at || Date.now(); state.seats.error = null;
+    state.seats.backoff = (state.seats.every || SEAT_MS);
+    railClock(); queueRail();
+  }
+  function seatTick(force) {
+    if (!state.ready) return;
+    if (!force && (state.seats.paused || document.visibilityState === "hidden")) return;
+    if (seatBusy) return;
+    if (!force && Date.now() - (state.seats.lastTry || 0) < state.seats.backoff) return;
+    state.seats.lastTry = Date.now();
+    seatBusy = true; railClock();
+    if (seatWorker) { try { seatWorker.postMessage({ type: "fetch-seats" }); return; } catch (e) { /* fall through */ } }
+    fetch(C.DATA_URL, { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (raw) { seatBusy = false; applySeats(C.seatRows(raw), Date.now()); })
+      .catch(function (e) { seatBusy = false; seatFail((e && e.message) || e); });
+  }
+  function seatCadence() {
+    var open = !!$("#seatsLayer") && !$("#seatsLayer").hidden;
+    var base = open ? SEAT_MS_OPEN : SEAT_MS;
+    state.seats.every = state.seats.paused ? 0 : base;
+    if (seatTimer) clearInterval(seatTimer);
+    seatTimer = setInterval(function () {
+      var live = !state.seats.paused && document.visibilityState !== "hidden";
+      if (live && Date.now() - (state.seats.lastTry || 0) >= state.seats.backoff) seatTick(false);
+    }, Math.max(4000, Math.round(base / 4)));
+    railClock();
+  }
+  function initRail() {
+    indexSeats();
+    if (typeof Worker === "function") {
+      try {
+        seatWorker = new Worker("./worker.js");
+        seatWorker.onmessage = function (ev) {
+          var m = (ev && ev.data) || {};
+          seatBusy = false;
+          if (m.type === "seats") applySeats(m.rows, m.at);
+          else if (m.type === "seats-error") seatFail(m.message);
+        };
+        seatWorker.onerror = function () { if (seatWorker) { try { seatWorker.terminate(); } catch (e) { } } seatWorker = null; seatBusy = false; };
+      } catch (e) { seatWorker = null; }
+    }
+    seatCadence();
+    setInterval(railClock, 5000);
+    renderRail();               // the lists are index-derived: they are right even offline
+    seatTick(true);
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && state.seats.at && Date.now() - state.seats.at > 15000) seatTick(true);
+  });
+  // rail interactions
+  $("#railBody").addEventListener("click", function (e) {
+    var pin = e.target.closest("[data-pin]");
+    if (pin) {
+      var bits = pin.dataset.pin.split("|");
+      pinToggle(bits[0], bits[1]);
+      return;
+    }
+    if (e.target.closest("[data-clearpins]")) { state.pins = []; save(); renderRail(); return; }
+    var cb = e.target.closest("[data-course]");
+    if (cb) { var c = cb.dataset.course; state.seats.open[c] = !state.seats.open[c]; renderRail(); return; }
+    if (e.target.closest("[data-showall]")) { state.seats.showAll = true; renderRail(); return; }
+  });
+  $("#railBody").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var cb = e.target.closest("[data-course]"); if (!cb) return;
+    e.preventDefault(); var c = cb.dataset.course; state.seats.open[c] = !state.seats.open[c]; renderRail();
+  });
+  var seatDebounce = null;
+  $("#seatSearch").addEventListener("input", function () {
+    var v = this.value.trim().toLowerCase();
+    $("#seatClr").hidden = !v;
+    clearTimeout(seatDebounce);
+    seatDebounce = setTimeout(function () { state.seats.query = v; state.seats.showAll = false; renderRail(); }, 120);
+  });
+  $("#seatClr").addEventListener("click", function () {
+    $("#seatSearch").value = ""; state.seats.query = ""; this.hidden = true; renderRail(); $("#seatSearch").focus();
+  });
+  $("#seatPause").addEventListener("click", function () {
+    state.seats.paused = !state.seats.paused;
+    this.textContent = state.seats.paused ? "Resume" : "Pause";
+    this.setAttribute("aria-pressed", String(state.seats.paused));
+    seatCadence();
+  });
+  $("#seatNow").addEventListener("click", function () { seatTick(true); });
+
   /* ============================ header, shortcuts, misc ============================ */
 
-  function setPop(open) { $("#livePop").hidden = !open; $("#livePill").setAttribute("aria-expanded", String(open)); }
+  function setPop(open) { $("#livePop").hidden = !open; $("#livePill").setAttribute("aria-expanded", String(open)); if (open) fitOverlays(); }
   $("#livePill").addEventListener("click", function (e) { e.stopPropagation(); setPop($("#livePop").hidden); });
   $("#livePop").addEventListener("click", function (e) { e.stopPropagation(); });
   $("#refreshBtn").addEventListener("click", function () {
@@ -1685,7 +2836,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
   });
   document.addEventListener("click", function (e) {
-    if (openMs && !openMs.el.contains(e.target) && !openMs.btn.contains(e.target)) closeMs();
+    if (openMs && !openMs.el.contains(e.target) && !(openMs.btn && openMs.btn.contains && openMs.btn.contains(e.target))) closeMs();
     if (!e.target.closest("#livePill") && !e.target.closest("#livePop")) setPop(false);
     if (!e.target.closest(".combo")) hideList();
   });
@@ -1696,12 +2847,104 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); generate(); }
   });
 
+  /* -------------------- saved pages (so earlier results never vanish) -------------------- */
+  var LS_RESULTS = "results", RESULTS_MAX = 6000;
+  function prefsFor() {
+    return {
+      minDays: state.prefs.dayMin, maxDays: state.prefs.dayMax,
+      preferShortDay: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
+      ignoreExams: !state.prefs.examClash
+    };
+  }
+  // Stable across reloads: the selection + prefs + a fingerprint of the feed itself
+  // (not the fetch time), so a saved search can be reopened on a later visit.
+  function sigFor(courses, prefs) {
+    return JSON.stringify([
+      (courses || []).map(function (c) { return [c.code, c.locked || [], c.faculty || [], c.secs || []]; }),
+      prefs || state.prefs, state.pageSize, state.index ? [state.index.count, state.index.groupCount] : 0
+    ]);
+  }
+  function currentSig() { return sigFor(state.courses, state.prefs); }
+  function saveResults() {
+    var sp = state.search;
+    if (!sp || !sp.items.length) return;
+    try {
+      store.set(LS_RESULTS, {
+        sig: sp.sig = currentSig(), done: !!sp.done, page: state.page, savedAt: Date.now(),
+        courses: state.courses.map(function (c) { return { code: c.code, locked: c.locked, faculty: c.faculty, secs: c.secs }; }),
+        prefs: state.prefs, picks: sp.picks,
+        items: sp.items.slice(0, RESULTS_MAX).map(function (it) {
+          return { ci: Array.prototype.slice.call(it.ci), days: it.days, gaps: it.gaps, span: it.span, early: it.early, alt: it.alt, score: it.score };
+        })
+      });
+    } catch (e) { }
+  }
+  function restoreResults(cb) {
+    store.get(LS_RESULTS).then(function (raw) { if (cb) cb(raw); });
+  }
+  function applyRestored(raw) {
+    if (!raw || !raw.items || !raw.items.length) return false;
+    if (raw.sig !== currentSig()) {
+      // the live selection differs: only adopt the saved one when there is nothing to show yet
+      if (state.courses.length || !raw.courses) return false;
+      state.courses = raw.courses.slice(0, MAX_COURSES).map(function (c) {
+        return { code: (c.code || "").toUpperCase(), locked: c.locked || [], faculty: c.faculty || [], secs: c.secs || [] };
+      });
+      if (raw.prefs) Object.keys(state.prefs).forEach(function (k) { if (raw.prefs[k] !== undefined) state.prefs[k] = raw.prefs[k]; });
+      renderRange(); renderChips(); renderCourses(); updateSummary();
+      if (raw.sig !== currentSig()) return false;
+    }
+    var built = buildRows();
+    if (built.error) return false;
+    var sp = state.search = {
+      rows: built.rows, prefs: prefsFor(), ord: C.orderRows(built.rows),
+      items: [], picks: raw.picks || {}, running: false, done: !!raw.done, once: false, all: false,
+      restored: true, stale: false, scanned: 0, tried: raw.items.length, valid: raw.items.length,
+      space: built.rows.reduce(function (n, r) { return n * r.candidates.length; }, 1), stats: { examBlockedPairs: 0, pairs: 0 }, mode: "saved", worker: null, en: null,
+      renderedCount: -1, sig: raw.sig
+    };
+    raw.items.forEach(function (it) {
+      sp.items.push({ ci: Int32Array.from(it.ci), days: it.days, gaps: it.gaps, span: it.span, early: it.early, alt: it.alt, score: it.score, _gi: sp.items.length });
+    });
+    state.results = sp.items;
+    state.page = Math.min(Math.max(1, raw.page || 1), Math.max(1, Math.ceil(sp.items.length / state.pageSize)));
+    sp.resume = function () {
+      if (!sp.running || state.search !== sp) return;
+      if (!sp.en) sp.en = C.createEnumerator(sp.rows, sp.prefs);
+      var r = sp.en.next({ want: sp.wantMore || (state.page + 1) * state.pageSize, budgetMs: sp.all ? 1400 : 900, sort: false });
+      var items = r.items || [];
+      for (var k = 0; k < items.length; k++) items[k]._gi = k;
+      sp.items = items; sp.tried = r.tried; sp.valid = r.valid; sp.space = r.space;
+      sp.stats = r.stats || sp.stats; sp.done = !!r.done; sp.restored = false; sp.running = false;
+      state.results = sp.items;
+      if (sp.pendingAdvance) {
+        sp.pendingAdvance = false;
+        var pg = Math.max(1, Math.ceil(sp.items.length / state.pageSize));
+        if (state.page < pg) state.page++;
+      }
+      setGen(false); $("#prog").hidden = true;
+      renderResults(); saveResults();
+    };
+    sp.requestMore = function (all) {
+      if (sp.running) return;
+      sp.all = !!all; sp.running = true;
+      sp.wantMore = all ? 1e9 : (state.page + 1) * state.pageSize;
+      setGen(true, all ? "Searching everything…" : "Finding " + state.pageSize + " more…");
+      $("#prog").hidden = false;
+      sp.resume();
+    };
+    renderResults();
+    return true;
+  }
+
   /* ================================ persistence ================================ */
 
   function save() {
     try {
       localStorage.setItem(LS_STATE, JSON.stringify({
-        courses: state.courses, prefs: state.prefs, view: state.view, sort: state.sort, pageSize: state.pageSize
+        courses: state.courses.map(function (c) { return { code: c.code, locked: c.locked, faculty: c.faculty, secs: c.secs }; }),
+        prefs: state.prefs, view: state.view, sort: state.sort, pageSize: state.pageSize,
+        pins: state.pins
       }));
     } catch (e) { }
   }
@@ -1722,6 +2965,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     if (state.prefs.avoidTime.length) q.push("t=" + state.prefs.avoidTime.join("."));
     if (state.prefs.avoidDay.length) q.push("y=" + state.prefs.avoidDay.join("."));
     if (state.prefs.avoidFac.length) q.push("f=" + state.prefs.avoidFac.join("."));
+    if (SEATS_VIEW) q.push("view=seats");
     var url = location.pathname + (q.length ? "?" + q.join("&") : "");
     if (history.replaceState) history.replaceState(null, "", url);
   }
@@ -1729,17 +2973,23 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     var p = new URLSearchParams(location.search);
     if (!p.get("c")) return false;
     var hasData = !!state.index;
-    state.courses = [];
+    var list = [], junk = [];                       // never blank a good selection over a bad token
     (p.get("c") || "").split(",").filter(Boolean).slice(0, MAX_COURSES).forEach(function (tok) {
       var mm = tok.match(/^([A-Z0-9]+)(?::([\d.]+))?(?:!([\w.]+))?(?:~([\w.]+))?$/);
-      if (!mm) return;
+      if (!mm) { junk.push(tok); return; }
       var code = mm[1], Cc = hasData ? K(code) : null, locked = [], fac = [], secs = [];
       if (Cc && mm[2]) locked = mm[2].split(".").map(Number).filter(function (i) { return Cc.groups[i]; }).map(function (i) { return Cc.groups[i].key; });
       else if (hasData && mm[2]) { /* pattern indexes from an older feed are dropped */ }
       if (mm[3]) fac = mm[3].split(".").filter(Boolean);
-      if (mm[4]) secs = mm[4].split(".").filter(Boolean);
-      state.courses.push({ code: code, locked: locked, faculty: fac, secs: secs });
+      if (mm[4]) secs = mm[4].split(".").filter(function (x) { return x; }).map(function (x) { return String(x); });
+      list.push({ code: code, locked: locked, faculty: fac, secs: secs });
     });
+    if (!list.length) {                              // the link carried nothing usable: keep what we had
+      state.droppedUrl = junk.join(" ");
+      return false;
+    }
+    state.courses = list;
+    if (junk.length) state.droppedUrl = junk.join(" ");
     if (p.get("d")) {
       var d = p.get("d").split("-").map(Number);
       if (d.length === 2) { state.prefs.dayMin = Math.max(1, d[0]); state.prefs.dayMax = Math.min(6, d[1]); }
@@ -1759,6 +3009,7 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     if (s) {
       if (s.prefs) Object.keys(state.prefs).forEach(function (k) { if (s.prefs[k] !== undefined) state.prefs[k] = s.prefs[k]; });
       state.view = s.view || "grid"; state.sort = s.sort || "best"; state.pageSize = s.pageSize || 50;
+      if (Array.isArray(s.pins)) state.pins = s.pins.filter(function (x) { return x && x.code && x.sec != null; }).slice(0, 50);
     }
     if (!readUrl() && s && Array.isArray(s.courses)) {
       state.courses = s.courses.slice(0, MAX_COURSES).map(function (c) {
@@ -1769,7 +3020,9 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
   }
   function afterChange() {
     renderCourses(); renderChips(); renderFacSuggestions(); updateSummary(); save();
-    noteStale();
+    noteStale(); queueRail();
+    updateCourseCount();
+    if (typeof syncSearchBtn === "function") syncSearchBtn();
   }
 
   /* ==================================== boot ==================================== */
@@ -1779,9 +3032,24 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
     restore();                      // selection is usable before the feed lands
     renderRange(); renderChips(); renderCourses(); updateSummary(); renderResults();
     loadNames();
+    readRailPrefs();                // the split the user left it at
+    applyRailSize();
+    initRail();                     // the seat rail runs on its own clock and its own worker
+    if (SEATS_LOADED) { setSeatsView(true, false); }
+    else {
+      var savedMode = "closed";
+      try { savedMode = localStorage.getItem(LS_DRAWER) || "closed"; } catch (e) { }
+      if (savedMode && savedMode !== "closed") setSeatsMode("open", false);
+    }
     loadData(false).then(function () {
       restore(true);                // locked patterns are feed indexes: apply them now the index exists
+      if (state.droppedUrl) {
+        toast("That link was written for an older version — these picks could not be read back: " + state.droppedUrl);
+        state.droppedUrl = "";
+      }
       afterChange();
+      if (!state.results && !state.search) restoreResults(applyRestored);
+      seatTick(true);               // fresh seat numbers right away
     });
   }
   boot();

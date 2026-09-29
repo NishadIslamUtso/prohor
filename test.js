@@ -204,12 +204,14 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(view.blocks.every((b) => b.row >= 2 && b.rowSpan >= 1 && b.col >= 0), "blocks are placed on the grid");
   ok(view.blocks.every((b) => b.label && b.time && b.faculty), "blocks carry label, time and faculty");
   const labBlock = view.blocks.find((b) => b.lab);
-  ok(!!labBlock && /L$/.test(labBlock.label) && /^\d\d:\d\d – \d\d:\d\d$/.test(labBlock.time),
+  ok(!!labBlock && /L$/.test(labBlock.label) && /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(labBlock.time),
     "lab block carries the lab course code and a 24-hour time", labBlock && labBlock.label + " · " + labBlock.time);
   const hues = view.blocks.map((b) => b.hue);
   ok(new Set(hues).size >= 2 && Math.max.apply(null, hues) <= 3, "each course keeps its own hue", hues.join(","));
   ok(view.exams.length === 4 && view.exams.every((e) => e.fin || e.mid), "exam table has a row per course");
-  ok(view.exams.every((e) => !e.mid || /^\d\d:\d\d – \d\d:\d\d$/.test(e.mid.time)), "exam cells use the 24-hour clock", (view.exams[0].mid || {}).time);
+  ok(view.exams.every((e) => !e.mid || /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(e.mid.time)), "exam cells use the 12-hour clock", (view.exams[0].mid || {}).time);
+  ok(view.rows.every((r) => r.kind !== "slot" || /^\d\d:\d\d [AP]M$/.test(r.label)), "grid gutter is 12-hour", view.rows[0].label);
+  ok(view.blocks.every((b) => /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(b.time)), "block times are 12-hour", view.blocks[0].time);
   ok(view.exams.every((e) => !e.fin || /[AP]M/.test(e.fin.clock)), "exam cells also carry a 12-hour form for prose", (view.exams[0].fin || {}).clock);
   ok(view.exams.every((e) => e.sections.length >= 1 && e.sections.some((x) => x.sel)), "each exam row lists the swappable sections with one selected");
   ok(view.altCount === r.picks.reduce((n, p) => n + p.count - 1, 0), "alternative count = extra sections", view.altCount);
@@ -235,7 +237,7 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(texts.some((t) => t === "free"), "empty days marked free in the image");
   ok(["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"].every((d) => texts.includes(d)), "all day headings painted");
   ok(view.cols.every((c) => c.label.length === 3 && c.full.length > 3), "view carries short labels for the grid and full ones for the image");
-  ok(texts.filter((t) => /^\d\d:\d\d$/.test(t)).length >= 4, "slot times painted");
+  ok(texts.filter((t) => /^\d\d:\d\d [AP]M$/.test(t)).length >= 4, "slot times painted in 12-hour", texts.filter((t) => /AM|PM/.test(t)).slice(0, 2).join(" / "));
   ok(texts.some((t) => /LAB/.test(t)), "labs marked in the image");
   ok(texts.some((t) => /MID|COURSE/.test(t)) && texts.some((t) => /FINAL|not published/.test(t)), "exam block painted");
   ok(texts.some((t) => /Jan|Nov/.test(t)), "exam dates include a month");
