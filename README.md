@@ -1,6 +1,6 @@
 # Prohor — BRACU routine planner
 
-## Domain (To use t directly from your browser):
+## Domain (To use it directly from your browser):
 
 <https://prohor-rg.vercel.app/>
 
