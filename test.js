@@ -276,7 +276,7 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
     set fillStyle(v) { ops.push(["fill", v]); }, set strokeStyle(v) { ops.push(["stroke", v]); },
     set lineWidth(v) {}, fillRect(x, y, w, h) { ops.push(["rect", Math.round(w), Math.round(h)]); },
     strokeRect() { ops.push(["strokeRect"]); }, beginPath() {}, moveTo() {}, lineTo() {}, arc() {}, stroke() {},
-    fillText(t) { ops.push(["text", String(t)]); }, measureText(s) { return { width: String(s).length * 6 }; }
+    fillText(t, x, y) { ops.push(["text", String(t), Math.round(y || 0)]); }, measureText(s) { return { width: String(s).length * 6 }; }
   };
   const info = Core.paintRoutine(ctx, r, { hueOf: (code) => codes.indexOf(code), title: "Prohor", subtitle: "Fall 2026 · unofficial", footer: "Data: BRACU Connect via Connect-CDN (unofficial)" });
   const texts = ops.filter((o) => o[0] === "text").map((o) => o[1]);
@@ -284,6 +284,13 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(info.width > 700 && info.height > 300, "canvas sized to the grid", info.width + "×" + info.height);
   ok(fills[0][1] === "#FFFFFF", "painted on white regardless of UI theme", fills[0][1]);
   ok(texts[0] === "Prohor", "wordmark in the export header", texts[0]);
+  const subOp = ops.find((o) => o[0] === "text" && /Fall 2026/.test(o[1]));
+  const timeOp = ops.find((o) => o[0] === "text" && o[1] === "Time");
+  // "Time" is painted 9px into the day-header band, so timeOp.y − 9 is the band's top edge;
+  // the semester line (12.5px font + descenders ≈ 17px of ink) must end above it.
+  ok(subOp && timeOp && subOp[2] + 17 <= timeOp[2] - 9,
+    "the semester line clears the timetable header, never painted over by it",
+    subOp && timeOp ? ("subtitle bottom ≈ " + (subOp[2] + 17) + ", band top " + (timeOp[2] - 9)) : "missing ops");
   ok(texts.some((t) => /Data: BRACU Connect via Connect-CDN/.test(t)), "footer credits the source");
   ok(texts.some((t) => t === "free"), "empty days marked free in the image");
   ok(["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"].every((d) => texts.includes(d)), "all day headings painted");

@@ -110,6 +110,21 @@ ok(posted[posted.length - 1].type === "batch" || posted[posted.length - 1].type 
     ok(msg.rows.every((r) => Array.isArray(r) && r.length === 6 && typeof r[0] === "string"), "rows are compact [code, sec, cap, used, free, faculty]");
     ok(Date.now() - msg.at < 60000, "and stamped with the poll time");
   }
+  // the failure contract the page actually listens for: "seats-error", never the search
+  // protocol's plain "error" (which the seat instance's handler would silently drop)
+  globalThis.fetch = async () => { throw new TypeError("Failed to fetch (offline)"); };
+  posted.length = 0;
+  await self.onmessage({ data: { type: "fetch-seats" } });
+  await new Promise((r) => setTimeout(r, 200));
+  const netDown = posted.find((p) => p.type === "seats-error");
+  ok(!!netDown && !posted.some((p) => p.type === "error"), "a network failure posts seats-error, not the ignored \"error\"", JSON.stringify(posted.map((p) => p.type)));
+  globalThis.fetch = async () => ({ ok: false, status: 503, json: async () => ({}) });
+  posted.length = 0;
+  await self.onmessage({ data: { type: "fetch-seats" } });
+  await new Promise((r) => setTimeout(r, 200));
+  const badHttp = posted.find((p) => p.type === "seats-error");
+  ok(!!badHttp && /503/.test(badHttp.message || ""), "an HTTP failure posts seats-error with the status", badHttp && badHttp.message);
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => big });
   posted.length = 0;
   self.onmessage({ data: { type: "init", rows: slimRows, prefs: { minDays: 1, maxDays: 6 } } });
   ok(posted[posted.length - 1].type === "ready", "seat traffic never wedges the search worker");

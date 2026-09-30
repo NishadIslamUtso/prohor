@@ -100,16 +100,23 @@ function boot(opts) {
           if (opts.liveFails) throw new TypeError("Failed to fetch (offline)");
           if (opts.tinyLive) return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ sections: snapshotRaw.sections.slice(0, 3) }) };
           if (opts.slowLive) await wait(opts.slowLive);
-          return { ok: true, status: 200, headers: { get: () => null }, json: async () => (liveRaw || snapshotRaw) };
+          // opts.liveFeed: serve a specific section list as the live feed (rollover / drift / payload tests)
+          // opts.liveFn: the test owns the live feed — each call deep-clones whatever it returns,
+          // so a test can advance the feed between deliberate polls regardless of call order
+          if (opts.liveFn) return { ok: true, status: 200, headers: { get: () => null }, json: async () => JSON.parse(JSON.stringify(opts.liveFn())) };
+          return { ok: true, status: 200, headers: { get: () => null }, json: async () => (opts.liveFeed || liveRaw || snapshotRaw) };
         }
         if (url.includes("snapshot.json")) { calls.snapshot++; if (opts.snapshotFails) throw new Error("offline"); return { ok: true, status: 200, headers: { get: () => null }, json: async () => snapshotRaw }; }
         if (url.includes("faculty-names.json")) { calls.names++; return { ok: true, status: 200, headers: { get: () => null }, json: async () => namesRaw }; }
         return { ok: false, status: 404, json: async () => { throw new Error("404"); }, headers: { get: () => null } };
       };
-      if (opts.seedCache) window.localStorage.setItem("prohor-cache:feed", JSON.stringify({ at: Date.now() - (opts.cacheAge || 60000), sections: snapshotRaw.sections }));
+      if (opts.seedCache) window.localStorage.setItem("prohor-cache:feed", JSON.stringify({ at: Date.now() - (opts.cacheAge || 60000), sections: opts.cacheFeed || snapshotRaw.sections }));
       if (opts.seedState) window.localStorage.setItem("prohor.state", JSON.stringify(opts.seedState));
       if (opts.seedResults) window.localStorage.setItem("prohor-cache:results", JSON.stringify(opts.seedResults));
       if (opts.seedSemesters) window.localStorage.setItem("prohor.semesters", JSON.stringify({ list: opts.seedSemesters }));
+      // the store module's localStorage mirror ("prohor-cache:" + key) — how the archive looks
+      // to a browser where IndexedDB is the store that got the fresh write
+      if (opts.seedSemestersStore) window.localStorage.setItem("prohor-cache:prohor.semesters", JSON.stringify({ list: opts.seedSemestersStore }));
     }
   });
   const d = dom.window.document, W = dom.window;
@@ -307,7 +314,7 @@ function boot(opts) {
   await A.done(ms);
   ok(!!A.q(".course .chip.locked"), "locked pattern renders as a chip", A.q(".course .chip.locked").textContent.replace(/\s+/g, " ").trim());
   ok(A.q(".course [data-act=open-ts] span").textContent.includes(`1 of ${F.CSE221.patterns} patterns`), "trigger label counts locks", A.q(".course [data-act=open-ts] span").textContent);
-  ok(/3 pattern|3 sections match|match/.test(A.q(".course .caption").textContent), "caption reports the effect of filters", A.q(".course .caption").textContent.trim());
+  ok(/\d+ of \d+ patterns fit your filters/.test(A.q(".course .caption").textContent), "caption reports the effect of filters", A.q(".course .caption").textContent.trim());
 
   /* ---------------- faculty popover ---------------- */
   ms = await A.openMs(0, "fac");
@@ -586,7 +593,7 @@ function boot(opts) {
   ok(st.pageSize === 50 && st.view === "grid" && st.sort === "best", "view settings persisted", JSON.stringify([st.pageSize, st.view, st.sort]));
   ok(st.results === undefined && st.resultsShown === undefined, "no result data written to storage");
   const cache = JSON.parse(S.W.localStorage.getItem("prohor-cache:feed"));
-  ok(cache && cache.sections.length > 2000 && Math.abs(Date.now() - cache.at) < 180000, "feed cached with a timestamp", cache && cache.sections.length);
+  ok(cache && cache.sections.length === F.sections && Math.abs(Date.now() - cache.at) < 180000, "feed cached with a timestamp", cache && cache.sections.length);
 
   /* ---------------- data states ---------------- */
   const C1 = boot({ liveFails: true, snapshotFails: true });
@@ -703,7 +710,7 @@ function boot(opts) {
   ok(X.qa(".course .chip.locked").length === 2, "each picked section becomes a chip", X.qa(".course .chip.locked").map(c => c.textContent).join("|"));
   ok(X.q('[data-act="open-sec"] span').textContent.includes(`2 of ${F.CSE221.sections} sections`), "trigger counts the picks", X.q('[data-act="open-sec"] span').textContent);
   ok(/2 sections picked/.test(X.q(".course .caption").textContent), "caption states the restriction", X.q(".course .caption").textContent.trim());
-  ok(/2 sections match/.test(X.q(".course .caption").textContent), "caption counts what survives", X.q(".course .caption").textContent.trim());
+  ok(/2 of \d+ sections \u00b7 \d+ of \d+ patterns fit your filters/.test(X.q(".course .caption").textContent), "caption counts what survives", X.q(".course .caption").textContent.trim());
   // the other two controls must react to the section picks, not the reverse only
   {
     const KC0 = fixture.courses.CSE221;
@@ -790,11 +797,11 @@ function boot(opts) {
   ok(box2.checked === false, "ticking it is refused");
   await X2.done(m2);
   await X2.wait(60);
-  ok(!/0 patterns match|no viable pattern/i.test(X2.q(".course .caption").textContent), "so the course never ends up in an impossible state", X2.q(".course .caption").textContent.trim());
+  ok(!/0 of \d+ patterns fit|no viable pattern/i.test(X2.q(".course .caption").textContent), "so the course never ends up in an impossible state", X2.q(".course .caption").textContent.trim());
   // the only way in is a link someone else shared — and it is still explained, not silently empty
   const X3 = boot({ url: "https://routine.test/?c=CSE221:" + KC.groups.indexOf(KC.groups.find((g) => g.key === otherGroup.key)) + "~" + secA.sec });
   await X3.ready(); await X3.wait(200);
-  ok(/0 patterns match|no viable pattern/i.test(X3.q(".course .caption").textContent + X3.txt("#summary")), "a contradictory link is surfaced", (X3.q(".course .caption").textContent + " || " + X3.txt("#summary")).replace(/\s+/g, " ").trim());
+  ok(/0 of \d+ patterns fit your filters|no viable pattern/i.test(X3.q(".course .caption").textContent + X3.txt("#summary")), "a contradictory link is surfaced", (X3.q(".course .caption").textContent + " || " + X3.txt("#summary")).replace(/\s+/g, " ").trim());
   X3.click("#genBtn"); await X3.wait(400);
   ok(X3.cards().length === 0, "and Generate refuses instead of returning nonsense");
   ok(new RegExp("\[" + String(secA.sec).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\]").test(X3.q("#resultsBody").textContent), "the zero state names the offending section", X3.q("#resultsBody").textContent.replace(/\s+/g, " ").slice(0, 160));
@@ -1422,7 +1429,7 @@ function boot(opts) {
       }
     }
   };
-  const SEM = boot({ width: 1440, seedSemesters: PAST });
+  const SEM = boot({ width: 1440, seedSemesters: PAST, seedState: { courses: [{ code: "CSE221", locked: [], faculty: [] }] } });
   await SEM.ready(); await SEM.wait(200);
   SEM.click("#seatsBtn"); await SEM.wait(220);
   ok(/Fall 2026/.test(SEM.txt("#semLabel")), "the switch names the semester you are reading", SEM.txt("#semLabel"));
@@ -1446,18 +1453,35 @@ function boot(opts) {
   ok(/left:\s*0(px)?/.test(SEM.q("#semPop").getAttribute("style") || ""), "and opens directly under it", SEM.q("#semPop").getAttribute("style"));
   SEM.click(semBtns[1]); await SEM.wait(200);
   ok(SEM.txt("#semLabel") === "Summer 2026", "picking it switches the panel over", SEM.txt("#semLabel"));
-  ok(/saved copy/.test(SEM.txt("#railSub")), "the sub-line says so", SEM.txt("#railSub"));
-  ok(/not live/.test(SEM.txt("#railFoot")), "and so does the footnote", SEM.txt("#railFoot"));
-  const mRows = SEM.qa("#railBody .srow");
-  ok(mRows.length === 2, "the saved sections are listed", mRows.length);
-  ok(/\[01\]/.test(mRows[0].textContent) && /ANK/.test(mRows[0].textContent), "with their faculty", mRows[0].textContent.replace(/\s+/g, " ").trim());
-  ok(/Mon 11:00/.test(mRows[0].textContent) && /Wed 11:00/.test(mRows[0].textContent), "and their meeting times", mRows[0].textContent.replace(/\s+/g, " ").trim());
-  ok(/18 free/.test(mRows[0].textContent), "and the seats as they stood", mRows[0].querySelector(".seat").textContent);
-  ok(/Jul 1, 2026/.test(mRows[0].textContent), "and the exam slot of that semester", mRows[0].querySelector(".exs").textContent.replace(/\s+/g, " ").trim());
-  ok(/Lab/.test(mRows[1].textContent), "lab meetings survive the round trip too", mRows[1].textContent.replace(/\s+/g, " ").trim());
+  // only the catalogue follows the switch — the other boxes and the clock must stay live
+  ok(/catalogue: Summer 2026/.test(SEM.txt("#railSub")) && /tracked/.test(SEM.txt("#railSub")),
+    "the sub-line shows live counts and names what the catalogue shows", SEM.txt("#railSub"));
+  ok(/saved copy of Summer 2026/.test(SEM.txt("#railFoot")) && /stay live/.test(SEM.txt("#railFoot")),
+    "the footnote says the same, bluntly", SEM.txt("#railFoot"));
+  ok(/[A-Z][a-z]{2} \d{1,2}, \d{4}/.test(SEM.txt("#railFoot")) && !/\d{10}/.test(SEM.txt("#railFoot")),
+    "the footnote names the filing date, not the raw epoch", SEM.txt("#railFoot"));
+  ok(SEM.q("#seatPause").hidden === false && SEM.q("#seatNow").hidden === false, "pause / refresh keep working while browsing the past");
+  ok(await SEM.waitFor(() => /updated|first seat/.test(SEM.txt("#seatAgo") || ""), 6000, "live clock while past"),
+    "and the seat clock keeps ticking there", SEM.txt("#seatAgo"));
+  const boxes = SEM.qa("#railBody .seatbox");
+  const byTitle = (t) => boxes.find((b) => { const h = b.querySelector("h3,h4"); return h && h.textContent.replace(/\s+/g, " ").trim().indexOf(t) === 0; });
+  const catBox = byTitle("All courses"), mineBox = byTitle("Your courses");
+  const catRows = catBox ? Array.prototype.slice.call(catBox.querySelectorAll(".srow")) : [];
+  const mineRows = mineBox ? Array.prototype.slice.call(mineBox.querySelectorAll(".srow")) : [];
+  ok(catRows.length === 2, "the catalogue shows the two saved sections", catRows.length);
+  ok(/\[01\]/.test(catRows[0].textContent) && /ANK/.test(catRows[0].textContent), "with their faculty", catRows[0].textContent.replace(/\s+/g, " ").trim());
+  ok(/Mon 11:00/.test(catRows[0].textContent) && /Wed 11:00/.test(catRows[0].textContent), "and their meeting times", catRows[0].textContent.replace(/\s+/g, " ").trim());
+  ok(/18 free/.test(catRows[0].textContent), "and the seats as they stood", catRows[0].querySelector(".seat").textContent);
+  ok(/Jul 1, 2026/.test(catRows[0].textContent), "and the exam slot of that semester", catRows[0].querySelector(".exs").textContent.replace(/\s+/g, " ").trim());
+  ok(/Lab/.test(catRows[1].textContent), "lab meetings survive the round trip too", catRows[1].textContent.replace(/\s+/g, " ").trim());
+  const liveSec = fixture.courses.CSE221.sections.find((x) => !/TBA/.test(x.faculty));
+  ok(mineRows.length === fixture.courses.CSE221.sections.length, "Your courses keeps the live feed even here", mineRows.length + " of " + fixture.courses.CSE221.sections.length);
+  ok(mineRows.some((r) => r.textContent.includes("[" + liveSec.sec + "]") && r.textContent.includes(liveSec.faculty)),
+    "and shows the live teacher, not the archived one", liveSec.sec + " / " + liveSec.faculty);
   SEM.click("#semBtn"); await SEM.wait(120);
   SEM.click(SEM.qa("#semPop [data-sem]")[0]); await SEM.wait(200);
-  ok(/Fall 2026/.test(SEM.txt("#semLabel")) && !/saved copy/.test(SEM.txt("#railSub")), "switching back to live restores the feed", SEM.txt("#semLabel") + " / " + SEM.txt("#railSub"));
+  ok(/Fall 2026/.test(SEM.txt("#semLabel")) && /tracked/.test(SEM.txt("#railSub")) && !/catalogue:/.test(SEM.txt("#railSub")),
+    "switching back to live restores the feed", SEM.txt("#semLabel") + " / " + SEM.txt("#railSub"));
   ok(SEM.qa("#railBody .coursebtn").length > 10, "and the live lists come back", SEM.qa("#railBody .coursebtn").length);
   ok(SEM.q("#seatPause").hidden === false && SEM.q("#seatNow").hidden === false, "the live controls come back too");
   try { SEM.dom.close(); } catch (e) { }
@@ -1468,6 +1492,190 @@ function boot(opts) {
   const onFile = Object.keys(JSON.parse(SEM2.W.localStorage.getItem("prohor.semesters") || "{}").list || {}).length;
   ok(onFile === 1, "the archive loads from storage", onFile);
   try { SEM2.dom.close(); } catch (e) { }
+
+  // when the two stores disagree (localStorage write failed silently, IndexedDB carried the new
+  // semester), booting must surface the union — never let a stale small store hide a semester
+  const PAST_SPRING = { "20261": Object.assign({}, PAST["20262"], { session: "20261", label: "Spring 2026" }) };
+  const SEM3 = boot({ width: 1440, seedSemesters: PAST_SPRING, seedSemestersStore: Object.assign({}, PAST_SPRING, PAST) });
+  await SEM3.ready(); await SEM3.wait(400);
+  SEM3.click("#seatsBtn"); await SEM3.wait(220);
+  SEM3.click("#semBtn"); await SEM3.wait(150);
+  const sem3Rows = SEM3.qa("#semPop [data-sem]").map((b) => b.textContent.replace(/\s+/g, " ").trim());
+  ok(sem3Rows.length === 3 && sem3Rows.some((r) => /Spring 2026/.test(r)) && sem3Rows.some((r) => /Summer 2026/.test(r)),
+    "both stores are merged at boot, no semester hidden by the stale one", sem3Rows.join(" | "));
+  const springRow = SEM3.qa("#semPop [data-sem]")[1];
+  if (springRow) SEM3.click(springRow);
+  await SEM3.wait(200);
+  ok(SEM3.qa("#railBody .srow").length === 2, "and the merged-in semester is browsable with its rows", SEM3.qa("#railBody .srow").length);
+  try { SEM3.dom.close(); } catch (e) { }
+
+  /* ---------------- semester rollover: the feed moves to a new session ----------------
+     Yesterday the device cached Summer 2026 (session 20262); today the feed serves Fall 2026.
+     The old semester must be filed with its seats frozen, the pill must name the new term,
+     and the planner and the seat rail must carry on without a reload. */
+  console.log("\n--- rollover / drift / hostile-feed pass ---");
+  const oldTerm = snapshotRaw.sections.map((r) => Object.assign({}, r, { sid: 20262 }));
+  const newTerm = snapshotRaw.sections.map((r) => Object.assign({}, r, { sid: 20263 }));
+  const ROLL = boot({
+    width: 1280, seedCache: true, cacheFeed: oldTerm, liveFeed: newTerm,
+    seedState: {
+      courses: [{ code: "CSE221", locked: [], faculty: [] }],
+      pins: [{ code: "ZZZ999", sec: "01" }, { code: "CSE221", sec: "01" }],
+      prefs: { dayMin: 1, dayMax: 6, examClash: true, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] }
+    }
+  });
+  ok(await ROLL.waitFor(() => {
+    const l = (JSON.parse(ROLL.W.localStorage.getItem("prohor.semesters") || "{}").list || {});
+    return !!l["20262"];
+  }, 8000, "old semester filed on rollover"), "a new session in the feed files the one the device was reading");
+  const filedList = (JSON.parse(ROLL.W.localStorage.getItem("prohor.semesters") || "{}").list || {});
+  const filed = filedList["20262"];
+  ok(filed && filed.label === "Summer 2026", "filed under the term name, not the session id", filed && filed.label);
+  const filedRows = filed ? Object.keys(filed.rows) : [];
+  ok(filedRows.length === F.sections, "every section of the old semester is kept", filedRows.length + " of " + F.sections);
+  const keptSeats = filedRows.map((k) => filed.rows[k]).filter((r) => r[4] != null && r[5] != null);
+  ok(keptSeats.length > 0 && keptSeats.every((r) => typeof r[4] === "number" && typeof r[5] === "number"),
+    "and its seat counts exactly as they stood", keptSeats.length + " rows with seats");
+  ok(/Live/.test(ROLL.txt("#livePill")), "the pill is live again after the swap", ROLL.txt("#livePill"));
+  ok(/Fall 2026/.test(ROLL.txt("#semLabel")), "the panel names the semester that just arrived", ROLL.txt("#semLabel"));
+  // a pinned section the new feed no longer carries must not hold its slot
+  const rollPins = ((JSON.parse(ROLL.W.localStorage.getItem("prohor.state") || "{}").pins) || []).map((p) => p.code);
+  ok(rollPins.indexOf("ZZZ999") < 0 && rollPins.indexOf("CSE221") >= 0, "pins on dropped sections are pruned, real ones kept", JSON.stringify(rollPins));
+  // the just-archived semester is browsable straight away, frozen seats and all
+  ROLL.click("#seatsBtn"); await ROLL.wait(220);
+  ROLL.click("#semBtn"); await ROLL.wait(150);
+  const rollOpts = ROLL.qa("#semPop [data-sem]");
+  const summerBtn = rollOpts.find((b) => /Summer 2026/.test(b.textContent));
+  ok(!!summerBtn, "the just-archived semester appears in the switch", rollOpts.map((b) => b.textContent.replace(/\s+/g, " ").trim()).join(" | "));
+  if (summerBtn) ROLL.click(summerBtn);
+  await ROLL.wait(250);
+  ok(/catalogue: Summer 2026/.test(ROLL.txt("#railSub")), "browsing it clearly says the catalogue is showing the saved copy", ROLL.txt("#railSub"));
+  const rollRow = ROLL.q("#railBody .srow");
+  ok(!!rollRow && !!rollRow.querySelector(".seat"), "its rows keep their seat pills", rollRow ? rollRow.textContent.replace(/\s+/g, " ").trim().slice(0, 50) : "none");
+  // planning and seat polling run on the new semester without a reload
+  ROLL.click("#semBtn"); await ROLL.wait(120);
+  ROLL.click(ROLL.qa("#semPop [data-sem]")[0]); await ROLL.wait(200);
+  await ROLL.gen();
+  ok(await ROLL.waitFor(() => ROLL.cards().length > 0, 20000, "search on the new semester"), "the planner runs on the new semester's data", ROLL.cards().length);
+  ok(await ROLL.waitFor(() => /updated|ago/.test(ROLL.txt("#seatAgo") || ""), 10000, "seat poll after rollover"), "the seats rail polls the new feed", ROLL.txt("#seatAgo"));
+  try { ROLL.dom.close(); } catch (e) { }
+
+  /* ---------------- seat flash: a change flashes once, and only once ----------------
+     The flash survives in the DOM until the next render, but renderRail folds each change into
+     seats.flashed the same pass it paints — so folding a group, pinning or filtering must never
+     replay it. Only a fresh change (a new timestamp) flashes again. */
+  console.log("\n--- seat flash pass ---");
+  const c221 = snapshotRaw.sections.filter((r) => r.c === "CSE221");
+  const mov = c221.find((r) => r.used > 1);                 // any enrolled seat to move by one
+  ok(!!mov, "fixture has a CSE221 section with seats to move", mov && (mov.sec + " " + mov.used + "/" + mov.cap));
+  if (mov) {
+    const seatBase = Object.assign({}, snapshotRaw, { sections: snapshotRaw.sections.map((r) => Object.assign({}, r)) });
+    const seatMoved = Object.assign({}, snapshotRaw, {
+      sections: snapshotRaw.sections.map((r) => r.c === "CSE221" && String(r.sec) === String(mov.sec) ? Object.assign({}, r, { used: mov.used - 1 }) : Object.assign({}, r))
+    });
+    let feed = seatBase;
+    const FLASH = boot({ width: 1280, liveFn: () => feed, seedState: { courses: [{ code: "CSE221", locked: [], faculty: [] }], pins: [{ code: "CSE221", sec: String(mov.sec) }] } });
+    await FLASH.ready(); await FLASH.wait(200);
+    FLASH.click("#seatsBtn"); await FLASH.wait(220);
+    const flashed = () => FLASH.qa("#railBody .srow.seat-changed");
+    ok(flashed().length === 0, "nothing flashes at rest", flashed().length);
+    feed = seatMoved;
+    FLASH.click("#seatNow");
+    await FLASH.waitFor(() => flashed().length > 0, 6000, "flash after the poll");
+    const firstFlash = flashed();
+    ok(firstFlash.length >= 1, "the moved section flashes", firstFlash.length);
+    ok(firstFlash.every((r) => r.textContent.includes("[" + mov.sec + "]")), "and every copy of it in every box flashes together", firstFlash.length + " copies");
+    FLASH.click("#railBody [data-fold]");
+    await FLASH.wait(150);
+    ok(flashed().length === 0, "a re-render (fold) never replays the flash", flashed().length);
+    feed = seatBase;
+    FLASH.click("#seatNow");
+    await FLASH.waitFor(() => flashed().length > 0, 6000, "flash on the next change");
+    ok(flashed().length > 0, "a fresh change flashes again", flashed().length);
+    try { FLASH.dom.close(); } catch (e) { }
+  }
+
+  /* ---------------- faculty memory: TBA flips never overwrite a real name ----------------
+     BRACU sometimes flips a published teacher back to TBA mid-semester. Live views must show
+     whatever the feed says — TBA included — but the archive must remember the last real
+     initial. A section that was TBA for the whole semester is the only one filed as TBA. */
+  console.log("\n--- faculty memory pass ---");
+  const aSec = String(c221[0].sec), bSec = String(c221[1].sec);
+  const flipFeed = (aF, sid) => Object.assign({}, snapshotRaw, {
+    sections: snapshotRaw.sections.map((r) => {
+      if (r.c !== "CSE221") return Object.assign({}, r, { sid: sid });
+      if (String(r.sec) === aSec) return Object.assign({}, r, { f: aF, sid: sid });
+      if (String(r.sec) === bSec) return Object.assign({}, r, { f: null, sid: sid });   // B is TBA all semester
+      return Object.assign({}, r, { sid: sid });
+    }),
+    meta: Object.assign({}, snapshotRaw.meta, { semesterSessionIds: [sid] })
+  });
+  let facFeed = flipFeed(null, 20263);                        // A starts TBA
+  const FAC = boot({ width: 1280, liveFn: () => facFeed, seedState: { courses: [{ code: "CSE221", locked: [], faculty: [] }] } });
+  await FAC.ready(); await FAC.wait(200);
+  const facMemLS = () => JSON.parse(FAC.W.localStorage.getItem("prohor.facmem") || "{}");
+  const semLS = () => (JSON.parse(FAC.W.localStorage.getItem("prohor.semesters") || "{}").list || {});
+  const railRow = (sec) => FAC.qa("#railBody .srow").filter((r) => r.textContent.includes("[" + sec + "]"));
+  const refresh = async () => { FAC.click("#livePill"); await FAC.wait(80); FAC.click("#refreshBtn"); await FAC.ready(); await FAC.wait(150); };
+  FAC.click("#seatsBtn"); await FAC.wait(220);
+  facFeed = flipFeed("IBA", 20263);                           // A gets a teacher
+  await refresh();
+  ok(railRow(aSec).some((r) => /IBA/.test(r.textContent)), "the live feed names IBA for the section", railRow(aSec).map((r) => r.textContent.replace(/\s+/g, " ").trim()).join(" | ").slice(0, 90));
+  ok(facMemLS().map && facMemLS().map["CSE221|" + aSec] === "IBA", "and the memory keeps it", JSON.stringify(facMemLS().map || {}).slice(0, 60));
+  facFeed = flipFeed(null, 20263);                            // BRACU flips it back to TBA
+  await refresh();
+  ok(railRow(aSec).length > 0 && railRow(aSec).every((r) => !/IBA/.test(r.textContent) && /TBA/.test(r.textContent)),
+    "live views show the TBA flip, exactly as the feed says", railRow(aSec).map((r) => r.textContent.replace(/\s+/g, " ").trim()).join(" | ").slice(0, 90));
+  ok(facMemLS().map && facMemLS().map["CSE221|" + aSec] === "IBA", "but the memory is not overwritten by TBA", JSON.stringify((facMemLS().map || {})["CSE221|" + aSec]));
+  ok(!semLS()["20263"], "nothing archived yet — the semester is still the one being served", Object.keys(semLS()).join("|"));
+  facFeed = flipFeed("XYZ", 20271);                           // the feed rolls to a new semester
+  await refresh();
+  ok(semLS()["20263"] && semLS()["20263"].rows["CSE221|" + aSec][0] === "IBA", "the archive keeps the last real name, not the TBA", semLS()["20263"] && semLS()["20263"].rows["CSE221|" + aSec][0]);
+  ok(semLS()["20263"] && semLS()["20263"].rows["CSE221|" + bSec][0] === "TBA", "a section that stayed TBA all semester is filed as TBA", semLS()["20263"] && semLS()["20263"].rows["CSE221|" + bSec][0]);
+  ok(facMemLS().sid === "20271" && facMemLS().map && facMemLS().map["CSE221|" + aSec] === "XYZ",
+    "and the memory resets with the new semester and starts collecting again", facMemLS().sid + " / " + JSON.stringify((facMemLS().map || {})["CSE221|" + aSec]));
+  try { FAC.dom.close(); } catch (e) { }
+
+  /* ---------------- same-count drift: a republish that hides edits behind the count ----------------
+     The old shortcut compared only the section count; a room edit at the same count would have
+     been claimed as "Live" while the screen kept the stale copy. */
+  const drift = snapshotRaw.sections.map((r, i) => (i === 0 ? Object.assign({}, r, { r: "Z9-99Z" }) : r));
+  const DRIFT = boot({ seedCache: true, cacheFeed: snapshotRaw.sections, liveFeed: drift, cacheAge: 60000 });
+  ok(await DRIFT.waitFor(() => DRIFT.qa(".toast").some((t) => /Section data refreshed/.test(t.textContent)), 8000, "same-count edit noticed"),
+    "same section count but edited content is noticed and rebuilt");
+  ok(/Live/.test(DRIFT.txt("#livePill")), "and the pill is honest about being live afterwards", DRIFT.txt("#livePill"));
+  try { DRIFT.dom.close(); } catch (e) { }
+  // the mirror case: a truly unchanged feed must NOT churn — no rebuild, no toast
+  const QUIET = boot({ seedCache: true, cacheFeed: snapshotRaw.sections, liveFeed: snapshotRaw.sections, cacheAge: 60000 });
+  ok(await QUIET.waitFor(() => /Live/.test(QUIET.txt("#livePill")), 8000, "unchanged feed confirms live"), "a genuinely unchanged feed still confirms Live", QUIET.txt("#livePill"));
+  await QUIET.wait(800);
+  ok(!QUIET.qa(".toast").some((t) => /Section data refreshed/.test(t.textContent)), "and it does not rebuild or toast for nothing");
+  try { QUIET.dom.close(); } catch (e) { }
+
+  /* ---------------- hostile feed markup ----------------
+     The feed is third-party data rendered with innerHTML in many places; one unescaped
+     course title / room / faculty string is an XSS on every user's device. */
+  const PL = '<img src=x onerror="window.__xss=1">';
+  const hostile = snapshotRaw.sections.map((r) => (r.c === "CSE221"
+    ? Object.assign({}, r, { nm: "ALGORITHMS " + PL, f: "RBR" + PL, r: "09C-16T " + PL, lr: "09B-08L " + PL, lc: "CSE221L" + PL })
+    : r));
+  const XF = boot({ liveFeed: hostile });
+  await XF.ready();
+  await XF.add("CSE221");
+  ok(!!XF.card(0), "a course carrying hostile strings can still be added");
+  for (const kind of ["slots", "sections", "faculty"]) { try { await XF.openMs(0, kind); await XF.wait(80); } catch (e) { } }
+  XF.key(XF.d.body, "Escape"); await XF.wait(80);
+  await XF.gen();
+  await XF.waitFor(() => XF.cards().length > 0, 20000, "results with a hostile feed");
+  XF.click("#seatsBtn"); await XF.wait(250);
+  const showAll = XF.q("[data-showall]"); if (showAll) { XF.click(showAll); await XF.wait(150); }
+  const xcb = XF.q('#railBody .coursebtn[data-course="CSE221"]'); if (xcb) { XF.click(xcb); await XF.wait(120); }
+  const xpin = XF.q('#railBody [data-pin]'); if (xpin) { XF.click(xpin); await XF.wait(120); }
+  ok(!XF.W.__xss, "no feed string ever executed as code");
+  ok(!XF.d.querySelector('img[src="x"]'), "no hostile node ever parsed into the DOM (every label escaped)");
+  ok(/&lt;img/.test(XF.d.body.innerHTML), "the markup renders as inert visible text instead");
+  ok(errors.length === 0, "no page errors through the hostile-feed drive", errors.slice(0, 2).join(" | "));
+  try { XF.dom.close(); } catch (e) { }
 
   log("\n" + (fail ? fail + " CHECK(S) FAILED" : "ALL BROWSER CHECKS PASSED"));
   process.exit(fail ? 1 : 0);

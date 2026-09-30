@@ -46,10 +46,17 @@
       // Seat rail: this worker instance only fetches + trims, so seat polling can never
       // queue behind (or interleave with) an enumeration running in the search worker.
       if (m.type === "fetch-seats") {
-        var res = await fetch(m.url || C.DATA_URL, { cache: "no-store" });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        var raw = await res.json();
-        post({ type: "seats", at: Date.now(), rows: C.seatRows(raw) });
+        try {
+          var res = await fetch(m.url || C.DATA_URL, { cache: "no-store" });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          var raw = await res.json();
+          post({ type: "seats", at: Date.now(), rows: C.seatRows(raw) });
+        } catch (seatErr) {
+          // the page's seat worker instance listens for "seats-error": a plain "error" is a
+          // search-protocol message its handler ignores, so without this a dead CDN would
+          // never surface, never back off, and the panel would keep claiming stale is fresh
+          post({ type: "seats-error", message: String((seatErr && seatErr.message) || seatErr) });
+        }
         return;
       }
     } catch (e) {
