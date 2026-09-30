@@ -436,6 +436,7 @@ body.seats-open .rail-h .sembtn,body.view-seats .rail-h .sembtn{display:inline-f
 .rail-h .sembtn[data-past="1"]{color:var(--accent-text);background:var(--accent-soft);border-color:transparent}
 .rail-h .sembtn svg.caret{transition:transform var(--dur-fast)}
 .rail-h .sembtn[aria-expanded="true"] svg.caret{transform:rotate(180deg)}
+.semwrap{position:relative;display:inline-flex;min-width:0}
 .sempop{position:absolute;top:calc(100% + 6px);left:0;z-index:80;width:max-content;max-width:min(300px,calc(100vw - 32px));
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:6px}
 .sempop h4{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);padding:3px 8px 6px}
@@ -445,7 +446,6 @@ body.seats-open .rail-h .sembtn,body.view-seats .rail-h .sembtn{display:inline-f
 .sempop button[aria-checked="true"]{background:var(--primary-soft);color:var(--primary-text);font-weight:600}
 .sempop button .tick{width:14px;height:14px;flex:none;margin-left:auto;color:currentColor;opacity:0}
 .sempop button[aria-checked="true"] .tick{opacity:1}
-.sempop .note{font-size:11.5px;color:var(--text-3);padding:7px 8px 3px;line-height:1.45;border-top:1px solid var(--border);margin-top:5px}
 body.view-seats .rail-h #railPop,body.view-seats .rail-h #railWin{display:none !important}
 #railBack{display:none}
 @media (min-width:1024px){
@@ -586,7 +586,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 .rail-h{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;min-width:0}
 .rail-h h2{flex:none}
 .rail-h .sub{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rail-h .more,.rail-h .rail-x{flex:none;margin-left:0}
+.rail-h .more,.rail-h .rail-x,.rail-h .semwrap{flex:none;margin-left:0}
 .rail-h .rail-x{margin-left:auto}      /* the close control always sits at the end of its line */
 .rail-h a.more{text-decoration:none}
 .rail-h h2{font-size:15px;font-weight:600;margin:0;letter-spacing:-.01em}
@@ -830,8 +830,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <aside id="rail" class="rail" role="region" aria-labelledby="railH">
     <div class="rail-top">
     <div class="rail-h"><h2 id="railH">Seats &amp; sections</h2><span class="sub" id="railSub">—</span>
-      <button class="more sembtn" id="semBtn" aria-expanded="false" aria-controls="semPop"><svg width="11" height="11"><use href="#i-cal"/></svg><span class="pt" id="semLabel">—</span><svg class="caret" width="10" height="10"><use href="#i-chev"/></svg></button>
-      <div class="sempop" id="semPop" hidden></div>
+      <span class="semwrap"><button class="more sembtn" id="semBtn" aria-expanded="false" aria-controls="semPop"><svg width="11" height="11"><use href="#i-cal"/></svg><span class="pt" id="semLabel">—</span><svg class="caret" width="10" height="10"><use href="#i-chev"/></svg></button>
+      <div class="sempop" id="semPop" hidden></div></span>
       <button class="more" id="railMore" aria-expanded="true" title="Fold the panel down to a status strip">Hide</button>
       <a class="more pagebtn backbtn" id="railBack" hidden href="./" title="Back to the routine planner"><svg width="11" height="11" style="transform:rotate(90deg)"><use href="#i-chev"/></svg>Planner</a>
       <button class="more pagebtn" id="railPop" title="Turn this panel into its own page. The planner keeps running underneath — use Planner to come back."><svg width="11" height="11"><use href="#i-page"/></svg><span class="pt">Open as page</span></button>
@@ -2554,13 +2554,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   $("#seatsClose").addEventListener("click", function () { setSeatsMode("closed"); try { $("#seatsBtn").focus(); } catch (e) { } });
   $("#railMore").addEventListener("click", function (e) { e.stopPropagation(); toggleRailSlim(); });
   window.addEventListener("resize", function () {
-    stickInset(); railCompact();
+    stickInset(); railCompact(); semPlace();
     if (state.rail) setRailSize(railSize(), true);          // keep the split legal for the new viewport
     fitOverlays();
     if (!state.seats || state.seats.mode !== "open") return;
     renderRail();
   });
-  window.addEventListener("scroll", function () { railCompact(); }, { passive: true });
+  window.addEventListener("scroll", function () { railCompact(); semPlace(); }, { passive: true });
   // the handle: drag it, double-click it for the default size, or nudge it with the arrow keys
   (function railDrag() {
     var grip = $("#railGrip");
@@ -2909,8 +2909,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         "<span>" + esc(o.label) + (o.count ? ' <span class="faint">· ' + num(o.count) + " sections</span>" : "") + "</span>" +
         '<svg class="tick"><use href="#i-check"/></svg></button>';
     }).join("");
-    pop.innerHTML = "<h4>Semester</h4>" + rows +
-      '<div class="note">Every semester is filed on this device the moment a new one arrives in the feed, so past semesters gather here on their own.</div>';
+    pop.innerHTML = "<h4>Semester</h4>" + rows;
   }
   function semSet(key) {
     state.sem = (key && key !== "live" && state.semesters[key]) ? key : "live";
@@ -3168,7 +3167,17 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     semRender();
     pop.hidden = !show;
     this.setAttribute("aria-expanded", String(show));
+    if (show) semPlace();
   });
+  // the popover hangs off its own button, so it only has to be kept inside the viewport
+  function semPlace() {
+    var pop = $("#semPop"), btn = $("#semBtn");
+    if (!pop || !btn || pop.hidden) { if (pop) { pop.style.left = ""; pop.style.right = ""; } return; }
+    pop.style.left = "0"; pop.style.right = "auto";
+    var b = btn.getBoundingClientRect(), r = pop.getBoundingClientRect();
+    var over = r.right - ((window.innerWidth || 1280) - 12);
+    if (over > 0) pop.style.left = Math.max(12 - b.left, -over) + "px";
+  }
   $("#semPop").addEventListener("click", function (e) {
     e.stopPropagation();
     var b = e.target.closest("[data-sem]");

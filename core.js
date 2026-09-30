@@ -900,13 +900,13 @@
     return { cols: cols, rows: rows, blocks: blocks, exams: exams, summary: sum, altCount: altCount, nCols: nCols, lo: lo, hi: hi, rowOf: rowOf };
   }
 
-  // Sort key for the exam table: the mid's date and clock, because that is the exam that comes
-  // round soonest; the final breaks a tie. Courses with no mid at all sort after them by their
-  // final, and courses with neither go last. Minutes are padded, so 8:30 never sorts after 10:30.
+  // Sort key for the exam table: the final's date and clock, for every course alike, so both
+  // columns read down the page in order. Courses with no final go last, ordered by their mid,
+  // and courses with neither go after those. Minutes are padded, so 8:30 never sorts after 10:30.
   function examKeyOf(e) {
     function stamp(x) { return String(x.date) + "|" + String(10000 + (x.start || 0)).slice(1); }
-    if (e.mid) return "0|" + stamp(e.mid) + "|" + (e.fin ? stamp(e.fin) : "");
-    if (e.fin) return "1|" + stamp(e.fin);
+    if (e.fin) return "0|" + stamp(e.fin);
+    if (e.mid) return "1|" + stamp(e.mid);
     return "2";
   }
 

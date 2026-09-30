@@ -461,11 +461,13 @@ function boot(opts) {
   ok(ex.every((r) => /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d+, 20\d\d/.test(r)), "exam dates in the table", ex[0]);
   ok(ex.every((r) => /\[\d+\]/.test(r)), "exam rows show the chosen section");
   const MON = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 };
+  // ordered on the FINAL column, for every course alike
   const exOrder = [...c0.querySelectorAll("table.exam tbody tr")].map((r) => {
-    const m = /([A-Z][a-z]{2}) (\d+), (\d{4})/.exec(r.textContent);            // the first slot this course has
+    const cells = [...r.querySelectorAll("td")];
+    const m = /([A-Z][a-z]{2}) (\d+), (\d{4})/.exec(cells[2].textContent);      // the final's cell
     return m ? [+m[3], MON[m[1]], +m[2]].join("-") : "zzzz";
   });
-  ok(exOrder.join(",") === exOrder.slice().sort().join(","), "exam rows run in date order", exOrder.join(" < "));
+  ok(exOrder.join(",") === exOrder.slice().sort().join(","), "exam rows run in final-exam date order", exOrder.join(" < "));
   ok(!!c0.querySelector("table.exam caption") && /sr-only/.test(c0.querySelector("table.exam caption").className), "the exam table says nothing in print", c0.querySelector("table.exam caption").textContent);
   const finTh = [...c0.querySelectorAll("table.exam th")].find((x) => x.textContent === "Final");
   ok(/confirm in BRACU Connect/.test(finTh.dataset.tip), "and the invented-finals caveat sits on the Final column", finTh.dataset.tip.slice(0, 50));
@@ -1411,6 +1413,10 @@ function boot(opts) {
   ok(semBtns.length === 2, "live first, then every semester on file", semBtns.map((b) => b.textContent.replace(/\s+/g, " ").trim()).join(" | "));
   ok(/live/.test(semBtns[0].textContent) && /Summer 2026/.test(semBtns[1].textContent), "labelled with the term, not the session id", semBtns[1].textContent.replace(/\s+/g, " ").trim());
   ok(semBtns[0].getAttribute("aria-checked") === "true" && semBtns[1].getAttribute("aria-checked") === "false", "the live row is the checked one");
+  ok(SEM.q("#semPop .note") === null, "the popover carries no paragraph of its own", SEM.q("#semPop").textContent.replace(/\s+/g, " ").trim());
+  // it hangs off its own button, not off the header row it sits in
+  ok(SEM.W.getComputedStyle(SEM.q(".semwrap")).position === "relative", "the popover is anchored to the semester button");
+  ok(/left:\s*0(px)?/.test(SEM.q("#semPop").getAttribute("style") || ""), "and opens directly under it", SEM.q("#semPop").getAttribute("style"));
   SEM.click(semBtns[1]); await SEM.wait(200);
   ok(SEM.txt("#semLabel") === "Summer 2026", "picking it switches the panel over", SEM.txt("#semLabel"));
   ok(/saved copy/.test(SEM.txt("#railSub")), "the sub-line says so", SEM.txt("#railSub"));

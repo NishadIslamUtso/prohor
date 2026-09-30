@@ -211,13 +211,16 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   });
   const at = (h, m) => h * 60 + m;
   const routine = { events: [], picks: [
-    pick("ZZZ300", "01", [{ kind: "MID", date: "2026-11-21", start: at(10, 30), end: at(12, 30) }]),
+    pick("ZZZ300", "01", [{ kind: "MID", date: "2026-11-21", start: at(10, 30), end: at(12, 30) }]),          // no final
     pick("AAA100", "01", [{ kind: "MID", date: "2026-11-21", start: at(8, 30), end: at(10, 30) },
                           { kind: "FINAL", date: "2027-01-07", start: at(8, 30), end: at(10, 30) }]),
-    pick("MMM200", "01", [{ kind: "FINAL", date: "2026-11-20", start: at(8, 30), end: at(10, 30) }])
+    pick("MMM200", "01", [{ kind: "FINAL", date: "2026-11-20", start: at(8, 30), end: at(10, 30) }]),
+    pick("BBB400", "01", [{ kind: "FINAL", date: "2026-11-20", start: at(10, 30), end: at(12, 30) }]),         // same day, later
+    pick("CCC500", "01", [])                                                                                   // nothing published
   ] };
   const rows = Core.buildView(routine, {}).exams.map((e) => e.code);
-  ok(rows.join(",") === "AAA100,ZZZ300,MMM200", "exam rows run on the mid's date and clock, 8:30 before 10:30", rows.join(","));
+  ok(rows.join(",") === "MMM200,BBB400,AAA100,ZZZ300,CCC500",
+    "exam rows run on the final's date and clock, 8:30 before 10:30, no-final last", rows.join(","));
   ok(Core.buildView(routine, {}).exams.filter((e) => e.mid).every((e) => typeof e.mid.start === "number"), "and the raw clock survives into the view");
 })();
 
