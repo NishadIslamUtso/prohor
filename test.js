@@ -200,6 +200,27 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
 })();
 
 
+/* ---------------- the exam table runs on the mid's date and clock ---------------- */
+(function examTableOrder() {
+  // a synthetic routine: three courses, one with no mid at all, and two mids on the same day
+  // at 8:30 and 10:30 — the pair that exposed a string-compare bug in the old sort key
+  const pick = (code, sec, exams) => ({
+    code: code, label: code + "-[" + sec + "]", secIdx: 0, count: 1,
+    chosen: { sec: sec, faculty: "TBA", exams: exams, examKey: "" },
+    sections: [{ sec: sec, faculties: ["TBA"], room: "R1" }]
+  });
+  const at = (h, m) => h * 60 + m;
+  const routine = { events: [], picks: [
+    pick("ZZZ300", "01", [{ kind: "MID", date: "2026-11-21", start: at(10, 30), end: at(12, 30) }]),
+    pick("AAA100", "01", [{ kind: "MID", date: "2026-11-21", start: at(8, 30), end: at(10, 30) },
+                          { kind: "FINAL", date: "2027-01-07", start: at(8, 30), end: at(10, 30) }]),
+    pick("MMM200", "01", [{ kind: "FINAL", date: "2026-11-20", start: at(8, 30), end: at(10, 30) }])
+  ] };
+  const rows = Core.buildView(routine, {}).exams.map((e) => e.code);
+  ok(rows.join(",") === "AAA100,ZZZ300,MMM200", "exam rows run on the mid's date and clock, 8:30 before 10:30", rows.join(","));
+  ok(Core.buildView(routine, {}).exams.filter((e) => e.mid).every((e) => typeof e.mid.start === "number"), "and the raw clock survives into the view");
+})();
+
 /* ---------------- view model (shared by HTML grid and the PNG export) ---------------- */
 (function viewModel() {
   const codes = ["CSE221", "CSE250", "CSE320", "MAT216"];

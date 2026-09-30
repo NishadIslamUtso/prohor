@@ -880,7 +880,7 @@
         var x = null;
         (p.chosen.exams || []).forEach(function (z) { if (z.kind === kind) x = z; });
         if (!x) return null;
-        return { date: x.date, time: fmtTime(x.start) + " – " + fmtTime(x.end), clock: fmtTime(x.start) + " – " + fmtTime(x.end), clash: clashInfo[p.code + "|" + kind] || false };
+        return { date: x.date, start: x.start, end: x.end, time: fmtTime(x.start) + " – " + fmtTime(x.end), clock: fmtTime(x.start) + " – " + fmtTime(x.end), clash: clashInfo[p.code + "|" + kind] || false };
       }
       return {
         code: p.code, hue: opts.hueOf ? opts.hueOf(p.code) : pi, sec: p.chosen.sec, fac: p.chosen.faculty,
@@ -890,18 +890,24 @@
                    clash: s.examKey !== p.chosen.examKey };
         })
       };
-    }).sort(function (a, b) { return examKeyOf(a) < examKeyOf(b) ? -1 : examKeyOf(a) > examKeyOf(b) ? 1 : 0; });
+    }).sort(function (a, b) {
+      var ka = examKeyOf(a), kb = examKeyOf(b);
+      if (ka !== kb) return ka < kb ? -1 : 1;
+      return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
+    });
     var altCount = routine.picks.reduce(function (n, p) { return n + (p.count - 1); }, 0);
 
     return { cols: cols, rows: rows, blocks: blocks, exams: exams, summary: sum, altCount: altCount, nCols: nCols, lo: lo, hi: hi, rowOf: rowOf };
   }
 
-  // sort key for the exam table: the first slot this course has, or "" when none is published
+  // Sort key for the exam table: the mid's date and clock, because that is the exam that comes
+  // round soonest; the final breaks a tie. Courses with no mid at all sort after them by their
+  // final, and courses with neither go last. Minutes are padded, so 8:30 never sorts after 10:30.
   function examKeyOf(e) {
-    var list = [e.mid, e.fin].filter(Boolean).map(function (x) {
-      return String(x.date) + "|" + String(x.time).slice(0, 8) + "|" + (x === e.fin ? "1" : "0");
-    }).sort();
-    return list.length ? list[0] : "zzzz";
+    function stamp(x) { return String(x.date) + "|" + String(10000 + (x.start || 0)).slice(1); }
+    if (e.mid) return "0|" + stamp(e.mid) + "|" + (e.fin ? stamp(e.fin) : "");
+    if (e.fin) return "1|" + stamp(e.fin);
+    return "2";
   }
 
   // which (course, exam kind) pairs actually collide with another course in this routine

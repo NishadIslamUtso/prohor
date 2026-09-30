@@ -466,9 +466,9 @@ function boot(opts) {
     return m ? [+m[3], MON[m[1]], +m[2]].join("-") : "zzzz";
   });
   ok(exOrder.join(",") === exOrder.slice().sort().join(","), "exam rows run in date order", exOrder.join(" < "));
-  ok(!!c0.querySelector("table.exam caption"), "exam table has a caption");
-  ok(!/sr-only/.test(c0.querySelector("table.exam caption").className), "and it is printed, not screen-reader only", c0.querySelector("table.exam caption").textContent);
-  ok(/order they happen/.test(c0.querySelector("table.exam caption").dataset.tip), "with the caveat about invented finals on hover", c0.querySelector("table.exam caption").dataset.tip.slice(0, 50));
+  ok(!!c0.querySelector("table.exam caption") && /sr-only/.test(c0.querySelector("table.exam caption").className), "the exam table says nothing in print", c0.querySelector("table.exam caption").textContent);
+  const finTh = [...c0.querySelectorAll("table.exam th")].find((x) => x.textContent === "Final");
+  ok(/confirm in BRACU Connect/.test(finTh.dataset.tip), "and the invented-finals caveat sits on the Final column", finTh.dataset.tip.slice(0, 50));
   // the header carries the day count in words, not in coloured dots
   ok(c0.querySelector(".day-dots") === null, "the day dots are gone from the header");
   const daysBadge = [...c0.querySelectorAll(".r-head .badge")].find((b) => /\d+ days?/.test(b.textContent));
@@ -862,6 +862,12 @@ function boot(opts) {
   ok(loaded1 === 50, "the first search returns exactly one page (50), not the whole space", loaded1);
   ok(/of 50\b/.test(P.txt("#pager")) || /1–50 of 50/.test(P.txt("#pager")), "the pager says 50 are loaded", P.txt("#pager").slice(0, 60));
   ok(/＋ 50 more|Next 50|50 more/.test(P.txt("#pager")), "and offers the next batch on demand", P.txt("#pager"));
+  // the button must ask for exactly what it says: en.next({want}) counts items in one batch,
+  // so an older (page + 1) * pageSize quietly fetched two pages per press
+  P.click('[data-pg="more"]');
+  await P.waitFor(() => /1–50 of (?!50\b)/.test(P.txt("#pager")), 30000, "the on-demand batch");
+  const totalAfter = /of ([\d,]+)/.exec(P.q("#pager .txt").textContent);
+  ok(!!totalAfter && +totalAfter[1].replace(/,/g, "") === 100, "＋ 50 more fetches exactly 50 more, not a whole extra page", P.q("#pager .txt").textContent);
   ok(/kept on this device|combinations searched|found/.test(P.txt("#resultsDesc")) === true, "summary line is populated", P.txt("#resultsDesc").slice(0, 90));
   const grew = P.qa("#resultsBody .routine").length;
   await P.wait(2500);
@@ -891,10 +897,10 @@ function boot(opts) {
   await R2.waitFor(() => R2.qa("#resultsBody .routine").length > 0, 4000, "restored pages");
   ok(R2.qa("#resultsBody .routine").length === 50, "a fresh visit restores the saved pages without re-searching", R2.qa("#resultsBody .routine").length);
   ok(/kept on this device/.test(R2.txt("#resultsDesc")), "and labels them as restored", R2.txt("#resultsDesc").slice(-60));
-  ok(/page <b>2<\/b>|Showing 51–100 of 150/.test(R2.txt("#pager")), "the restored view reopens on the page they left", R2.txt("#pager").slice(0, 60));
+  ok(/page <b>2<\/b>|Showing 51–100 of 100/.test(R2.txt("#pager")), "the restored view reopens on the page they left", R2.txt("#pager").slice(0, 60));
   const r2Card = (R2.q("#resultsBody .routine") ? R2.q("#resultsBody .routine .rank").textContent + "|" + R2.q("#resultsBody .routine").textContent.replace(/\s+/g, " ").slice(0, 120) : "");
   ok(r2Card === secondCard, "the restored page is identical to what was saved", r2Card.slice(0, 60));
-  ok(/150 of 255 combinations/.test(R2.txt("#resultsDesc")), "and the totals are honest for a restored search", R2.txt("#resultsDesc").slice(0, 130));
+  ok(/100 of 255 combinations/.test(R2.txt("#resultsDesc")), "and the totals are honest for a restored search", R2.txt("#resultsDesc").slice(0, 130));
   ok(/＋ 50 more/.test(R2.txt("#pager")), "the restored view can continue where it stopped", R2.txt("#pager"));
   const all = R2.q('[data-pg="all"]');
   ok(!!all, "the explicit 'find them all' escape hatch is offered", all && all.textContent);
@@ -1218,6 +1224,13 @@ function boot(opts) {
   ok(/scroll-padding-top:var\(--stick,1\d\dpx\)/.test(cssSrc), "the sticky inset has a sane fallback for when layout is unavailable");
   const pgInset = P0.W.document.documentElement.style.getPropertyValue("--stick");
   ok(pgInset === "" || parseInt(pgInset, 10) > 60, "and a zero-height measurement never overwrites it", JSON.stringify(pgInset));
+  // A sticky course name has to name the scrollport it actually sits in: 0 inside a column that
+  // scrolls on its own, the page header's height when the page itself is what moves. Offsetting it
+  // from the wrong one parks the name in the middle of the box.
+  const flat = cssSrc.replace(/\s+/g, "");
+  ok(/\.sgroup>h4\{position:sticky;top:0/.test(flat), "the group header sticks to its own scrollport");
+  ok(/body\.view-seats\.sgroup>h4\{[^}]*top:var\(--stick/.test(flat), "on the seats page it clears the page header instead");
+  ok(/body\.view-seats\.rail-col:not\(\.one\)\.sgroup>h4\{top:0\}/.test(flat), "but a self-scrolling column brings it back to 0");
   P0.click("#railBody [data-pin]"); await P0.wait(180);
   ok((JSON.parse(P0.W.localStorage.getItem("prohor.state")).pins || []).length === 1, "pinning from the page persists", JSON.stringify(JSON.parse(P0.W.localStorage.getItem("prohor.state")).pins));
   // another window's changes arrive through the storage event

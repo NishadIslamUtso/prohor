@@ -330,8 +330,6 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .exam-wrap{overflow:auto;margin-top:16px}
 .exam{width:100%;min-width:640px;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .exam th,.exam td{white-space:nowrap}
-.exam caption{caption-side:top;text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--text-3);padding:0 8px 7px}
 .exam th{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
 .exam td{padding:8px;border-bottom:1px solid var(--border);vertical-align:middle}
 .exam tr:last-child td{border-bottom:0}
@@ -555,10 +553,14 @@ body.view-seats .rail-h{gap:3px 8px}
 body.view-seats .rail-h h2{font-size:16px;transition:font-size var(--dur-base)}
 body.view-seats .rail-live{margin-top:2px}
 @media (max-width:600px){ body.view-seats .rail-h .sub{display:none} }
-/* scrolling through a long section list should never lose the course it belongs to */
-body.view-seats .sgroup>h4{position:sticky;top:var(--stick,132px);z-index:1;background:var(--bg);
-  margin:0;padding:5px 0 4px;border-bottom:1px solid var(--border)}
 body.view-seats .sgroup{margin-top:0;padding-top:4px}
+/* Scrolling a long section list should never lose the course it belongs to. `top` has to name the
+   scrollport the header actually sits in — 0 when a column scrolls on its own, the height of the
+   page's sticky header when the page itself is what moves. Naming the wrong one parks the course
+   name in the middle of the box. */
+.sgroup>h4{position:sticky;top:0;z-index:1;background:var(--surface);margin:0 -11px;padding:0 11px}
+body.view-seats .sgroup>h4{top:var(--stick,132px);margin:0 -13px;padding:0 13px}
+.seatbox.pinned .sgroup>h4{background:var(--primary-soft)}
 /* two columns, each scrolling on its own — like the planner's two panes, only slimmer */
 .rail-cols{display:block}
 .rail-col{min-width:0}
@@ -569,6 +571,7 @@ body.view-seats .sgroup{margin-top:0;padding-top:4px}
   body.view-seats .rail-col::-webkit-scrollbar{width:6px}
   body.view-seats .rail-col::-webkit-scrollbar-thumb{border:0}
   body.view-seats .rail-col.one{grid-column:1 / -1;max-height:none;overflow:visible}
+  body.view-seats .rail-col:not(.one) .sgroup>h4{top:0}
 }
 body.view-seats .rail-search{margin:6px 0 0}
 body.view-seats .rail-search input{height:32px}
@@ -623,7 +626,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 .seatbox>h3 .at{margin-left:auto;font-size:11px;letter-spacing:0;text-transform:none;color:var(--text-3);font-variant-numeric:tabular-nums;font-weight:500}
 .sgroup{margin:7px 0 0}
 /* every group header is a fold button: one tap compresses a course out of the way */
-.sgroup>h4{margin:0;font-size:12px;font-weight:600}
+.sgroup>h4{font-size:12px;font-weight:600}
 .sgroup .fold{display:flex;align-items:center;gap:7px;width:100%;font:inherit;text-align:left;
   padding:3px 4px 4px;border-radius:var(--radius-xs);color:inherit}
 .sgroup .fold:hover{background:var(--surface-2)}
@@ -738,7 +741,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <!-- STEP 1 -->
     <section id="step1" aria-labelledby="h1">
       <div class="step-head"><h2 id="h1" data-tip="Everything you pick is saved on this device, so the page keeps working while the section feed is still loading.">Pick your courses</h2><span class="count tnum" id="courseCount">0 of 6 courses</span></div>
-      <p class="step-desc">Search by code or title — leave any filter on “All …” to consider every option.</p>
       <div class="combo">
         <svg class="ico"><use href="#i-search"/></svg>
         <input id="courseSearch" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="courseList" placeholder="Search by code or title — CSE221, Algorithms…" autocomplete="off">
@@ -857,17 +859,14 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   <h3>How Prohor works</h3>
   <p class="muted">A <em>prohor</em> (প্রহর) is one-eighth of a day. Pick yours in three steps:</p>
   <ol>
-    <li><b>Pick your courses.</b> Search, add up to six. Lock time slots or faculty or sections per course if you care.</li>
-    <li><b>Set your preferences.</b> How many days on campus, exam-clash checks, times and days to avoid.</li>
-    <li><b>Compare routines.</b> Every conflict-free combination, ranked. Download any as PNG.</li>
-    <li><b>Watch seats.</b> Open <i>Seats</i> for a panel that splits the screen with the page — drag the handle
-      between them to size it, tap it to fold the panel to a strip. Pin up to 50 sections and their seat counts
-      stay at the top. Fold a course away with the <i>chevron</i> on its heading, and switch semester with the
-      button beside it. Or press <i>Open as page</i> / <i>New window</i> and the seats become their own page
-      (<span class="kbd">?view=seats</span>) that you can park on another screen while you keep planning.</li>
+    <li><b>Pick your courses.</b> Add up to six — lock slots, sections or faculty per course if you care.</li>
+    <li><b>Set your preferences.</b> Days on campus, exam-clash checks, times and days to avoid.</li>
+    <li><b>Compare routines.</b> Every conflict-free combination, ranked. Download any as a PNG.</li>
   </ol>
-  <p class="muted" style="font-size:13px">Anything you want explained is one hover away — the page itself only shows
-  what you need at a glance. Shortcuts: <span class="kbd">/</span> focus course search · <span class="kbd">Ctrl/⌘ + Enter</span> generate</p>
+  <p class="muted" style="font-size:13px">Open <i>Seats</i> for a panel that splits the screen — drag its edge to size
+  it, tap it to fold to a strip, pin sections to keep their seat counts on top. It also stands alone as a page
+  (<span class="kbd">?view=seats</span>). Anything unexplained is one hover away.
+  Shortcuts: <span class="kbd">/</span> search · <span class="kbd">Ctrl/⌘ + Enter</span> generate.</p>
   <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" id="howClose">Got it</button></div>
 </dialog>
 
@@ -1900,7 +1899,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       sp.running = true;
       sp.all = !!all;
       sp.once = !all;
-      sp.wantMore = all ? 1e9 : (state.page + 1) * state.pageSize;
+      sp.wantMore = all ? 1e9 : state.pageSize;
       if (sp.restored) {                       // saved pages: rebuild the enumerator and re-derive the same order
         sp.en = sp.en || C.createEnumerator(sp.rows, sp.prefs);
         sp.items = []; sp.renderedCount = -1; sp.restored = false;
@@ -2222,8 +2221,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     }).join("") + "</div>";
   }
   function examHtml(v) {
-    return '<div class="exam-wrap"><table class="exam"><caption data-tip="In the order they happen. The feed lists a date for some finals that the course does not really have — confirm in BRACU Connect before you plan around one.">Exam slots · in order</caption>' +
-      '<thead><tr><th scope="col">Course</th><th scope="col">Mid</th><th scope="col">Final</th><th scope="col">Section</th><th scope="col">Faculty</th></tr></thead><tbody>' +
+    return '<div class="exam-wrap"><table class="exam"><caption class="sr-only">Mid and final exam slots for the sections in this routine, soonest first</caption>' +
+      '<thead><tr><th scope="col">Course</th><th scope="col">Mid</th>' +
+      '<th scope="col" data-tip="Rows run soonest first, on the mid. The feed lists a date for some finals the course does not really have — confirm in BRACU Connect before you plan around one.">Final</th>' +
+      '<th scope="col">Section</th><th scope="col">Faculty</th></tr></thead><tbody>' +
       v.exams.map(function (e) {
         function cell(x) {
           if (!x) return '<span class="s">not published</span>';
@@ -3321,8 +3322,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     };
     sp.requestMore = function (all) {
       if (sp.running) return;
+      var have = sp.items.length;                 // the list is rebuilt from the top, so `want` is a total
       sp.all = !!all; sp.running = true;
-      sp.wantMore = all ? 1e9 : (state.page + 1) * state.pageSize;
+      sp.wantMore = all ? 1e9 : have + state.pageSize;
       setGen(true, all ? "Searching everything…" : "Finding " + state.pageSize + " more…");
       $("#prog").hidden = false;
       sp.resume();
