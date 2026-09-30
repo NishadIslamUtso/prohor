@@ -1180,7 +1180,10 @@
     opts = opts || {};
     var S = opts.scale || 2;
     var view = buildView(routine, { hueOf: function (code) { return opts.hueOf ? opts.hueOf(code) : 0; }, friday: opts.friday });
-    var labelW = 56, colW = opts.colW || 168, rowH = 56, gapH = 7, headH = 56, pad = 18;
+    // headH must clear the whole header stack: the 21px wordmark at pad+5 and the 12.5px
+    // semester line at pad+35 (its ink reaches ~pad+50+tallest glyph ≈ pad+50) — anything
+    // shorter and the day-header band, painted over it below, eats the semester text.
+    var labelW = 56, colW = opts.colW || 168, rowH = 56, gapH = 7, headH = 72, pad = 18;
     var gridH = 30;                                   // day header row
     view.rows.forEach(function (r) { gridH += r.kind === "gap" ? gapH : rowH; });
     var exRowH = 30, exHeadH = 24;                    // the exam table: a row per course, two lines

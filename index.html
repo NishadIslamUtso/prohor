@@ -38,6 +38,7 @@
   --primary-soft:#E8EBFA;--primary-soft-2:#D5DAF5;--on-primary:#FFFFFF;
   --accent:#E8A317;--accent-soft:#FCF1D6;--accent-text:#8A5B00;
   --success:#1B8A5A;--success-soft:#DDF5E8;--warning:#B7791F;--warning-soft:#FCEFD3;--danger:#C62F4A;--danger-soft:#FCE3E8;
+  --flash:rgba(27,138,90,.20);--flash-ring:rgba(27,138,90,.40);
   --focus-ring:0 0 0 3px rgba(37,52,148,.28);
   --knob:#FFFFFF;--knob-shadow:0 1px 2px rgba(0,0,0,.25);--hatch:rgba(127,127,127,.12);
   --shadow-sm:0 1px 2px rgba(19,22,48,.06);--shadow-md:0 4px 16px rgba(19,22,48,.08);--shadow-lg:0 12px 40px rgba(19,22,48,.12);
@@ -55,6 +56,7 @@
   --primary-soft:rgba(140,153,255,.14);--primary-soft-2:rgba(140,153,255,.26);--on-primary:#FFFFFF;
   --accent:#F2B84B;--accent-soft:rgba(242,184,75,.16);--accent-text:#F7CB78;
   --success:#3DD68C;--success-soft:rgba(61,214,140,.14);--warning:#F2B84B;--warning-soft:rgba(242,184,75,.16);--danger:#FF6B85;--danger-soft:rgba(255,107,133,.14);
+  --flash:rgba(61,214,140,.18);--flash-ring:rgba(61,214,140,.38);
   --focus-ring:0 0 0 3px rgba(154,166,255,.4);
   --knob:#EDEFFA;--knob-shadow:0 1px 2px rgba(0,0,0,.45);--hatch:rgba(220,226,255,.10);
   --shadow-sm:0 1px 2px rgba(0,0,0,.35);--shadow-md:0 4px 16px rgba(0,0,0,.4);--shadow-lg:0 12px 40px rgba(0,0,0,.55);
@@ -645,6 +647,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 .srow{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;padding:6px;border-radius:var(--radius-sm);
   border:1px solid transparent;font-size:12px}
 .srow:hover{background:var(--surface-2)}
+/* a section whose seat count moved flashes once in a translucent green wash — a tint behind the
+   labels, never a solid fill, so every detail stays readable; once per change, never replayed */
+@keyframes seatFlash{0%{background-color:var(--flash);box-shadow:inset 0 0 0 1px var(--flash-ring)}
+  100%{background-color:transparent;box-shadow:inset 0 0 0 0 transparent}}
+.srow.seat-changed{animation:seatFlash 2.2s ease-out 1}
 .srow .sec{font-family:var(--font-mono);font-weight:600;font-size:12px}
 .srow .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:baseline;min-width:0}
 .srow .f{font-family:var(--font-mono);font-size:11px;color:var(--text-2)}
@@ -897,7 +904,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     prefs: { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] },
     view: "grid", sort: "best", pageSize: 50, page: 1,
     results: null, picks: {}, search: null, blockedNote: "", droppedUrl: "",
-    semesters: {}, sem: "live"
+    semesters: {}, sem: "live",
+    // per-section "last known teacher": BRACU sometimes flips a scheduled name back to TBA
+    // mid-semester; this keeps the last real initial so the archive never forgets who taught it
+    facMem: { sid: null, map: {} }
   };
 
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -1054,13 +1064,32 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       session: (raw.meta && raw.meta.semesterSessionIds && raw.meta.semesterSessionIds[0]) || f.sid || null
     };
   }
+  // Content fingerprint of a section list. Counts alone cannot say "nothing changed": a room
+  // swap, an exam-date edit or a drop+add netting zero all keep the same count. Comparing
+  // fingerprints is what lets a refetch skip the rebuild honestly — never while hiding an edit.
+  function feedFp(sections) {
+    var s = JSON.stringify(sections), h = 5381;
+    for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return s.length + ":" + (h >>> 0).toString(36);
+  }
   function adopt(sections, meta) {
     var first = !state.ready;
     var leaving = state.index, leavingMeta = state.meta;
     state.index = C.buildIndex(sections);
     state.meta = meta;
+    state.feedFp = feedFp(sections);
     state.ready = true;
     if (leaving && leavingMeta && String(leavingMeta.session || "") !== String(meta.session || "")) semFile(leaving, leavingMeta);
+    // the memory above was the leaving semester's job — reset it for whoever just arrived,
+    // then fold every real name the fresh feed carries into it (TBA never overwrites)
+    var newSid = String(meta.session || ""), dirty = false;
+    if (newSid !== String(state.facMem.sid || "")) { state.facMem = { sid: newSid, map: {} }; dirty = true; }
+    state.index.codes.forEach(function (code) {
+      state.index.courses[code].sections.forEach(function (s) {
+        if (!facUnknown(s.faculty) && state.facMem.map[code + "|" + s.sec] !== s.faculty) { state.facMem.map[code + "|" + s.sec] = s.faculty; dirty = true; }
+      });
+    });
+    if (dirty) facSave();                     // one storage write per feed adoption, not one per section
     if (state.pins && state.pins.length) {          // a section the feed dropped must not hold a pin slot
       var lived = state.pins.length;
       state.pins = state.pins.filter(function (x) { return !!findSec(x.code, x.sec); });
@@ -1116,7 +1145,14 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         var p = parseFeed(await res.json());
         var at = Date.now();
         store.set(CACHE_KEY, { at: at, sections: p.sections });
-        adopt(p.sections, { origin: "usis-cdn.eniamza.com/connect.json", at: at, start: p.start, end: p.end, session: p.session, label: "live" });
+        if (state.ready && feedFp(p.sections) === state.feedFp) {
+          // same sections we already built (Refresh, or a stale copy that is still current):
+          // roll the clock forward and leave the screen, the search and the pickers alone
+          state.meta.at = at; state.meta.label = "live"; state.meta.origin = "usis-cdn.eniamza.com/connect.json"; state.meta.warn = false;
+          renderData();
+        } else {
+          adopt(p.sections, { origin: "usis-cdn.eniamza.com/connect.json", at: at, start: p.start, end: p.end, session: p.session, label: "live" });
+        }
         upgraded = true;
       } catch (e1) {
         if (!state.ready) {
@@ -1140,8 +1176,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       var p = parseFeed(await res.json());
       var at = Date.now();
       store.set(CACHE_KEY, { at: at, sections: p.sections });
-      if (state.index && p.sections.length === state.index.count) {
-        state.meta.at = at; state.meta.label = "live"; state.meta.origin = "usis-cdn.eniamza.com/connect.json";
+      if (state.index && feedFp(p.sections) === state.feedFp) {
+        // genuinely the same sections, not merely the same number of them
+        state.meta.at = at; state.meta.label = "live"; state.meta.origin = "usis-cdn.eniamza.com/connect.json"; state.meta.warn = false;
         renderData();
         return;
       }
@@ -1198,7 +1235,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       set: function (k, v) {
         return db().then(function (d) {
           if (!d) { ls(k, v); return null; }
-          try { d.transaction("kv", "readwrite").objectStore("kv").put(v, k); } catch (e) { ls(k, v); }
+          try {
+            var tx = d.transaction("kv", "readwrite");
+            tx.objectStore("kv").put(v, k);
+            tx.onerror = function () { ls(k, v); };   // quota/full-disk errors arrive asynchronously
+          } catch (e) { ls(k, v); }
           return null;
         });
       }
@@ -1313,11 +1354,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
           '<button class="select-btn" data-act="open-fac" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-f-' + esc(c.code) + '"><span>' + esc(facLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
       '</div>' +
       (chips ? '<div class="chips">' + chips + '</div>' : "") +
-      '<div class="caption">' + num(Cc.sections.length) + " sections" +
+      '<div class="caption">' +
         (anyFilter()
-          ? " · <b>" + num(viable.length) + " of " + num(Cc.groups.length) + " patterns · " + num(vSections) +
-            " section" + (vSections === 1 ? "" : "s") + " match</b>"
-          : " · " + num(Cc.groups.length) + " patterns") +
+          ? "<b>" + num(vSections) + " of " + num(Cc.sections.length) + " sections · " +
+            num(viable.length) + " of " + num(Cc.groups.length) + " patterns fit your filters</b>"
+          : num(Cc.sections.length) + " sections · " + num(Cc.groups.length) + " patterns") +
         ((c.secs || []).length ? ' · <b>' + c.secs.length + " section" + (c.secs.length === 1 ? "" : "s") + " picked</b>" : "") +
       '</div></article>';
   }
@@ -2654,8 +2695,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     return true;
   }
   var SEAT_MS = 30000, SEAT_MS_OPEN = 8000, SEAT_MAX_BACKOFF = 480000;
+  var SEAT_FLASH_MS = 6000;                 // how long a seat movement still counts as "just happened"
   var seatWorker = null, seatBusy = false, seatTimer = null, rowCache = {};
-  state.seats = { map: {}, at: null, error: null, paused: false, backoff: SEAT_MS, lastTry: 0, query: "", open: {}, fold: {}, showAll: false, mode: "closed" };
+  state.seats = { map: {}, changed: {}, flashed: {}, at: null, error: null, paused: false, backoff: SEAT_MS, lastTry: 0, query: "", open: {}, fold: {}, showAll: false, mode: "closed" };
   state.pins = [];
   state.railPage = [];
   state.rail = { w: 430, h: 320, was: 320 };
@@ -2676,7 +2718,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function indexSeats() {
     rowCache = {};
     var map = {};
-    if (!state.index) { state.seats.map = map; return; }
+    if (!state.index) { state.seats.map = map; state.seats.changed = {}; return; }
     state.index.codes.forEach(function (code) {
       state.index.courses[code].sections.forEach(function (s) {
         var cap = s.cap == null ? null : +s.cap, used = s.used == null ? null : +s.used;
@@ -2684,6 +2726,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       });
     });
     state.seats.map = map;
+    state.seats.changed = {};               // a rebuilt map invalidates the previous diff
   }
   function fmtRange(lo, hi) {           // "3:30–4:50 PM" — the repeated meridiem only earns its keep once
     var a = fmt12(lo), b = fmt12(hi);
@@ -2740,15 +2783,23 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     return (rowCache[key] = rowBuild(code, sec, s, g ? g.events : s.all, s.exams || [], facNames, Cc && Cc.name));
   }
   function seatPill(code, sec, st) {
-    st = st || seatState(code, sec);
+    if (st === undefined) st = seatState(code, sec);      // an explicit null is honoured: "live box, no live figure"
     if (!st || st.free == null) return '<span class="seat unknown" data-tip="No seat figures in the feed for this section.">\u2013</span>';
     var cls = st.free <= 0 ? (st.over ? "over" : "full") : (st.free <= 3 ? "low" : "");
     var label = st.free <= 0 ? (st.over ? "full \u00b7 +" + st.over + " over" : "full") : st.free + " free";
     return '<span class="seat ' + cls + '" data-tip="Capacity ' + st.cap + " \u00b7 enrolled " + st.used + ' \u00b7 free = capacity \u2212 enrolled.">' + label + "</span>";
   }
-  function seatRow(r, inUse, showCode) {
+  function seatRow(r, inUse, showCode, liveNow) {
     var pinned = state.pins.some(function (x) { return x.code === r.code && x.sec === r.sec; });
-    return '<div class="srow' + (inUse ? " inuse" : "") + '" style="' + hueVars(r.hue) + '" data-tip="' + esc(r.tip) + '">' +
+    // the same section can sit in several boxes at once — every copy of it flashes together,
+    // and a change flashes exactly once: renderRail folds "shown" into seats.flashed afterwards,
+    // so re-renders caused by folding, pinning or filtering never replay it
+    var chAt = state.seats.changed ? state.seats.changed[r.code + "|" + r.sec] : 0;
+    var moved = !!chAt && (state.seats.flashed || {})[r.code + "|" + r.sec] !== chAt && Date.now() - chAt < SEAT_FLASH_MS;
+    // liveNow rows (every box except All courses) always show the live pill, even while the
+    // catalogue is browsing an archived semester
+    var pill = liveNow ? seatPill(r.code, r.sec, seatOf(r.code, r.sec)) : seatPill(r.code, r.sec);
+    return '<div class="srow' + (inUse ? " inuse" : "") + (moved ? " seat-changed" : "") + '" style="' + hueVars(r.hue) + '" data-tip="' + esc(r.tip) + '">' +
       '<button class="pinbtn" data-pin="' + esc(r.code + "|" + r.sec) + '" aria-pressed="' + pinned +
         '" aria-label="' + (pinned ? "Unpin" : "Pin") + " " + esc(r.code) + " section " + esc(r.sec) + '" data-tip="' +
         (pinned ? "Unpin this section" : "Pin this section \u2014 its seat count then stays at the top of the panel") +
@@ -2757,7 +2808,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       '<span class="sec">[' + esc(r.sec) + ']</span><span class="f">' + esc(r.faculty) + "</span>" +
       '<span class="t">' + (r.patternHtml || esc(r.pattern)) + '</span><span class="exs">' + (r.examHtml || esc(r.exam)) + "</span>" +
       (inUse ? '<span class="use">on this page</span>' : "") + "</div>" +
-      '<div class="right">' + seatPill(r.code, r.sec) + "</div></div>";
+      '<div class="right">' + pill + "</div></div>";
   }
   function qMatch(row) { return !state.seats.query || row.hay.indexOf(state.seats.query) >= 0; }
   function bySec(rows) { return rows.slice().sort(function (a, b) { return String(a.sec).localeCompare(String(b.sec)); }); }
@@ -2772,13 +2823,31 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       (hue != null ? '<span class="sw"></span>' : "") + esc(title) +
       (sub ? ' <span class="faint" style="font-weight:400">' + esc(sub) + "</span>" : "") +
       '<span class="n">' + rows.length + " section" + (rows.length === 1 ? "" : "s") + "</span></button></h4>" +
-      rows.map(function (x) { return seatRow(x.r, x.inUse); }).join("") + "</div>";
+      rows.map(function (x) { return seatRow(x.r, x.inUse, false, true); }).join("") + "</div>";
   }
   /* ------------------------------ saved semesters ------------------------------
      The moment a *different* session turns up in the feed, the semester we were reading is
      filed away on this device, so the seats panel can still show it months later: faculty,
      rooms, meeting times, exam slots and the seat counts exactly as they stood.            */
-  var LS_SEM = "prohor.semesters", SEM_KEEP = 8;
+  var LS_SEM = "prohor.semesters", LS_FAC = "prohor.facmem", SEM_KEEP = 8;
+  // a faculty string counts as unknown when every word in it is TBA / empty
+  function facUnknown(f) {
+    if (!f) return true;
+    return !String(f).toUpperCase().split(/[^A-Z]+/).some(function (w) { return w && w !== "TBA"; });
+  }
+  function facSave() {
+    try { localStorage.setItem(LS_FAC, JSON.stringify(state.facMem)); } catch (e) { }
+    store.set(LS_FAC, state.facMem);
+  }
+  function facLoad() {
+    try { var v = JSON.parse(localStorage.getItem(LS_FAC) || "null"); if (v && v.map) state.facMem = v; } catch (e) { }
+    store.get(LS_FAC).then(function (v) {
+      if (!v || !v.map) return;
+      // IndexedDB may carry a copy localStorage lost; union keeps the newest memory per section
+      Object.keys(v.map).forEach(function (k) { if (v.sid === state.facMem.sid) state.facMem.map[k] = state.facMem.map[k] || v.map[k]; });
+      if (!state.facMem.sid && v.sid) state.facMem.sid = v.sid;
+    }).catch(function () { });
+  }
   function semLabel(session) {
     var s = String(session == null ? "" : session);
     if (!/^\d{5}$/.test(s)) return "Session " + (s || "?");
@@ -2811,12 +2880,16 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     index.codes.forEach(function (code) {
       var Cc = index.courses[code];
       rec.courses[code] = Cc.name || code;
+      var prior = state.facMem && state.facMem.map ? state.facMem.map : {};
       Cc.sections.forEach(function (s) {
         var ev = [], i;
         for (i = 0; i < s.all.length; i++) ev.push(s.all[i].day, s.all[i].start, s.all[i].end, s.all[i].kind === "LAB" ? 1 : 0);
         var ex = [];
         (s.exams || []).forEach(function (x) { ex.push(x.kind === "MID" ? 0 : 1, x.date, x.start, x.end); });
-        rec.rows[code + "|" + s.sec] = [s.faculty, s.room || "", s.labRoom || "", s.labCourse || "",
+        // archive the last real name, never a mid-semester flip back to TBA; a section that
+        // stayed TBA from the first usable snapshot to the last is the only one filed as TBA
+        var fac = facUnknown(s.faculty) && prior[code + "|" + s.sec] ? prior[code + "|" + s.sec] : s.faculty;
+        rec.rows[code + "|" + s.sec] = [fac, s.room || "", s.labRoom || "", s.labCourse || "",
           s.cap == null ? null : +s.cap, s.used == null ? null : +s.used, ev, ex];
       });
     });
@@ -2863,6 +2936,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function courseSections(code) {
     var rec = semActive();
     if (rec) return bySec((semByCode()[code] || []).map(function (s) { return semRow(code, s); }).filter(Boolean));
+    var Cc = K(code);
+    return Cc ? bySec(Cc.sections.map(function (s) { return sectionRow(code, s.sec); }).filter(Boolean)) : [];
+  }
+  // for the boxes that always follow the live feed, never the semester switch
+  function liveCourseSections(code) {
     var Cc = K(code);
     return Cc ? bySec(Cc.sections.map(function (s) { return sectionRow(code, s.sec); }).filter(Boolean)) : [];
   }
@@ -2932,14 +3010,24 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     renderRail();
     semRender();
     save();
-    if (state.sem !== "live") toast("Showing " + state.semesters[state.sem].label + " — switch back to " + (semNow() ? semLabel(semNow()) : "the live feed") + " for today's seats.");
+    if (state.sem !== "live") toast("\u201cAll courses\u201d now shows the saved copy of " + state.semesters[state.sem].label + " — the other boxes stay live.");
   }
   function semBoot() {
     var raw = null;
     try { raw = JSON.parse(localStorage.getItem(LS_SEM) || "null"); } catch (e) { }
     if (raw && raw.list && typeof raw.list === "object") state.semesters = raw.list;
-    else store.get(LS_SEM).then(function (v) {
-      if (v && v.list && typeof v.list === "object") { state.semesters = v.list; if (state.sem !== "live" && !state.semesters[state.sem]) state.sem = "live"; renderRail(); semRender(); }
+    // localStorage holds only what fits; a failed write there leaves a valid-but-old list that
+    // would otherwise shadow the fresh copy IndexedDB carries. Take the union of both stores —
+    // a semester already present in the fast copy never gets re-paint, one it lacks appears.
+    store.get(LS_SEM).then(function (v) {
+      if (!v || !v.list || typeof v.list !== "object") return;
+      var missing = Object.keys(v.list).filter(function (k) { return !state.semesters[k]; });
+      if (!missing.length) return;
+      missing.forEach(function (k) { state.semesters[k] = v.list[k]; });
+      var keys = Object.keys(state.semesters).sort();
+      while (keys.length > SEM_KEEP) delete state.semesters[keys.shift()];
+      if (state.sem !== "live" && !state.semesters[state.sem]) state.sem = "live";
+      renderRail(); semRender();
     }).catch(function () { });
     if (state.sem !== "live" && !state.semesters[state.sem]) state.sem = "live";
     semRender();
@@ -2953,20 +3041,20 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var past = semActive();
     // pinned sections — any course, any number up to PIN_MAX, always the first box
     if (state.pins.length) {
-      var pr = state.pins.map(function (x) { return rowFor(x.code, x.sec); }).filter(Boolean)
+      var pr = state.pins.map(function (x) { return sectionRow(x.code, x.sec); }).filter(Boolean)
         .sort(function (a, b) {
           return String(a.code).localeCompare(String(b.code)) || String(a.sec).localeCompare(String(b.sec), undefined, { numeric: true });
         });
       if (pr.length) {
         pinnedBox = '<div class="seatbox pinned"><h3 data-tip="Kept at the top of this panel and refreshed with everything else. Tap the pin on any row to add or remove one."><svg width="12" height="12"><use href="#i-pin"/></svg>Pinned' +
           '<span class="at">' + pr.length + " of " + PIN_MAX + ' · <button class="link-btn" data-clearpins>clear all</button></span></h3>' +
-          pr.map(function (r) { return seatRow(r, false, true); }).join("") + "</div>";
+          pr.map(function (r) { return seatRow(r, false, true, true); }).join("") + "</div>";
       }
     }
     // 1) the sections on the routine page being read
     if (state.railPage.length) {
       var b = state.railPage.map(function (g) {
-        var rows = g.rows.map(function (x) { return { r: rowFor(x.r.code, x.r.sec), inUse: x.inUse > 0 }; })
+        var rows = g.rows.map(function (x) { return { r: sectionRow(x.r.code, x.r.sec), inUse: x.inUse > 0 }; })
           .filter(function (x) { return x.r && qMatch(x.r); });
         return rows.length ? groupHtml(g.code, "", rows, g.hue, "page|" + g.code) : "";
       }).join("");
@@ -2980,7 +3068,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     // 2) every section of the chosen courses
     if (state.courses.length) {
       var b2 = state.courses.map(function (c, ci) {
-        var rows = bySec(courseSections(c.code)).filter(qMatch).map(function (r) { return { r: r, inUse: false }; });
+        var rows = liveCourseSections(c.code).filter(qMatch).map(function (r) { return { r: r, inUse: false }; });
         return rows.length ? groupHtml(c.code, courseName(c.code), rows, ci, "mine|" + c.code) : "";
       }).join("");
       if (b2) out.push('<div class="seatbox"><h3 data-tip="Every section of the courses you added, in section-number order.">Your courses<span class="at">' +
@@ -3013,13 +3101,15 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       (state.seats.query && list.length > cap ? '<div class="rail-empty">' + (list.length - cap) + ' more matching course' + (list.length - cap === 1 ? "" : "s") + ' — open one from the list or refine the search.</div>' : "") + more + "</div>");
     body.innerHTML = pinnedBox + wrapCols(out);
     renderPeek();
+    state.seats.flashed = Object.assign({}, state.seats.changed);   // the flash fires once per change
     var known = 0, freeTotal = 0;
     for (i in state.seats.map) { var v = state.seats.map[i]; if (v.free != null) { known++; if (v.free > 0) freeTotal++; } }
     var narrow = railStacked();
-    $("#railSub").textContent = (past ? "saved copy" : num(known) + " tracked") +
-      (narrow || past ? "" : " · " + num(freeTotal) + " open · " + num(state.pins.length) + " pinned");
+    $("#railSub").textContent = num(known) + " tracked" +
+      (narrow ? "" : " · " + num(freeTotal) + " open · " + num(state.pins.length) + " pinned") +
+      (past ? " · catalogue: " + past.label : "");
     stickInset();
-    var sc = $("#seatsCount"); if (sc) sc.textContent = past ? "—" : (known ? num(known) : "—");
+    var sc = $("#seatsCount"); if (sc) sc.textContent = known ? num(known) : "—";
     railClock();
   }
   // on a wide seats page the boxes read better in two columns that scroll on their own
@@ -3038,7 +3128,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     // only meaningful in the stacked band, where it is what you see when folded
     if (!state.pins.length || !railStacked()) { el2.hidden = true; el2.innerHTML = ""; return; }
     var parts = state.pins.slice(0, 24).map(function (x) {
-      var st = seatState(x.code, x.sec);
+      var st = seatOf(x.code, x.sec);
       var free = st && st.free != null ? st.free : null;
       var cls = free == null ? "" : (free <= 0 ? (st.over ? "full low" : "full") : (free <= 3 ? "low" : ""));
       return "<i class=\"" + cls + "\" style=\"" + hueVars(hueOf(x.code)) + "\"><b>" + esc(x.code) + " [" + esc(x.sec) + "]</b>" +
@@ -3050,8 +3140,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function railFootText() {
     var past = semActive();
-    if (past) return "Saved copy of " + past.label + " · " + num(past.count) + " sections as they were on " +
-      C.fmtDate(String(past.at).slice(0, 10)) + ". Seats are not live here.";
+    if (past) {
+      var savedAt = new Date(+past.at || NaN);
+      return "\u201cAll courses\u201d shows the saved copy of " + past.label + " (" + num(past.count) + " sections as they were on " +
+        (isNaN(savedAt) ? "an unknown date" : C.fmtDate(savedAt.toISOString().slice(0, 10))) + ") — the other boxes stay live.";
+    }
     var every = Math.round((state.seats.every || SEAT_MS) / 1000);
     return "Free seats = capacity − enrolled, refreshed every " + every + " s " +
       (state.seats.mode === "closed" ? "in the background" : "while this panel is open") + ".";
@@ -3060,17 +3153,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var el2 = $("#seatAgo"); if (!el2) return;
     var live = $("#railLive");
     var foot = $("#railFoot"); if (foot) foot.textContent = railFootText();
-    var past = semActive();
-    if (past) {
-      live.setAttribute("data-state", "idle");
-      el2.textContent = "saved copy · not live";
-      var pause = $("#seatPause"), now = $("#seatNow");
-      if (pause) pause.hidden = true;
-      if (now) now.hidden = true;
-      return;
-    }
     var pause2 = $("#seatPause"), now2 = $("#seatNow");
-    if (pause2) pause2.hidden = false;
+    if (pause2) pause2.hidden = false;      // the rail stays live even while the catalogue browses a saved semester
     if (now2) now2.hidden = false;
     if (state.seats.paused) { live.setAttribute("data-state", "paused"); el2.textContent = "paused"; return; }
     if (state.seats.error) { live.setAttribute("data-state", "error"); el2.textContent = "retry in " + Math.round(state.seats.backoff / 1000) + " s (" + state.seats.error + ")"; return; }
@@ -3097,17 +3181,24 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function applySeats(rows, at) {
     if (!rows || !rows.length) { seatFail("empty feed"); return; }
-    var next = {};
+    var now = at || Date.now();
+    var prev = state.seats.map || {}, next = {}, changed = {};
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i], free = r[4] == null ? null : r[4];
-      next[secKey(r[0], r[1])] = { cap: r[2], used: r[3], free: free, over: r[2] != null && r[3] != null && r[3] > r[2] ? r[3] - r[2] : 0 };
+      var key = secKey(r[0], r[1]);
+      var over = r[2] != null && r[3] != null && r[3] > r[2] ? r[3] - r[2] : 0;
+      next[key] = { cap: r[2], used: r[3], free: free, over: over };
+      // worth flashing only when we had a previous reading and the number the row shows
+      // actually moved (free count, or the over-subscription an already-full section carries)
+      var p = prev[key];
+      if (p && p.free != null && free != null && (p.free !== free || (p.over || 0) !== over)) changed[key] = now;
     }
-    state.seats.map = next; state.seats.at = at || Date.now(); state.seats.error = null;
+    state.seats.map = next; state.seats.changed = changed; state.seats.at = now; state.seats.error = null;
     state.seats.backoff = (state.seats.every || SEAT_MS);
     railClock(); queueRail();
   }
   function seatTick(force) {
-    if (!state.ready || semActive()) return;          // a saved semester has no live seats to poll
+    if (!state.ready) return;                         // polling continues while the catalogue browses a saved semester
     if (!force && (state.seats.paused || document.visibilityState === "hidden")) return;
     if (seatBusy) return;
     if (!force && Date.now() - (state.seats.lastTry || 0) < state.seats.backoff) return;
@@ -3451,6 +3542,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     readRailPrefs();                // the split the user left it at
     applyRailSize();
     semBoot();                      // the semesters already filed on this device
+    facLoad();                      // and the last-known-teacher memory behind them
     initRail();                     // the seat rail runs on its own clock and its own worker
     if (SEATS_LOADED) { setSeatsView(true, false); }
     else {
