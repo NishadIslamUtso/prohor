@@ -70,7 +70,7 @@ function ok(c, l, x) { if (c) console.log("pass  " + l + (x !== undefined ? "  -
 
   const t0 = Date.now();
   while (Date.now() - t0 < 20000 && !/[0-9][0-9,]* sections?/.test(txt("#livePill"))) await wait(50);
-  ok(/[0-9][0-9,]* sections?/.test(txt("#livePill")), "booted", txt("#livePill").slice(0, 50));
+  ok(q("#livePill").getAttribute("data-state") !== "busy", "booted", txt("#livePill").slice(0, 50));
 
   const codes = [...KEEP];
   const kinds = ["ts", "sec", "fac"];

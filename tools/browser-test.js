@@ -62,7 +62,7 @@ const liveWindows = [];
 function reapWindows(keep) {
   while (liveWindows.length > keep) {
     const old = liveWindows.shift();
-    try { old.close(); } catch (e) { }
+    try { if (old && old.window) old.window.close(); } catch (e) { }
   }
 }
 function boot(opts) {
@@ -142,7 +142,7 @@ function boot(opts) {
     async ready(ms) {
       const t0 = Date.now();
       const cap = budget(ms || 12000);
-      while (Date.now() - t0 < cap) { if (/sections/.test(A.txt("#livePill") || "")) return true; await wait(50); }
+      while (Date.now() - t0 < cap) { if (A.q("#livePill").getAttribute("data-state") !== "busy") return true; await wait(50); }
       return false;
     },
     async waitFor(pred, ms, label) {
@@ -192,7 +192,8 @@ function boot(opts) {
   await A.ready();
   console.log("\npill  : " + A.txt("#livePill"));
   console.log("desc  : " + A.txt("#resultsDesc") + "\n");
-  ok(A.txt("#livePill").includes(F.sections.toLocaleString("en-US")), "live feed loaded into the pill", A.txt("#livePill"));
+  ok(/Live/.test(A.txt("#livePill")) && !/sections/.test(A.txt("#livePill")), "the pill names the state and nothing else", A.txt("#livePill"));
+  ok(A.txt("#dataKv").includes(F.sections.toLocaleString("en-US")), "the feed size moved to the popover", A.txt("#dataKv").slice(0, 120));
   ok(A.q("#livePill").getAttribute("data-state") === "ok", "pill reports ok state");
   const kv = A.qa("#dataKv dt").map((x) => x.textContent);
   ok(A.qa("#dataKv dd").length === kv.length && kv.length >= 7, "popover has a full key/value table", kv.join(","));
@@ -204,7 +205,8 @@ function boot(opts) {
   /* ---------------- branding + chrome ---------------- */
   ok(/Prohor/.test(A.q("title").textContent), "document title is Prohor", A.txt("title"));
   ok(A.q(".wordmark").textContent.trim() === "Prohor", "wordmark rendered");
-  ok(/unofficial/.test(A.q(".unofficial").textContent), "unofficial line in the header", A.q(".unofficial").textContent.trim());
+  ok(A.q(".unofficial").textContent.trim() === "BRACU", "the header wordmark is short again", A.q(".unofficial").textContent.trim());
+  ok(/not affiliated with BRAC University/.test(A.q(".unofficial").dataset.tip), "and the disclaimer is one hover away", A.q(".unofficial").dataset.tip.slice(0, 40));
   ok(!!A.q("#prohor-mark") && A.qa("#courses,#courses").length >= 0, "brand mark available as a symbol");
   ok(!!A.q('link[rel="icon"]') && /favicon\.svg/.test(A.q('link[rel="icon"]').href), "favicon wired to the brand svg");
   ok(!!A.q('link[rel="manifest"]'), "manifest linked");
@@ -222,7 +224,8 @@ function boot(opts) {
   ok(/mailto:nishadislamutso@gmail\.com/.test(A.q("footer").innerHTML), "a plain mailto fallback is offered too");
   const gh = A.qa("footer a").find((a) => /github/.test(a.href));
   ok(gh && gh.href === "https://github.com/NishadIslamUtso" && gh.target === "_blank", "GitHub link opens the profile directly", gh && gh.href + " " + gh.target);
-  ok(/feedback/i.test(A.q("footer").textContent), "footer wording mentions feedback");
+  ok(/Unofficial · always confirm in BRACU Connect/.test(A.q("footer").textContent), "the footer is one line", A.q("footer").textContent.replace(/\s+/g, " ").trim().slice(0, 90));
+  ok(/Gmail/.test(A.q("footer").textContent) && A.q("#feedbackLink"), "and still offers feedback");
   ok(A.qa(".step-head h2").map((h) => h.textContent.trim()).join(" | ") === "Pick your courses | Set your preferences | Compare routines", "three plain section titles, no numbering", A.qa(".step-head h2").map(h => h.textContent.trim()).join(" | "));
   ok(!/[123] · /.test(A.d.body.textContent), "no 'N ·' numbering left anywhere on the page", (/[123] · [A-Z][a-z]+/.exec(A.d.body.textContent) || ["none"])[0]);
   ok(/Set your preferences/.test(A.txt("#prefsToggle")), "preferences toggle label");
@@ -328,8 +331,11 @@ function boot(opts) {
 
   /* ---------------- preferences ---------------- */
   const sw = A.qa(".switch");
-  ok(sw.length === 3, "three switches", sw.length);
-  ok(sw.map((s) => s.getAttribute("aria-checked")).join(",") === "true,true,false", "default switch states", sw.map(s => s.dataset.pref + "=" + s.getAttribute("aria-checked")).join(","));
+  ok(sw.length === 5, "five switches, one per thing you can rank on", sw.map((s) => s.dataset.pref).join(","));
+  ok(sw.map((s) => s.dataset.pref + "=" + s.getAttribute("aria-checked")).join(",") === "examClash=true,fewerDays=true,lessTime=false,minGaps=true,moreChoices=false",
+    "default switch states", sw.map(s => s.dataset.pref + "=" + s.getAttribute("aria-checked")).join(","));
+  const examTxt = sw[0].closest(".pref-row").querySelector(".txt");
+  ok(/confirm in BRACU Connect/.test(examTxt.dataset.tip), "the exam switch warns that the feed invents some finals", examTxt.dataset.tip.slice(0, 60));
   A.click(sw[0].closest(".pref-row"));
   await wait(30);
   ok(A.qa(".switch")[0].getAttribute("aria-checked") === "false", "clicking the row flips the switch");
@@ -352,7 +358,8 @@ function boot(opts) {
   await wait(60);
   ok(A.q('#timeChips .chip[data-i="0"]').getAttribute("aria-pressed") === "true", "time chip pressed state");
   ok(A.q("#clearTime").hidden === false && A.q("#clearDay").hidden === false, "Clear buttons appear when active");
-  ok(/3 active/.test(A.txt("#prefsActive")), "preferences badge counts actives", A.txt("#prefsActive"));
+  ok(/3 changed/.test(A.txt("#prefsActive")), "the badge counts what differs from the default", A.txt("#prefsActive"));
+  ok(A.q("#resetPrefs").hidden === false, "and reset shows up once something has changed");
   A.q("#facSearch").focus();
   A.set("#facSearch", "ANK"); await wait(60);
   ok(A.qa("#facList .option").length >= 1, "faculty suggestions offered", A.qa("#facList .option").map(o => o.textContent.trim()).join("|").slice(0, 60));
@@ -376,6 +383,32 @@ function boot(opts) {
   ok(A.qa("#courses .course").length === 5, "remove ✕ drops a course card");
   ok(A.q("#courseSearch").disabled === false, "search re-enabled below the cap");
 
+  /* ---------------- the ranking switches each own one term ---------------- */
+  const RK = boot({});
+  await RK.ready();
+  await RK.add("CSE221"); await RK.add("CSE250"); await RK.add("CSE320"); await RK.add("MAT216");
+  const setSwitches = async (want) => {
+    for (const s of RK.qa(".switch")) {
+      const on = s.getAttribute("aria-checked") === "true";
+      if (on !== !!want[s.dataset.pref]) { RK.click(s.closest(".pref-row")); await RK.wait(20); }
+    }
+  };
+  const topOrder = async () => {
+    await RK.gen();
+    return RK.qa("#resultsBody .routine .r-secs").map((x) => x.textContent.replace(/\s+/g, "")).join("|");
+  };
+  await setSwitches({ fewerDays: true, lessTime: false, minGaps: false, moreChoices: false });
+  const byDays = await topOrder();
+  await setSwitches({ fewerDays: false, lessTime: true, minGaps: false, moreChoices: false });
+  const byTime = await topOrder();
+  await setSwitches({ fewerDays: false, lessTime: false, minGaps: true, moreChoices: false });
+  const byGaps = await topOrder();
+  ok([byDays, byTime, byGaps].every((x) => x.length > 0), "each ranking still produces routines");
+  ok(byDays !== byTime || byDays !== byGaps, "and each switch reorders the list its own way",
+    [byDays, byTime, byGaps].map((x) => x.slice(0, 22)).join("   vs   "));
+  ok(/lab shares its course/.test(RK.q(".routine .r-secs").dataset.tip), "the header explains the section chips", RK.q(".routine .r-secs").dataset.tip.slice(0, 50));
+  try { RK.dom.window.close(); } catch (e) { }
+
   /* ---------------- exam-clash semantics ---------------- */
   const B = boot({});
   await B.ready();
@@ -384,6 +417,8 @@ function boot(opts) {
   ok(B.cards().length === 0, "ACT201 + CHN101: every combination rejected by the exam check");
   ok(/No routine fits these constraints/.test(B.txt("#resultsBody")), "zero state shown");
   ok(/turn off “Check exam clashes”/.test(B.txt("#resultsBody")), "zero state suggests turning the exam check off");
+  ok(/mid or a final on the same date and time/.test(B.q("#resultsBody .muted").dataset.tip), "and explains what a clash is", B.q("#resultsBody .muted").dataset.tip.slice(0, 60));
+  ok(/Not every course really has a final/.test(B.q("#resultsBody .muted").dataset.tip), "including that the feed invents some finals", "hover");
   ok(/blocked by exam clashes/.test(B.txt("#resultsDesc")) || /combinations/.test(B.txt("#resultsDesc")), "results line reports what was checked", B.txt("#resultsDesc"));
   B.click(B.qa(".switch")[0].closest(".pref-row"));
   await B.wait(50);
@@ -413,6 +448,9 @@ function boot(opts) {
   console.log("\nfirst routine blocks:\n  " + blocks.join("\n  "));
   ok(blocks.length >= 6, "one block per weekly meeting", blocks.length);
   ok(c0.querySelectorAll(".blk.lab").length >= 1 && /LAB/.test(c0.querySelector(".blk.lab").textContent), "labs hatched and tagged");
+  ok([...c0.querySelectorAll(".blk.lab b")].every((b) => /^[A-Z]{3}\d{3} · \[\d+\]$/.test(b.firstChild.textContent.trim())),
+     "a lab block carries its course section, written the same way as a class", c0.querySelector(".blk.lab b").firstChild.textContent.trim());
+  ok([...c0.querySelectorAll(".blk.lab")].every((b) => /lab/i.test(b.getAttribute("title"))), "and says it is a lab on hover", c0.querySelector(".blk.lab").getAttribute("title").slice(0, 60));
   ok([...c0.querySelectorAll(".blk")].every((b) => /\d\d:\d\d [AP]M – \d\d:\d\d [AP]M/.test(b.textContent) && /·/.test(b.textContent)), "blocks carry a 12-hour time range, room and faculty", [...c0.querySelectorAll(".blk")][0].textContent.replace(/\s+/g, " ").trim());
   ok(!/\d\d:\d\d – \d\d:\d\d(?! [AP]M)/.test(c0.textContent), "no 24-hour times left in the routine table");
   ok(/\d\d:\d\d [AP]M/.test(c0.querySelector(".rt:not(.gap)").textContent), "the time gutter is 12-hour too", c0.querySelector(".rt:not(.gap)").textContent.replace(/\s+/g, " ").trim());
@@ -422,10 +460,24 @@ function boot(opts) {
   ok(["Course", "Mid", "Final", "Section", "Faculty"].every((h) => c0.querySelectorAll("table.exam th")[Array.from(c0.querySelectorAll("table.exam th")).findIndex(x => x.textContent === h)]), "exam table columns", [...c0.querySelectorAll("table.exam th")].map(x => x.textContent).join(","));
   ok(ex.every((r) => /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d+, 20\d\d/.test(r)), "exam dates in the table", ex[0]);
   ok(ex.every((r) => /\[\d+\]/.test(r)), "exam rows show the chosen section");
-  ok(!!c0.querySelector("table.exam caption"), "exam table has a caption for screen readers");
-  ok(c0.querySelector(".day-dots").querySelectorAll("i.on").length >= 3, "day dots mark active days", c0.querySelector(".day-dots").querySelectorAll("i.on").length);
-  // the two numbers a person does not need at a glance live one hover away, on the badges they belong to
-  ok(/longest day \d/.test(c0.querySelector(".day-dots").closest(".badge").dataset.tip), "longest-day figure, on hover over the days badge", c0.querySelector(".day-dots").closest(".badge").dataset.tip);
+  const MON = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 };
+  const exOrder = [...c0.querySelectorAll("table.exam tbody tr")].map((r) => {
+    const m = /([A-Z][a-z]{2}) (\d+), (\d{4})/.exec(r.textContent);            // the first slot this course has
+    return m ? [+m[3], MON[m[1]], +m[2]].join("-") : "zzzz";
+  });
+  ok(exOrder.join(",") === exOrder.slice().sort().join(","), "exam rows run in date order", exOrder.join(" < "));
+  ok(!!c0.querySelector("table.exam caption"), "exam table has a caption");
+  ok(!/sr-only/.test(c0.querySelector("table.exam caption").className), "and it is printed, not screen-reader only", c0.querySelector("table.exam caption").textContent);
+  ok(/order they happen/.test(c0.querySelector("table.exam caption").dataset.tip), "with the caveat about invented finals on hover", c0.querySelector("table.exam caption").dataset.tip.slice(0, 50));
+  // the header carries the day count in words, not in coloured dots
+  ok(c0.querySelector(".day-dots") === null, "the day dots are gone from the header");
+  const daysBadge = [...c0.querySelectorAll(".r-head .badge")].find((b) => /\d+ days?/.test(b.textContent));
+  ok(!!daysBadge && /longest day \d/.test(daysBadge.dataset.tip), "longest-day figure, on hover over the days badge", daysBadge && daysBadge.dataset.tip);
+  // and it names the sections the routine is built from
+  const secs = [...c0.querySelectorAll(".r-secs .r-sec")].map((x) => x.textContent.replace(/\s+/g, " ").trim());
+  ok(secs.length === 3, "every course is named with its section in the header", secs.join(" · "));
+  ok(secs.every((x) => /^[A-Z]{3}\d{3} \[\d+\]$/.test(x)), "as CODE [section]", secs.join(" · "));
+  ok(c0.querySelectorAll(".r-secs .r-sec").length === c0.querySelectorAll("table.exam tbody tr").length, "one chip per exam row");
   ok(/\d section option/.test(c0.querySelector(".rank").dataset.tip), "section-option count, on hover over the rank", c0.querySelector(".rank").dataset.tip);
 
   // swapping a section inside the card
@@ -907,7 +959,7 @@ function boot(opts) {
   const hMin = parseInt(K2.W.document.body.style.getPropertyValue("--rail-h"), 10);
   ok(hMin >= 50 && hMin <= 120, "it can fold down to a status strip", hMin);
   ok(K2.q("#seatsLayer").classList.contains("slim"), "folded band shows only the live strip, no rows", K2.q("#seatsLayer").className);
-  ok(K2.q("#railMore").textContent.trim() === "Show sections", "and offers to bring the rows back", K2.q("#railMore").textContent.trim());
+  ok(K2.q("#railMore").textContent.trim() === "Show", "and offers to bring the rows back", K2.q("#railMore").textContent.trim());
   K2.click("#railMore"); await K2.wait(120);
   ok(!K2.q("#seatsLayer").classList.contains("slim") && parseInt(K2.W.document.body.style.getPropertyValue("--rail-h"), 10) > 200,
     "tapping it again unfolds to the size you had", K2.W.document.body.style.getPropertyValue("--rail-h"));
@@ -951,7 +1003,7 @@ function boot(opts) {
   ok(K2.q("#seatsLayer").classList.contains("slim"), "a tap on the handle folds the band away", K2.q("#seatsLayer").className);
   const hFold = parseInt(K2.W.document.body.style.getPropertyValue("--rail-h"), 10);
   ok(hFold > 60 && hFold <= 130, "folded it is a strip that still fits a line of text", hFold + "px");
-  ok(/Show sections/.test(K2.q("#railMore").textContent), "the strip says how to get the rows back", K2.q("#railMore").textContent.trim());
+  ok(K2.q("#railMore").textContent.trim() === "Show", "the strip says how to get the rows back", K2.q("#railMore").textContent.trim());
   ok(K2.qa("#railBody .srow").length > 0, "folding hides by class, it does not throw the lists away", K2.qa("#railBody .srow").length);
   K2.click("#railMore"); await K2.wait(150);
   ok(!K2.q("#seatsLayer").classList.contains("slim"), "and unfolding restores the exact size you had", K2.W.document.body.style.getPropertyValue("--rail-h"));
@@ -1132,7 +1184,8 @@ function boot(opts) {
   await T9.ready();
   ok(/Offline copy|snapshot/i.test(T9.txt("#livePill")), "a 3-section response is treated as broken and the bundled snapshot is used instead", T9.txt("#livePill").slice(0, 90));
   const snapCount = snapshotRaw.sections.length.toLocaleString("en-US");
-  ok(T9.txt("#livePill").includes(snapCount), "the header counts the bundled snapshot, not 1 or 3", T9.txt("#livePill").slice(0, 60));
+  T9.click("#livePill");
+  ok(T9.txt("#dataKv").includes(snapCount), "the popover counts the bundled snapshot, not 1 or 3", T9.txt("#dataKv").slice(0, 120));
   await T9.add("CSE221");
   ok(T9.q("#courseCount").textContent.trim() === "1 of 6 courses", "the course counter agrees with the cards", T9.q("#courseCount").textContent.trim());
   ok(T9.qa("#courses .course").length === 1 && !/not in this feed/.test(T9.txt(T9.card(0))), "CSE221 resolves from the snapshot, not the half feed", T9.txt(T9.card(0)).slice(0, 60));
@@ -1245,11 +1298,15 @@ function boot(opts) {
   D.click("#railBody [data-pin]"); await D.wait(200);          // so the pinned box exists
   const body0 = visibleText(D.d);
   ok(!/Rejects routines whose mid/.test(body0), "the per-switch explanation is off the page", "gone");
-  ok(/Routines whose mid-term or final exams overlap/.test(D.q('[data-for="examClash"]').dataset.tip), "…and is one hover away on the switch it belongs to", D.q('[data-for="examClash"]').dataset.tip.slice(0, 40));
+  ok(/Routines whose mid or final exams overlap/.test(D.q('[data-for="examClash"]').dataset.tip), "…and is one hover away on the switch it belongs to", D.q('[data-for="examClash"]').dataset.tip.slice(0, 40));
   ok(!/saved on this device, so the page works/.test(body0), "the step-1 paragraph no longer spells out the device cache");
   ok(/saved on this device/.test(D.q("#h1").dataset.tip), "…the reassurance moved to the heading", D.q("#h1").dataset.tip.slice(0, 40));
-  ok(!/TBA = faculty not published yet/.test(body0), "the legend lost its last clause");
-  ok(/TBA means the faculty has not been published/.test(D.q(".legend").dataset.tip), "…which now lives on the legend", D.q(".legend").dataset.tip.slice(0, 40));
+  ok(D.q(".legend") === null, "the printed legend line is gone");
+  ok(!/colour = course/.test(body0) && !/hatched = lab/.test(body0), "and so is its wording", "gone");
+  const h3 = D.q("#h3");
+  ok(/Every course keeps its own colour/.test(h3.dataset.tip) && /hatched block is a lab/.test(h3.dataset.tip) &&
+     /red ring/.test(h3.dataset.tip) && /TBA means the faculty has not been published/.test(h3.dataset.tip),
+     "…all four symbols now live on the heading they belong to", h3.dataset.tip.slice(0, 50));
   ok(!/Kept at the top of this panel/.test(body0), "the pinned box stopped explaining itself in print");
   ok(!/in section-number order/.test(body0), "so did your-courses", "gone");
   ok(!/Every course in the feed/.test(body0), "and all-courses", "gone");
@@ -1260,7 +1317,9 @@ function boot(opts) {
   const cardBadges = D.q(".routine .r-head").querySelectorAll(".badge").length;
   ok(cardBadges <= 5, "a routine header keeps five badges at most", cardBadges);
   ok(!/longest day/.test(D.q(".routine").textContent), "the longest-day figure is not printed on every card");
-  ok(/longest day/.test(D.q(".routine .rank").dataset.tip + " " + D.q(".routine .day-dots").closest(".badge").dataset.tip), "…it is on the rank and the days badge", "hover");
+  const daysB = [...D.qa(".routine .r-head .badge")].find((b) => /\d+ days?/.test(b.textContent));
+  ok(/longest day/.test(D.q(".routine .rank").dataset.tip + " " + daysB.dataset.tip), "…it is on the rank and the days badge", "hover");
+  ok(/faculty for this section has not been published/.test(D.q(".routine .blk .tba").dataset.tip), "and TBA spells itself out on the block it appears in", D.q(".routine .blk .tba").dataset.tip.slice(0, 40));
   // the tooltip is built on demand, follows the pointer's target and never eats a click
   D.d.querySelector("#h1").dispatchEvent(new D.W.MouseEvent("mouseover", { bubbles: true }));
   await D.wait(450);

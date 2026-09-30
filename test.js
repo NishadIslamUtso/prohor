@@ -180,6 +180,23 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
     plain.routines[0].alt + " -> " + altOn.routines[0].alt);
   ok(typeof plain.routines[0].early === "number", "early-start count is reported for the badge (the avoid-8 AM toggle was removed)", "early=" + plain.routines[0].early);
   ok(snap.meta.count === snap.sections.length, "snapshot meta agrees with its payload", snap.meta.count);
+
+  // three separate ranking terms, each owned by its own switch
+  const base = { minDays: 1, maxDays: 6, topK: 40 };
+  const fewer = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: true, preferLessTime: false, preferGaps: false }));
+  const anyDays = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: false, preferGaps: false }));
+  ok(fewer.valid === anyDays.valid, "preferFewerDays reorders but never changes the set", fewer.valid + " vs " + anyDays.valid);
+  ok(fewer.routines[0].days <= anyDays.routines[0].days, "preferFewerDays surfaces the fewest days first",
+    anyDays.routines[0].days + " -> " + fewer.routines[0].days);
+  const hours = (list) => list.routines[0].span;
+  const lessTime = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: true, preferGaps: false }));
+  const noTime = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: false, preferGaps: false }));
+  ok(hours(lessTime) <= hours(noTime), "preferLessTime surfaces the fewest hours on campus first", hours(noTime) + " -> " + hours(lessTime));
+  // gaps and the longest single day are one term, owned by one switch
+  const cost = (list) => { const s = Core.routineSummary(list.routines[0]); return s.gapMin + s.longest * 10; };
+  const gapsOn = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: false, preferGaps: true }));
+  const gapsOff = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: false, preferGaps: false }));
+  ok(cost(gapsOn) <= cost(gapsOff), "preferGaps surfaces the fewest empty hours and the shortest long day first", cost(gapsOff) + " -> " + cost(gapsOn));
 })();
 
 
@@ -203,9 +220,15 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(view.blocks.length === r.events.length, "every meeting becomes a block", view.blocks.length);
   ok(view.blocks.every((b) => b.row >= 2 && b.rowSpan >= 1 && b.col >= 0), "blocks are placed on the grid");
   ok(view.blocks.every((b) => b.label && b.time && b.faculty), "blocks carry label, time and faculty");
+  // a lab block reads exactly like a class block: the course and its section, plus a LAB tag
   const labBlock = view.blocks.find((b) => b.lab);
-  ok(!!labBlock && /L$/.test(labBlock.label) && /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(labBlock.time),
-    "lab block carries the lab course code and a 24-hour time", labBlock && labBlock.label + " · " + labBlock.time);
+  const classBlock = view.blocks.find((b) => !b.lab);
+  ok(!!labBlock && !!classBlock && labBlock.label === labBlock.code + " · [" + labBlock.label.slice(labBlock.label.indexOf("[") + 1, -1) + "]",
+    "a lab block is labelled exactly like a class block", labBlock && labBlock.label + " vs " + classBlock.label);
+  ok(!!labBlock && /^[A-Z]{3}\d{3} · \[\d+\]$/.test(labBlock.label), "with the course section, not a lab code", labBlock && labBlock.label);
+  ok(!!labBlock && !!labBlock.labCourse, "and the lab course code is still carried for the tooltip", labBlock && labBlock.labCourse);
+  ok(!!labBlock && /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(labBlock.time),
+    "lab block time is 12-hour", labBlock && labBlock.time);
   const hues = view.blocks.map((b) => b.hue);
   ok(new Set(hues).size >= 2 && Math.max.apply(null, hues) <= 3, "each course keeps its own hue", hues.join(","));
   ok(view.exams.length === 4 && view.exams.every((e) => e.fin || e.mid), "exam table has a row per course");

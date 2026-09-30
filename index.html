@@ -135,9 +135,13 @@ a{color:var(--primary-text)}
 .b-bad{background:var(--danger-soft);color:var(--danger)}
 .b-warn{background:var(--warning-soft);color:var(--warning)}
 .b-accent{background:var(--accent-soft);color:var(--accent-text)}
-.day-dots{display:inline-flex;gap:3px}
-.day-dots i{width:8px;height:8px;border-radius:50%;background:var(--border-strong)}
-.day-dots i.on{background:var(--primary)}
+/* the sections a routine is built from, each in its course's colour */
+.r-secs{display:inline-flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;color:var(--text-2);
+  font-variant-numeric:tabular-nums;padding:0 2px}
+.r-sec{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.r-sec::before{content:"";width:9px;height:9px;border-radius:3px;background:var(--line);flex:none}
+.r-sec b{font-weight:600;color:var(--text-3)}
+.tba{border-bottom:1px dotted var(--border-strong);cursor:help}
 
 /* =============================== HEADER =============================== */
 .app-header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border)}
@@ -297,8 +301,6 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .seg button{height:34px;padding:0 12px;font-size:13px;font-weight:500;color:var(--text-2)}
 .seg button + button{border-left:1px solid var(--border-strong)}
 .seg button[aria-pressed="true"]{background:var(--primary-soft);color:var(--primary-text)}
-.legend{font-size:12.5px;color:var(--text-3);margin-bottom:14px}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:4px}
 .placeholder{border:1px dashed var(--border-strong);border-radius:var(--radius-lg);padding:32px;color:var(--text-2)}
 .placeholder b{color:var(--text);display:block;font-size:15px;margin-bottom:6px}
 .placeholder ol{margin:8px 0 0;padding-left:18px}
@@ -328,6 +330,8 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .exam-wrap{overflow:auto;margin-top:16px}
 .exam{width:100%;min-width:640px;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .exam th,.exam td{white-space:nowrap}
+.exam caption{caption-side:top;text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-3);padding:0 8px 7px}
 .exam th{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
 .exam td{padding:8px;border-bottom:1px solid var(--border);vertical-align:middle}
 .exam tr:last-child td{border-bottom:0}
@@ -399,6 +403,8 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
 .action-bar .sum:empty::after{content:"0 courses"}
 .rgrid{min-width:min(100%,760px)}
 @media (max-width:520px){.routine{padding:12px}.r-head{gap:6px}.badge{font-size:11.5px;padding:0 8px}}
+/* the section chips are the one line a phone reader wants most, so they shrink rather than wrap away */
+@media (max-width:640px){.r-secs{gap:6px;font-size:12px;width:100%}.r-sec::before{width:8px;height:8px}}
 @media print{.results .badge.b-neutral{background:var(--surface);border:1px solid var(--border)}.grid-wrap{border:0}}
 @media (max-width:1023px){ body.seats-open .routine,body.seats-open .panel{min-width:0} }
 
@@ -711,10 +717,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <a class="lockup" href="#">
       <svg class="mark" aria-hidden="true"><use href="#prohor-mark"/></svg>
       <span class="wordmark">Prohor</span>
-      <span class="unofficial">for BRAC University · unofficial</span>
+      <span class="unofficial" data-tip="An unofficial student project, not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag the portal — always confirm in BRACU Connect before pre-advising.">BRACU</span>
     </a>
     <div class="hdr-right">
-      <button class="pill" id="livePill" data-state="busy" aria-expanded="false" aria-controls="livePop"><span class="dot"></span><span class="full">loading section data…</span><span class="short">Loading…</span></button>
+      <button class="pill" id="livePill" data-state="busy" aria-expanded="false" aria-controls="livePop"><span class="dot"></span><span class="full">Loading data…</span><span class="short">Loading…</span></button>
       <div class="popover" id="livePop" hidden>
         <h4>Section data</h4>
         <dl class="kv" id="dataKv"><dt>Status</dt><dd>loading…</dd></dl>
@@ -735,7 +741,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       <p class="step-desc">Search by code or title — leave any filter on “All …” to consider every option.</p>
       <div class="combo">
         <svg class="ico"><use href="#i-search"/></svg>
-        <input id="courseSearch" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="courseList" placeholder="Search a course — CSE221, Algorithms…" autocomplete="off">
+        <input id="courseSearch" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="courseList" placeholder="Search by code or title — CSE221, Algorithms…" autocomplete="off">
         <span class="kbd" id="searchKbd">/</span>
         <button class="clr" id="searchClr" hidden aria-label="Close this list and clear the search"><svg width="13" height="13"><use href="#i-x"/></svg></button>
         <div class="listbox" id="courseList" role="listbox" hidden></div>
@@ -760,9 +766,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         </div>
 
         <div class="pref-section" id="switches">
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="examClash" aria-labelledby="sw1"></button><div class="txt" data-for="examClash" data-tip="Routines whose mid-term or final exams overlap are thrown out. Turn it off and they come back, ringed in red and tagged CLASH."><div class="t" id="sw1">Check exam clashes</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="minGaps" aria-labelledby="sw2"></button><div class="txt" data-for="minGaps" data-tip="Ranks the routines with compact days and few empty hours in between higher up the list."><div class="t" id="sw2">Minimise gaps and long days</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="moreChoices" aria-labelledby="sw3"></button><div class="txt" data-for="moreChoices" data-tip="Pushes routines whose time slot has more sections to the top, so you have better odds of still getting a seat."><div class="t" id="sw3">Prefer patterns with more section choices</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="examClash" aria-labelledby="sw1"></button><div class="txt" data-for="examClash" data-tip="Routines whose mid or final exams overlap are thrown out. Not every course really has a final — the feed still lists a date for some of them — so confirm in BRACU Connect before you drop a routine you liked."><div class="t" id="sw1">Check exam clashes</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="fewerDays" aria-labelledby="sw2"></button><div class="txt" data-for="fewerDays" data-tip="Puts the routines that need you on campus on fewer different days at the top. Turn it off and the number of days stops mattering."><div class="t" id="sw2">Fewer days on campus</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="lessTime" aria-labelledby="sw3"></button><div class="txt" data-for="lessTime" data-tip="Puts the routines that keep you on campus for fewer hours in total at the top — a few long days instead of many short ones."><div class="t" id="sw3">Less time on campus</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="minGaps" aria-labelledby="sw4"></button><div class="txt" data-for="minGaps" data-tip="Puts the routines with the fewest empty hours between classes, and the shortest longest day, at the top."><div class="t" id="sw4">Minimise gaps and long days</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="moreChoices" aria-labelledby="sw5"></button><div class="txt" data-for="moreChoices" data-tip="Pushes routines whose time slot has more sections to the top, so you have better odds of still getting a seat."><div class="t" id="sw5">Prefer patterns with more section choices</div></div></div>
         </div>
 
         <div class="pref-section">
@@ -793,16 +801,16 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 
   <!-- STEP 3 -->
   <section id="step3" class="results" aria-labelledby="h3" tabindex="-1">
-    <div class="step-head"><h2 id="h3">Compare routines</h2></div>
+    <div class="step-head"><h2 id="h3" data-tip="Every course keeps its own colour. A hatched block is a lab. A red ring means two of your exams land at the same time. TBA means the faculty has not been published for that section yet.">Compare routines</h2></div>
     <p class="step-desc" id="resultsDesc">Generate to see every conflict-free routine that fits your preferences.</p>
     <div id="resultsBody"></div>
     <div class="sr-only" aria-live="polite" id="live"></div>
   </section>
   <footer class="wrap">
-  Unofficial student project, not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag the portal — always confirm in BRACU Connect before pre-advising. ·
+  <span data-tip="An unofficial student project, not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag the portal.">Unofficial</span> · always confirm in BRACU Connect ·
   <a href="https://github.com/NishadIslamUtso" target="_blank" rel="noopener noreferrer">GitHub</a> ·
-  <a id="feedbackLink" href="https://mail.google.com/mail/?view=cm&fs=1&to=nishadislamutso@gmail.com&su=Prohor%20routine%20planner%20feedback" target="_blank" rel="noopener noreferrer">Send feedback on Gmail</a>
-  or <a href="mailto:nishadislamutso@gmail.com?subject=Prohor%20routine%20planner%20feedback">your mail app</a>
+  <a id="feedbackLink" href="https://mail.google.com/mail/?view=cm&fs=1&to=nishadislamutso@gmail.com&su=Prohor%20routine%20planner%20feedback" target="_blank" rel="noopener noreferrer">Gmail</a>
+  or <a href="mailto:nishadislamutso@gmail.com?subject=Prohor%20routine%20planner%20feedback">mail app</a>
 </footer>
 </main>
 
@@ -822,7 +830,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <div class="rail-h"><h2 id="railH">Seats &amp; sections</h2><span class="sub" id="railSub">—</span>
       <button class="more sembtn" id="semBtn" aria-expanded="false" aria-controls="semPop"><svg width="11" height="11"><use href="#i-cal"/></svg><span class="pt" id="semLabel">—</span><svg class="caret" width="10" height="10"><use href="#i-chev"/></svg></button>
       <div class="sempop" id="semPop" hidden></div>
-      <button class="more" id="railMore" aria-expanded="true" title="Fold the panel down to a status strip">Hide sections</button>
+      <button class="more" id="railMore" aria-expanded="true" title="Fold the panel down to a status strip">Hide</button>
       <a class="more pagebtn backbtn" id="railBack" hidden href="./" title="Back to the routine planner"><svg width="11" height="11" style="transform:rotate(90deg)"><use href="#i-chev"/></svg>Planner</a>
       <button class="more pagebtn" id="railPop" title="Turn this panel into its own page. The planner keeps running underneath — use Planner to come back."><svg width="11" height="11"><use href="#i-page"/></svg><span class="pt">Open as page</span></button>
       <button class="more pagebtn" id="railWin" title="Open the seats page in a second window, so you can watch seats while you plan"><svg width="11" height="11"><use href="#i-win"/></svg><span class="pt">New window</span></button>
@@ -831,11 +839,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <span class="dot"></span><span id="seatAgo">not polled yet</span>
     <span class="peek" id="railPeek" hidden></span>
     <button class="link-btn" id="seatPause" aria-pressed="false">Pause</button>
-    <button class="link-btn" id="seatNow">Check now</button>
+    <button class="link-btn" id="seatNow">Refresh</button>
     </div>
     <div class="rail-search">
     <svg><use href="#i-search"/></svg>
-    <input id="seatSearch" type="text" placeholder="Filter course, code, section, faculty, room…" autocomplete="off" aria-label="Filter the seat lists">
+    <input id="seatSearch" type="text" placeholder="Filter sections…" autocomplete="off" aria-label="Filter the seat lists">
     <button class="clr" id="seatClr" hidden aria-label="Clear the seat filter"><svg width="13" height="13"><use href="#i-x"/></svg></button>
     </div>
     </div>
@@ -881,7 +889,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   var state = {
     index: null, meta: null, names: {}, ready: false, pending: false,
     courses: [],
-    prefs: { dayMin: 1, dayMax: 6, examClash: true, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] },
+    prefs: { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] },
     view: "grid", sort: "best", pageSize: 50, page: 1,
     results: null, picks: {}, search: null, blockedNote: "", droppedUrl: "",
     semesters: {}, sem: "live"
@@ -1012,7 +1020,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var kv = [
       ["Session", M.session ? "<span class=\"mono\">" + esc(M.session) + "</span>" : "—"],
       ["Classes", M.start ? "<span class=\"tnum\">" + esc(C.fmtDate(M.start)) + " → " + esc(C.fmtDate(M.end)) + "</span>" : "—"],
-      ["Courses", "<span class=\"tnum\">" + num(I.codes.length) + " courses · " + num(I.count) + " sections</span>"],
+      ["Feed", "<span class=\"tnum\">" + num(I.codes.length) + " courses · " + num(I.count) + " sections</span>"],
       ["Patterns", "<span class=\"tnum\">" + num(I.groupCount) + " schedule patterns</span>"],
       ["Exam slots", "<span class=\"tnum\">" + num(I.examsKnown) + " sections have published mid + final slots</span>"],
       ["Source", "<span class=\"mono\">" + esc(M.origin || "") + "</span>"],
@@ -1021,7 +1029,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     $("#dataKv").innerHTML = kv.map(function (r) { return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>"; }).join("");
     var o = String(M.origin || "") + " " + String(M.label || "");
     var word = /stale/.test(o) ? "Stale copy" : /snapshot/.test(o) ? "Offline copy" : /cache/.test(o) ? "Cached" : "Live";
-    setPill(M.warn ? "warn" : "ok", word + " · <span class=\"tnum\">" + num(I.count) + "</span> section" + (I.count === 1 ? "" : "s") + " · updated " + ago(M.at) +
+    setPill(M.warn ? "warn" : "ok", word +
       (M.warn ? "" : " · auto-refresh in <span class=\"tnum\">" + nextRefresh() + "</span>"));
     updateCourseCount();
   }
@@ -1077,7 +1085,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function loadData(force) {
     if (inflight && !force) return inflight;
     inflight = (async function () {
-      setPill("busy", "loading section data…");
+      setPill("busy", "Loading data…");
       var cached = null;
       try { cached = await store.get(CACHE_KEY); } catch (e) { }
       if (cached && cached.at && (Date.now() - cached.at) < C.REFRESH_MS && !force) {
@@ -1635,9 +1643,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         '<button class="rm" data-rf="' + esc(f) + '" aria-label="Stop avoiding ' + esc(f) + '">×</button></span>';
     }).join("");
     $$(".switch").forEach(function (sw) { sw.setAttribute("aria-checked", String(!!state.prefs[sw.dataset.pref])); });
-    var n = (state.prefs.dayMin > 1 || state.prefs.dayMax < 6 ? 1 : 0) + (state.prefs.avoidFac.length ? 1 : 0) +
-      (state.prefs.avoidTime.length ? 1 : 0) + (state.prefs.avoidDay.length ? 1 : 0);
-    $("#prefsActive").textContent = n ? "· " + n + " active" : "";
+    var d = defaultPrefs(), n = 0;
+    Object.keys(d).forEach(function (k) {
+      if (Array.isArray(d[k])) { if (state.prefs[k].length) n++; } else if (state.prefs[k] !== d[k]) n++;
+    });
+    $("#prefsActive").textContent = n ? "· " + n + " changed" : "";
+    $("#resetPrefs").hidden = !n;
   }
   function renderFacSuggestions() {
     var input = $("#facSearch"), host = $("#facList");
@@ -1707,7 +1718,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     renderChips(); renderFacSuggestions(); updateSummary(); renderCourses(); save(); noteStale();
   });
   $("#resetPrefs").onclick = function () {
-    state.prefs = { dayMin: 1, dayMax: 6, examClash: true, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] };
+    state.prefs = defaultPrefs();
     renderRange(); renderChips(); renderFacSuggestions(); updateSummary(); renderCourses(); save(); toast("Preferences reset");
   };
   $("#prefsToggle").onclick = function () { setPrefsOpen($("#step2").classList.contains("collapsed")); };
@@ -1817,7 +1828,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     state.blockedNote = "";
     var prefs = {
       minDays: state.prefs.dayMin, maxDays: state.prefs.dayMax,
-      preferShortDay: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
+      preferFewerDays: state.prefs.fewerDays, preferLessTime: state.prefs.lessTime,
+      preferGaps: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
       ignoreExams: !state.prefs.examClash
     };
     var sp = state.search = {
@@ -2079,9 +2091,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       '<div class="seg" role="group" aria-label="View"><button data-view="grid" aria-pressed="' + (state.view === "grid") + '">Grid</button>' +
       '<button data-view="list" aria-pressed="' + (state.view === "list") + '">Day list</button></div></div>' +
       '<div class="ctl"><button class="btn btn-secondary btn-sm" id="copyLink"><svg width="14" height="14"><use href="#i-link"/></svg>Copy link</button>' +
-      '<button class="btn btn-secondary btn-sm" id="printAll">Print all</button></div></div>' +
-      '<div class="legend" data-tip="Every course keeps its own colour. A hatched block is a lab. A red ring means two exams land at the same time. TBA means the faculty has not been published for that section yet."><i style="background:var(--c1-line)"></i><i style="background:var(--c2-line)"></i><i style="background:var(--c3-line)"></i>' +
-      "colour = course · hatched = lab · red ring = exam clash</div>";
+      '<button class="btn btn-secondary btn-sm" id="printAll">Print all</button></div></div>';
     // collect which sections this page shows so the seats rail can follow the paging
     var acc = state.courses.map(function (c) { return { code: c.code, seen: {} }; });
     var html = page.map(function (it, i) {
@@ -2117,7 +2127,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       if (state.prefs.dayMax < 6) hints.push("allow " + Math.min(6, state.prefs.dayMax + 1) + " days on campus");
       if (state.prefs.avoidTime.length) hints.push(state.prefs.avoidTime.length > 1 ? "clear one of the " + state.prefs.avoidTime.length + " avoided time slots" : "clear the avoided time slot");
       if (state.prefs.avoidDay.length) hints.push("clear an avoided day");
-      if (state.prefs.examClash) hints.push("turn off “Check exam clashes” — clashing exams then get flagged instead of rejecting the routine");
+      if (state.prefs.examClash) hints.push("turn off “Check exam clashes” — clashing exams are then flagged in red instead of ruling the routine out");
       state.courses.forEach(function (c) {
         if (c.locked.length) hints.push("unlock time slots for " + esc(c.code));
         if ((c.secs || []).length) hints.push("widen the section" + (c.secs.length > 1 ? "s" : "") + " [" + esc(c.secs.join(", ")) + "] on " + esc(c.code));
@@ -2125,7 +2135,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       });
     }
     var sp = state.search;
-    return '<div class="zero"><b>No routine fits these constraints.</b><span class="muted">' +
+    var clashNote = state.prefs.examClash
+      ? ' data-tip="An exam clash means two of your courses have a mid or a final on the same date and time. Not every course really has a final — the feed still lists a date for some of them — so confirm in BRACU Connect before you drop a routine you liked."'
+      : "";
+    return '<div class="zero"><b>No routine fits these constraints.</b><span class="muted"' + clashNote + ">" +
       (sp ? num(sp.tried || sp.space || 0) + " combinations were checked. " : "") + (state.blockedNote ? state.blockedNote : "Try one of these:") +
       "</span>" + (hints.length ? "<ul>" + hints.map(function (h) { return "<li>" + h + "</li>"; }).join("") + "</ul>" : "") + "</div>";
   }
@@ -2135,9 +2148,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function routineHtml(r, gi, rank, bestMatch) {
     var v = C.buildView(r, { hueOf: hueOf });
     var sum = r.summary;
-    var dots = C.DAY_ABBR.slice(0, 6).map(function (d, i) {
-      return '<i class="' + (sum.days[i] ? "on" : "") + '"></i>';
-    }).join("");
     var dayNames = C.DAYS.filter(function (_, i) { return sum.days[i]; }).map(function (d) { return C.DAY_LABEL[d]; }).join(", ") || "no class days";
     var clashCount = r.picks.filter(function (p) { return p.conflict; }).length;
     var gapBadge = sum.gapCount
@@ -2148,8 +2158,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         esc(state.meta && state.meta.session ? "session " + state.meta.session : "class routine") + "</div>" +
       '<div class="r-head"><span class="rank" data-tip="' + r.alt + " section option" + (r.alt > 1 ? "s" : "") + ' across your courses — more means more chance of still getting a seat.">#' + rank + "</span>" +
         (bestMatch ? '<span class="badge b-accent" data-tip="The routine that scores best against the preferences you set.">★ Best match</span>' : "") +
-        '<span class="badge b-neutral" data-tip="' + esc(dayNames) + " · longest day " + dur(sum.longest) + '"><span class="day-dots">' + dots + "</span>" + sum.dayCount + " day" + (sum.dayCount > 1 ? "s" : "") + "</span>" +
+        '<span class="badge b-neutral" data-tip="' + esc(dayNames) + " · longest day " + dur(sum.longest) + '">' + sum.dayCount + " day" + (sum.dayCount > 1 ? "s" : "") + "</span>" +
         '<span class="badge b-neutral tnum" data-tip="Earliest class starts at ' + fmt12(sum.minStart) + ", the latest ends at " + fmt12(sum.maxEnd) + '.">' + fmt12(sum.minStart) + " → " + fmt12(sum.maxEnd) + "</span>" + gapBadge +
+        '<span class="r-secs" data-tip="The sections this routine is built from — a lab shares its course’s section number.">' +
+        r.picks.map(function (p) {
+          return '<span class="r-sec" style="' + hueVars(hueOf(p.code)) + '">' + esc(p.code) + ' <b class="mono">[' + esc(p.chosen.sec) + "]</b></span>";
+        }).join("") + "</span>" +
         (clashCount ? '<span class="badge b-bad" data-tip="Two of these exams fall at the same time. Turn off “Check exam clashes” in preferences if you want to keep this routine anyway.">exam clash</span>' : "") +
         '<div class="r-actions">' +
           '<button class="icon-btn" data-ra="copy" data-gi="' + gi + '" aria-label="Copy section list" title="Copy sections"><svg><use href="#i-copy"/></svg></button>' +
@@ -2157,6 +2171,16 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         "</div></div>" +
       '<div class="grid-wrap">' + (state.view === "grid" ? gridHtml(v) : dayListHtml(v)) + "</div>" +
       examHtml(v) + altHtml(v, gi) + "</article>";
+  }
+  function blockTip(b) {
+    var t = b.tip;
+    if (b.lab) t += " · lab" + (b.labCourse ? " " + b.labCourse : "") + " — hatched, in a lab room";
+    if (b.clash) t += " · ringed in red: this section's exam lands at the same time as another course's in this routine";
+    return t;
+  }
+  function facCell(b) {          // TBA is the one abbreviation worth spelling out on hover
+    return b.faculty && b.faculty !== "TBA" ? esc(b.faculty)
+      : '<span class="tba" data-tip="TBA — the faculty for this section has not been published yet.">TBA</span>';
   }
   function gridHtml(v) {
     var tpl = "grid-template-columns:56px repeat(" + v.nCols + ",minmax(118px,1fr));min-width:" + (56 + 118 * v.nCols) + "px;grid-template-rows:30px " +
@@ -2179,9 +2203,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     });
     v.blocks.forEach(function (b) {
       h += '<div class="blk' + (b.lab ? " lab" : "") + (b.clash ? " clash" : "") + '" role="cell" tabindex="0" style="' + hueVars(b.hue) +
-        ";grid-column:" + (b.col + 2) + ";grid-row:" + b.row + " / span " + b.rowSpan + '" title="' + esc(b.tip) + '"><b>' + esc(b.label) +
+        ";grid-column:" + (b.col + 2) + ";grid-row:" + b.row + " / span " + b.rowSpan + '" title="' + esc(blockTip(b)) + '"><b>' + esc(b.label) +
         (b.lab ? '<span class="tag">LAB</span>' : "") + "</b>" + esc(b.time) +
-        '<span class="meta">' + esc((b.room || "—") + " · " + (b.faculty || "TBA")) + "</span></div>";
+        '<span class="meta">' + esc((b.room || "—") + " · ") + facCell(b) + "</span></div>";
     });
     v.cols.forEach(function (c, ci) { if (c.free) h += '<div class="free-lbl" style="grid-column:' + (ci + 2) + ';grid-row:2">free</div>'; });
     return h + "</div>";
@@ -2192,13 +2216,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     return '<div class="daylist">' + v.cols.map(function (c, ci) {
       var list = (byDay[ci] || []).sort(function (a, b) { return a.time < b.time ? -1 : 1; });
       return '<div class="dl-day"><h4>' + esc(c.full) + "</h4>" + (list.length ? list.map(function (b) {
-        return '<div class="dl-item" style="' + hueVars(b.hue) + '"><i></i><span class="t">' + esc(b.time) + "</span><span>" + esc(b.label) +
-          (b.lab ? ' <span class="tag">LAB</span>' : "") + ' <span class="mono faint">' + esc((b.room || "—") + " · " + (b.faculty || "TBA")) + "</span></span></div>";
+        return '<div class="dl-item" style="' + hueVars(b.hue) + '" title="' + esc(blockTip(b)) + '"><i></i><span class="t">' + esc(b.time) + "</span><span>" + esc(b.label) +
+          (b.lab ? ' <span class="tag">LAB</span>' : "") + ' <span class="mono faint">' + esc((b.room || "—") + " · ") + facCell(b) + "</span></span></div>";
       }).join("") : '<div class="dl-free">free</div>') + "</div>";
     }).join("") + "</div>";
   }
   function examHtml(v) {
-    return '<div class="exam-wrap"><table class="exam"><caption class="sr-only">Mid and final exam slots for the sections in this routine</caption>' +
+    return '<div class="exam-wrap"><table class="exam"><caption data-tip="In the order they happen. The feed lists a date for some finals that the course does not really have — confirm in BRACU Connect before you plan around one.">Exam slots · in order</caption>' +
       '<thead><tr><th scope="col">Course</th><th scope="col">Mid</th><th scope="col">Final</th><th scope="col">Section</th><th scope="col">Faculty</th></tr></thead><tbody>' +
       v.exams.map(function (e) {
         function cell(x) {
@@ -2338,7 +2362,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       layer.classList.toggle("slim", slim);
       layer.classList.toggle("tight", railStacked() && state.rail.h < Math.round((window.innerHeight || 800) * 0.56));
       var more = $("#railMore");
-      if (more) { more.textContent = slim ? "Show sections" : "Hide sections"; more.title = slim ? "Give the panel its rows back" : "Shrink the panel to a status strip"; }
+      if (more) { more.textContent = slim ? "Show" : "Hide"; more.title = slim ? "Give the panel its rows back" : "Shrink the panel to a status strip"; }
       if (more) more.setAttribute("aria-expanded", String(!slim));
     }
     if (!railSlim()) state.rail.was = state.rail.h;
@@ -3218,9 +3242,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function prefsFor() {
     return {
       minDays: state.prefs.dayMin, maxDays: state.prefs.dayMax,
-      preferShortDay: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
+      preferFewerDays: state.prefs.fewerDays, preferLessTime: state.prefs.lessTime,
+      preferGaps: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
       ignoreExams: !state.prefs.examClash
     };
+  }
+  function defaultPrefs() {
+    return { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] };
   }
   // Stable across reloads: the selection + prefs + a fingerprint of the feed itself
   // (not the fetch time), so a saved search can be reopened on a later visit.

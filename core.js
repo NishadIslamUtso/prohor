@@ -581,7 +581,7 @@
       var sc = scoreOf(ci);
       if (sc.days < minDays || sc.days > maxDays) return null;
       st.valid++;
-      return { ci: ci, days: sc.days, gaps: sc.gaps, span: sc.span, early: sc.early, alt: sc.alt, score: sc.score };
+      return { ci: ci, days: sc.days, gaps: sc.gaps, span: sc.span, longest: sc.longest, early: sc.early, alt: sc.alt, score: sc.score };
     }
 
     function scoreOf(ci) {
@@ -597,19 +597,23 @@
         }
       }
       var dayNos = Object.keys(perDay).map(Number).sort(function (a, b) { return a - b; });
-      var gaps = 0, early = 0, span = 0;
+      var gaps = 0, early = 0, span = 0, longest = 0;
       dayNos.forEach(function (dn) {
         var l = perDay[dn].slice().sort(function (a, b) { return a.start - b.start; });
-        span += (l[l.length - 1].end - l[0].start);
+        var dspan = l[l.length - 1].end - l[0].start;
+        span += dspan;
+        if (dspan > longest) longest = dspan;
         if (l[0].start <= 480) early++;
         for (var t = 1; t < l.length; t++) { var gp = l[t].start - l[t - 1].end; if (gp > 0) gaps += gp; }
       });
       void events;
-      var v = dayNos.length * 100000;
-      if (prefs.preferShortDay !== false) v += span * 10;
-      v += gaps;
+      // Each ranking switch owns one term, so turning one off really removes it from the order.
+      var v = 0;
+      if (prefs.preferFewerDays !== false) v += dayNos.length * 100000;
+      if (prefs.preferLessTime !== false) v += span * 10;
+      if (prefs.preferGaps !== false) v += gaps + longest * 10;
       if (prefs.preferAlt && alt > 1) v -= Math.min(90000, 30000 * (Math.log(alt) / Math.LN2));
-      return { days: dayNos.length, dayNos: dayNos, gaps: gaps, span: span, early: early, alt: alt, score: v };
+      return { days: dayNos.length, dayNos: dayNos, gaps: gaps, span: span, longest: longest, early: early, alt: alt, score: v };
     }
 
     function next(opts) {
@@ -735,9 +739,9 @@
       lines.push((DAY_LABEL[d] || d) + "  (" + l.length + " class" + (l.length > 1 ? "es" : "") + ")");
       l.forEach(function (e) {
         var s = e.section || {};
-        lines.push("  " + fmtTime(e.start) + " – " + fmtTime(e.end) + "  " +
-          (e.kind === "LAB" && s.labCourse ? s.labCourse : s.label) +
-          (e.kind === "LAB" ? " (LAB)" : "") + "  ·  " + e.faculty + "  ·  " + (e.room || "-"));
+        lines.push("  " + fmtTime(e.start) + " – " + fmtTime(e.end) + "  " + s.label +
+          (e.kind === "LAB" ? " (LAB" + (s.labCourse ? " " + s.labCourse : "") + ")" : "") +
+          "  ·  " + e.faculty + "  ·  " + (e.room || "-"));
       });
       lines.push("");
     });
@@ -857,19 +861,19 @@
       var first = Math.max(p0, lo), last = Math.min(Math.max(p1, first), hi);
       blocks.push({
         col: col, row: rowOf(first), rowSpan: Math.max(1, (last - first) * 2 + 1),
-        code: sec.code, label: ev.kind === "LAB" ? (sec.labCourse || (sec.code + "L")) : (sec.code + " · [" + sec.sec + "]"),
+        code: sec.code, label: sec.code + " · [" + sec.sec + "]",
         time: fmtTime(ev.start) + " – " + fmtTime(ev.end),
         room: ev.room || "—", faculty: ev.faculty || "TBA",
-        lab: ev.kind === "LAB", clash: clash,
+        lab: ev.kind === "LAB", labCourse: sec.labCourse || null, clash: clash,
         hue: opts.hueOf ? opts.hueOf(sec.code) : 0,
-        tip: sec.label + " · " + (ev.kind === "LAB" ? (sec.labCourse || "") + " lab" : sec.name || "") +
+        tip: sec.label + " · " + (ev.kind === "LAB" ? (sec.labCourse || "lab") : sec.name || "") +
              " · " + (ev.faculty || "TBA") + " · " + (ev.room || "no room") +
              (sec.exams && sec.exams.length ? " · " + sec.exams.map(function (x) { return x.kind + " " + fmtDate(x.date) + " " + fmtTime(x.start); }).join(" · ") : "")
       });
     });
     blocks.sort(function (x, y) { return x.col - y.col || x.row - y.row; });
 
-    // exam table (dates come straight from the chosen sections)
+    // exam table (dates come straight from the chosen sections), ordered by when it happens
     var clashInfo = examClashMap(routine);
     var exams = routine.picks.map(function (p, pi) {
       function cell(kind) {
@@ -886,10 +890,18 @@
                    clash: s.examKey !== p.chosen.examKey };
         })
       };
-    });
+    }).sort(function (a, b) { return examKeyOf(a) < examKeyOf(b) ? -1 : examKeyOf(a) > examKeyOf(b) ? 1 : 0; });
     var altCount = routine.picks.reduce(function (n, p) { return n + (p.count - 1); }, 0);
 
     return { cols: cols, rows: rows, blocks: blocks, exams: exams, summary: sum, altCount: altCount, nCols: nCols, lo: lo, hi: hi, rowOf: rowOf };
+  }
+
+  // sort key for the exam table: the first slot this course has, or "" when none is published
+  function examKeyOf(e) {
+    var list = [e.mid, e.fin].filter(Boolean).map(function (x) {
+      return String(x.date) + "|" + String(x.time).slice(0, 8) + "|" + (x === e.fin ? "1" : "0");
+    }).sort();
+    return list.length ? list[0] : "zzzz";
   }
 
   // which (course, exam kind) pairs actually collide with another course in this routine
