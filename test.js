@@ -180,8 +180,49 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
     plain.routines[0].alt + " -> " + altOn.routines[0].alt);
   ok(typeof plain.routines[0].early === "number", "early-start count is reported for the badge (the avoid-8 AM toggle was removed)", "early=" + plain.routines[0].early);
   ok(snap.meta.count === snap.sections.length, "snapshot meta agrees with its payload", snap.meta.count);
+
+  // three separate ranking terms, each owned by its own switch
+  const base = { minDays: 1, maxDays: 6, topK: 40 };
+  const fewer = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: true, preferLessTime: false, preferGaps: false }));
+  const anyDays = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: false, preferGaps: false }));
+  ok(fewer.valid === anyDays.valid, "preferFewerDays reorders but never changes the set", fewer.valid + " vs " + anyDays.valid);
+  ok(fewer.routines[0].days <= anyDays.routines[0].days, "preferFewerDays surfaces the fewest days first",
+    anyDays.routines[0].days + " -> " + fewer.routines[0].days);
+  const hours = (list) => list.routines[0].span;
+  const lessTime = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: true, preferGaps: false }));
+  const noTime = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: false, preferGaps: false }));
+  ok(hours(lessTime) <= hours(noTime), "preferLessTime surfaces the fewest hours on campus first", hours(noTime) + " -> " + hours(lessTime));
+  // gaps and the longest single day are one term, owned by one switch
+  const cost = (list) => { const s = Core.routineSummary(list.routines[0]); return s.gapMin + s.longest * 10; };
+  const gapsOn = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: false, preferGaps: true }));
+  const gapsOff = Core.generate(mk(), Object.assign({}, base, { preferFewerDays: false, preferLessTime: false, preferGaps: false }));
+  ok(cost(gapsOn) <= cost(gapsOff), "preferGaps surfaces the fewest empty hours and the shortest long day first", cost(gapsOff) + " -> " + cost(gapsOn));
 })();
 
+
+/* ---------------- the exam table runs on the mid's date and clock ---------------- */
+(function examTableOrder() {
+  // a synthetic routine: three courses, one with no mid at all, and two mids on the same day
+  // at 8:30 and 10:30 — the pair that exposed a string-compare bug in the old sort key
+  const pick = (code, sec, exams) => ({
+    code: code, label: code + "-[" + sec + "]", secIdx: 0, count: 1,
+    chosen: { sec: sec, faculty: "TBA", exams: exams, examKey: "" },
+    sections: [{ sec: sec, faculties: ["TBA"], room: "R1" }]
+  });
+  const at = (h, m) => h * 60 + m;
+  const routine = { events: [], picks: [
+    pick("ZZZ300", "01", [{ kind: "MID", date: "2026-11-21", start: at(10, 30), end: at(12, 30) }]),          // no final
+    pick("AAA100", "01", [{ kind: "MID", date: "2026-11-21", start: at(8, 30), end: at(10, 30) },
+                          { kind: "FINAL", date: "2027-01-07", start: at(8, 30), end: at(10, 30) }]),
+    pick("MMM200", "01", [{ kind: "FINAL", date: "2026-11-20", start: at(8, 30), end: at(10, 30) }]),
+    pick("BBB400", "01", [{ kind: "FINAL", date: "2026-11-20", start: at(10, 30), end: at(12, 30) }]),         // same day, later
+    pick("CCC500", "01", [])                                                                                   // nothing published
+  ] };
+  const rows = Core.buildView(routine, {}).exams.map((e) => e.code);
+  ok(rows.join(",") === "MMM200,BBB400,AAA100,ZZZ300,CCC500",
+    "exam rows run on the final's date and clock, 8:30 before 10:30, no-final last", rows.join(","));
+  ok(Core.buildView(routine, {}).exams.filter((e) => e.mid).every((e) => typeof e.mid.start === "number"), "and the raw clock survives into the view");
+})();
 
 /* ---------------- view model (shared by HTML grid and the PNG export) ---------------- */
 (function viewModel() {
@@ -203,9 +244,19 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(view.blocks.length === r.events.length, "every meeting becomes a block", view.blocks.length);
   ok(view.blocks.every((b) => b.row >= 2 && b.rowSpan >= 1 && b.col >= 0), "blocks are placed on the grid");
   ok(view.blocks.every((b) => b.label && b.time && b.faculty), "blocks carry label, time and faculty");
+  // a lab block is named for the lab course itself, and written like any other block
   const labBlock = view.blocks.find((b) => b.lab);
-  ok(!!labBlock && /L$/.test(labBlock.label) && /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(labBlock.time),
-    "lab block carries the lab course code and a 24-hour time", labBlock && labBlock.label + " · " + labBlock.time);
+  const classBlock = view.blocks.find((b) => !b.lab);
+  ok(!!labBlock && !!classBlock, "a lab and a class block to compare");
+  const labTail = labBlock && labBlock.label.slice(labBlock.label.indexOf(" · "));
+  ok(!!labBlock && labBlock.label === (labBlock.labCourse || labBlock.code) + labTail,
+    "a lab block is named for the lab course, not the lecture it hangs off", labBlock && labBlock.label + " vs " + classBlock.label);
+  ok(!!labBlock && /^[A-Z]{3}\d{3}L? · \[\d+\]$/.test(labBlock.label), "with the section, written the same way as a class", labBlock && labBlock.label);
+  ok(!!labBlock && labBlock.labCourse && labBlock.label.startsWith(labBlock.labCourse), "an attached lab carries its own code", labBlock && labBlock.label);
+  ok(labBlock.lab === true && classBlock.lab === false, "the lab flag survives on the block");
+  ok(!!labBlock && !!labBlock.labCourse, "and the lab course code is still carried for the tooltip", labBlock && labBlock.labCourse);
+  ok(!!labBlock && /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(labBlock.time),
+    "lab block time is 12-hour", labBlock && labBlock.time);
   const hues = view.blocks.map((b) => b.hue);
   ok(new Set(hues).size >= 2 && Math.max.apply(null, hues) <= 3, "each course keeps its own hue", hues.join(","));
   ok(view.exams.length === 4 && view.exams.every((e) => e.fin || e.mid), "exam table has a row per course");
@@ -214,7 +265,7 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(view.blocks.every((b) => /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(b.time)), "block times are 12-hour", view.blocks[0].time);
   ok(view.exams.every((e) => !e.fin || /[AP]M/.test(e.fin.clock)), "exam cells also carry a 12-hour form for prose", (view.exams[0].fin || {}).clock);
   ok(view.exams.every((e) => e.sections.length >= 1 && e.sections.some((x) => x.sel)), "each exam row lists the swappable sections with one selected");
-  ok(view.altCount === r.picks.reduce((n, p) => n + p.count - 1, 0), "alternative count = extra sections", view.altCount);
+  ok(view.altCount === r.picks.filter((p) => p.sections.length > 1).length, "alternative count = courses with a section to swap to", view.altCount);
   ok(sum.dayCount === r.days && sum.longest > 0 && sum.classes >= 1, "summary math", sum.dayCount + " days, longest " + sum.longest + "m");
   ok(Core.periodIndex(480) === 0 && Core.periodIndex(1100) === 6 && Core.periodIndex(845) === 4, "period snapping", [Core.periodIndex(480), Core.periodIndex(845), Core.periodIndex(1100)].join(","));
 
@@ -238,7 +289,9 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"].every((d) => texts.includes(d)), "all day headings painted");
   ok(view.cols.every((c) => c.label.length === 3 && c.full.length > 3), "view carries short labels for the grid and full ones for the image");
   ok(texts.filter((t) => /^\d\d:\d\d [AP]M$/.test(t)).length >= 4, "slot times painted in 12-hour", texts.filter((t) => /AM|PM/.test(t)).slice(0, 2).join(" / "));
-  ok(texts.some((t) => /LAB/.test(t)), "labs marked in the image");
+  ok(view.blocks.filter((b) => b.lab).every((b) => texts.includes(b.label)),
+    "every lab is named in the image by its own code, with no LAB suffix",
+    view.blocks.filter((b) => b.lab).map((b) => b.label).join(" | "));
   ok(texts.some((t) => /MID|COURSE/.test(t)) && texts.some((t) => /FINAL|not published/.test(t)), "exam block painted");
   ok(texts.some((t) => /Jan|Nov/.test(t)), "exam dates include a month");
   ok(ops.some((o) => o[0] === "strokeRect"), "clash/hatch strokes issued");

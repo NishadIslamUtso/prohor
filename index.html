@@ -39,7 +39,7 @@
   --accent:#E8A317;--accent-soft:#FCF1D6;--accent-text:#8A5B00;
   --success:#1B8A5A;--success-soft:#DDF5E8;--warning:#B7791F;--warning-soft:#FCEFD3;--danger:#C62F4A;--danger-soft:#FCE3E8;
   --focus-ring:0 0 0 3px rgba(37,52,148,.28);
-  --knob:#FFFFFF;--knob-shadow:0 1px 2px rgba(0,0,0,.25);--hatch:rgba(127,127,127,.12);--tag-bg:rgba(127,127,127,.18);
+  --knob:#FFFFFF;--knob-shadow:0 1px 2px rgba(0,0,0,.25);--hatch:rgba(127,127,127,.12);
   --shadow-sm:0 1px 2px rgba(19,22,48,.06);--shadow-md:0 4px 16px rgba(19,22,48,.08);--shadow-lg:0 12px 40px rgba(19,22,48,.12);
   --backdrop:rgba(19,22,48,.45);
   --c1-bg:#E8EBFA;--c1-line:#8F9BE8;--c1-text:#1F2C7C; --c2-bg:#DDF4F1;--c2-line:#5FC1B4;--c2-text:#0F5E55;
@@ -56,7 +56,7 @@
   --accent:#F2B84B;--accent-soft:rgba(242,184,75,.16);--accent-text:#F7CB78;
   --success:#3DD68C;--success-soft:rgba(61,214,140,.14);--warning:#F2B84B;--warning-soft:rgba(242,184,75,.16);--danger:#FF6B85;--danger-soft:rgba(255,107,133,.14);
   --focus-ring:0 0 0 3px rgba(154,166,255,.4);
-  --knob:#EDEFFA;--knob-shadow:0 1px 2px rgba(0,0,0,.45);--hatch:rgba(220,226,255,.10);--tag-bg:rgba(220,226,255,.16);
+  --knob:#EDEFFA;--knob-shadow:0 1px 2px rgba(0,0,0,.45);--hatch:rgba(220,226,255,.10);
   --shadow-sm:0 1px 2px rgba(0,0,0,.35);--shadow-md:0 4px 16px rgba(0,0,0,.4);--shadow-lg:0 12px 40px rgba(0,0,0,.55);
   --backdrop:rgba(0,0,0,.6);
   --c1-bg:rgba(140,153,255,.18);--c1-line:#8C99FF;--c1-text:#C7CDFF; --c2-bg:rgba(63,196,178,.18);--c2-line:#3FC4B2;--c2-text:#A9EBE1;
@@ -80,6 +80,22 @@ a{color:var(--primary-text)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 [hidden]{display:none !important}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none !important;animation:none !important}}
+
+/* ---- slim scrollbars: the stock 15px Windows bar eats the narrow panes ---- */
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--text-3);background-clip:content-box}
+::-webkit-scrollbar-corner{background:transparent}
+
+/* ---- hover/focus tips: short, plain, and never in the way ---- */
+.tip{position:fixed;left:0;top:0;z-index:95;pointer-events:none;max-width:min(264px,calc(100vw - 24px));
+  padding:6px 9px;border-radius:var(--radius-xs);background:var(--text);color:var(--bg);
+  font-size:12px;font-weight:500;line-height:1.4;box-shadow:var(--shadow-md);
+  opacity:0;transform:translateY(2px);transition:opacity var(--dur-fast),transform var(--dur-fast)}
+.tip[data-show]{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.tip{transition:none}}
 
 .wrap{max-width:var(--content-max);margin:0 auto;padding:0 24px}
 .label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px;display:block}
@@ -119,9 +135,13 @@ a{color:var(--primary-text)}
 .b-bad{background:var(--danger-soft);color:var(--danger)}
 .b-warn{background:var(--warning-soft);color:var(--warning)}
 .b-accent{background:var(--accent-soft);color:var(--accent-text)}
-.day-dots{display:inline-flex;gap:3px}
-.day-dots i{width:8px;height:8px;border-radius:50%;background:var(--border-strong)}
-.day-dots i.on{background:var(--primary)}
+/* the sections a routine is built from, each in its course's colour */
+.r-secs{display:inline-flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;color:var(--text-2);
+  font-variant-numeric:tabular-nums;padding:0 2px}
+.r-sec{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.r-sec::before{content:"";width:9px;height:9px;border-radius:3px;background:var(--line);flex:none}
+.r-sec b{font-weight:600;color:var(--text-3)}
+.tba{border-bottom:1px dotted var(--border-strong);cursor:help}
 
 /* =============================== HEADER =============================== */
 .app-header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border)}
@@ -262,7 +282,7 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 
 /* =============================== ACTION BAR =============================== */
 .action-bar{position:fixed;left:0;right:0;bottom:0;z-index:40;pointer-events:none;display:flex;justify-content:center}
-.action-bar .inner{pointer-events:auto;width:min(100% - 48px,var(--content-max));margin:0 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:10px 12px 10px 16px;display:flex;align-items:center;gap:14px}
+.action-bar .inner{pointer-events:auto;width:min(100% - 48px,var(--content-max));margin:0 24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md) var(--radius-md) 0 0;box-shadow:var(--shadow-md);padding:10px 12px 10px 16px;display:flex;align-items:center;gap:14px}
 .action-bar .sum{font-size:13px;color:var(--text-2);min-width:0}
 .action-bar .sum b{color:var(--text);font-weight:600}
 .action-bar .prog{flex:1;min-width:0;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
@@ -281,8 +301,6 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .seg button{height:34px;padding:0 12px;font-size:13px;font-weight:500;color:var(--text-2)}
 .seg button + button{border-left:1px solid var(--border-strong)}
 .seg button[aria-pressed="true"]{background:var(--primary-soft);color:var(--primary-text)}
-.legend{font-size:12.5px;color:var(--text-3);margin-bottom:14px}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:4px}
 .placeholder{border:1px dashed var(--border-strong);border-radius:var(--radius-lg);padding:32px;color:var(--text-2)}
 .placeholder b{color:var(--text);display:block;font-size:15px;margin-bottom:6px}
 .placeholder ol{margin:8px 0 0;padding-left:18px}
@@ -306,7 +324,6 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .blk .meta{display:block;font-family:var(--font-mono);font-size:10.5px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .blk.lab{background-image:repeating-linear-gradient(135deg,transparent 0 6px,var(--hatch) 6px 8px)}
 .blk.clash{box-shadow:inset 0 0 0 1.5px var(--danger)}
-.blk .tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:0 5px;border-radius:4px;background:var(--tag-bg);margin-left:5px;vertical-align:1px}
 .blk .tip{display:none;position:absolute;left:8px;bottom:calc(100% - 4px)}
 .free-lbl{z-index:1;place-self:center;color:var(--text-3);font-size:11px}
 .exam-wrap{overflow:auto;margin-top:16px}
@@ -377,12 +394,13 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
 @keyframes pulse{50%{opacity:.3}}
 .pill .link-btn{margin-left:4px}
 .option>span:not(.code):not(.meta){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.dl-item .tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:0 5px;border-radius:4px;background:var(--tag-bg);margin-left:4px}
 .alt-course label .mini{margin-left:6px}
 #summary .tnum{font-variant-numeric:tabular-nums}
 .action-bar .sum:empty::after{content:"0 courses"}
 .rgrid{min-width:min(100%,760px)}
 @media (max-width:520px){.routine{padding:12px}.r-head{gap:6px}.badge{font-size:11.5px;padding:0 8px}}
+/* the section chips are the one line a phone reader wants most, so they shrink rather than wrap away */
+@media (max-width:640px){.r-secs{gap:6px;font-size:12px;width:100%}.r-sec::before{width:8px;height:8px}}
 @media print{.results .badge.b-neutral{background:var(--surface);border:1px solid var(--border)}.grid-wrap{border:0}}
 @media (max-width:1023px){ body.seats-open .routine,body.seats-open .panel{min-width:0} }
 
@@ -410,6 +428,22 @@ body{--rail-w:430px;--rail-h:320px}      /* the split: JS keeps both in range an
 /* the two page buttons belong to the panel header at every width; folding is a narrow-screen tool */
 .rail-h .pagebtn{display:none}
 body.seats-open .rail-h .pagebtn:not([hidden]),body.view-seats .rail-h .pagebtn:not([hidden]){display:inline-flex}
+/* the semester switch rides along wherever the panel is */
+.rail-h .sembtn{display:none}
+body.seats-open .rail-h .sembtn,body.view-seats .rail-h .sembtn{display:inline-flex;white-space:nowrap}
+.rail-h .sembtn[data-past="1"]{color:var(--accent-text);background:var(--accent-soft);border-color:transparent}
+.rail-h .sembtn svg.caret{transition:transform var(--dur-fast)}
+.rail-h .sembtn[aria-expanded="true"] svg.caret{transform:rotate(180deg)}
+.semwrap{position:relative;display:inline-flex;min-width:0}
+.sempop{position:absolute;top:calc(100% + 6px);left:0;z-index:80;width:max-content;max-width:min(300px,calc(100vw - 32px));
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:6px}
+.sempop h4{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);padding:3px 8px 6px}
+.sempop button{display:flex;width:100%;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--radius-sm);
+  font-size:13px;text-align:left;color:var(--text-2)}
+.sempop button:hover{background:var(--surface-2);color:var(--text)}
+.sempop button[aria-checked="true"]{background:var(--primary-soft);color:var(--primary-text);font-weight:600}
+.sempop button .tick{width:14px;height:14px;flex:none;margin-left:auto;color:currentColor;opacity:0}
+.sempop button[aria-checked="true"] .tick{opacity:1}
 body.view-seats .rail-h #railPop,body.view-seats .rail-h #railWin{display:none !important}
 #railBack{display:none}
 @media (min-width:1024px){
@@ -465,6 +499,9 @@ body.seats-open .action-bar{z-index:66}
   .rail-grip:hover::before,.rail-grip:focus-visible::before,.seats-layer.dragging .rail-grip::before{width:88px;height:5px}
   body.seats-open #toasts{top:64px;bottom:auto;left:12px;right:12px}   /* out of both panes' way */
   body.seats-open #toasts .toast{text-align:left}
+  /* the grabber straddles the band's top edge (top:-15px, height:30px), so the header row
+     starts clear of it: a tap on "New window" must reach the button, never the handle */
+  body.seats-open .rail-top{padding-top:13px}
   /* slimmed band = status strip only, so the page can have the whole screen back with one drag */
   .seats-layer.slim .rail-body,.seats-layer.slim .rail-search,.seats-layer.slim .rail-foot{display:none}
   .seats-layer.tight .rail-foot{display:none}
@@ -502,27 +539,51 @@ body.view-seats #railBack{display:inline-flex}
 body.view-seats .rail-h #railBack{margin-left:auto}
 body.view-seats .rail-h .rail-x + .pagebtn,body.view-seats .rail-h #railBack~.pagebtn{margin-left:8px}
 .rail-top{flex:none}
-body.view-seats .rail-top{position:sticky;top:57px;z-index:3;background:var(--bg);margin:0 -24px;padding:12px 24px 8px;
-  border-bottom:1px solid var(--border)}
-body.view-seats .rail-h{gap:5px 10px}
-body.view-seats .rail-h h2{font-size:17px}
-body.view-seats .rail-live{margin-top:3px}
+/* the chrome is the only fixed furniture on this page, so it is deliberately thin — and it
+   thins out again once the rows start moving under it */
+body.view-seats .rail-top{position:sticky;top:57px;z-index:3;background:var(--bg);margin:0 -24px;padding:7px 24px 5px;
+  border-bottom:1px solid var(--border);transition:padding var(--dur-base)}
+body.view-seats .rail-top.compact{padding-top:4px;padding-bottom:3px}
+body.view-seats .rail-top.compact .rail-h h2{font-size:14px}
+body.view-seats .rail-top.compact .rail-h .sub{display:none}
+body.view-seats .rail-top.compact .rail-live{margin-top:1px}
+body.seats-open .rail-top.compact{padding-top:9px}
+body.seats-open .rail-top.compact .rail-h h2{font-size:14px}
+body.seats-open .rail-top.compact .rail-h .sub{display:none}
+body.seats-open .rail-top.compact .rail-live{margin-top:1px}
+body.seats-open .rail-top.compact .rail-search{margin-top:5px}
+body.seats-open .rail-top.compact .rail-search input{height:32px}
+body.seats-open .rail-top.compact .rail-search svg{top:8px}
+body.view-seats .rail-h{gap:3px 8px}
+body.view-seats .rail-h h2{font-size:16px;transition:font-size var(--dur-base)}
+body.view-seats .rail-live{margin-top:2px}
 @media (max-width:600px){ body.view-seats .rail-h .sub{display:none} }
-/* scrolling through a long section list should never lose the course it belongs to */
-body.view-seats .sgroup>h4{position:sticky;top:var(--stick,132px);z-index:1;background:var(--bg);
-  margin:0;padding:6px 0 5px;border-bottom:1px solid var(--border)}
-body.view-seats .sgroup{margin-top:0;padding-top:6px}
+body.view-seats .sgroup{margin-top:0;padding-top:4px}
+/* Scrolling a long section list should never lose the course it belongs to. `top` has to name the
+   scrollport the header actually sits in — 0 when a column scrolls on its own, the height of the
+   page's sticky header when the page itself is what moves. Naming the wrong one parks the course
+   name in the middle of the box. */
+.sgroup>h4{position:sticky;top:0;z-index:1;background:var(--surface);margin:0 -11px;padding:0 11px}
+body.view-seats .sgroup>h4{top:var(--stick,132px);margin:0 -13px;padding:0 13px}
+.seatbox.pinned .sgroup>h4{background:var(--primary-soft)}
+/* two columns, each scrolling on its own — like the planner's two panes, only slimmer */
+.rail-cols{display:block}
+.rail-col{min-width:0}
 @media (min-width:980px){
-  /* a big screen reads better in two columns; the pinned box keeps the full width */
-  body.view-seats .rail-body{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;align-items:start}
-  body.view-seats .rail-body>.seatbox.pinned{grid-column:1 / -1}
-  body.view-seats .rail-body>.seatbox{margin-bottom:14px}
+  body.view-seats .rail-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;align-items:start}
+  body.view-seats .rail-col{max-height:calc(100dvh - var(--stick,132px) - 64px);overflow-y:auto;overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;padding-right:3px}
+  body.view-seats .rail-col::-webkit-scrollbar{width:6px}
+  body.view-seats .rail-col::-webkit-scrollbar-thumb{border:0}
+  body.view-seats .rail-col.one{grid-column:1 / -1;max-height:none;overflow:visible}
+  body.view-seats .rail-col:not(.one) .sgroup>h4{top:0}
 }
-body.view-seats .rail-search{margin:9px 0 0}
-body.view-seats .rail-body{overflow:visible;max-height:none;margin-top:10px}
-body.view-seats .seatbox{padding:12px 14px}
-body.view-seats .rail-foot{padding-bottom:10px}
-@media (max-width:640px){ body.view-seats .seats-layer{padding:0 12px} body.view-seats .rail-top{margin:0 -12px;padding:10px 12px 7px} }
+body.view-seats .rail-search{margin:6px 0 0}
+body.view-seats .rail-search input{height:32px}
+body.view-seats .rail-body{overflow:visible;max-height:none;margin:8px 0 0;padding:0}
+body.view-seats .seatbox{padding:11px 13px;margin-bottom:12px}
+body.view-seats .rail-foot{padding-bottom:10px;font-size:11.5px}
+@media (max-width:640px){ body.view-seats .seats-layer{padding:0 12px} body.view-seats .rail-top{margin:0 -12px;padding:6px 12px 4px} }
 html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-bottom:24px}   /* scrollIntoView must not tuck a row under the sticky bars */
 @media print{ body.view-seats .seats-layer{display:block !important;position:static} }
 /* =============================== SEATS RAIL =============================== */
@@ -530,7 +591,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 .rail-h{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;min-width:0}
 .rail-h h2{flex:none}
 .rail-h .sub{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rail-h .more,.rail-h .rail-x{flex:none;margin-left:0}
+.rail-h .more,.rail-h .rail-x,.rail-h .semwrap{flex:none;margin-left:0}
 .rail-h .rail-x{margin-left:auto}      /* the close control always sits at the end of its line */
 .rail-h a.more{text-decoration:none}
 .rail-h h2{font-size:15px;font-weight:600;margin:0;letter-spacing:-.01em}
@@ -563,16 +624,24 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   background:var(--primary-soft);border:1px solid var(--border);border-radius:var(--radius-pill);padding:1px 8px;cursor:pointer}
 .rail-h .more:hover{background:var(--surface-3)}
 .seatbox{border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 11px;margin-bottom:10px;background:var(--surface)}
+@media (max-width:640px){.seatbox{margin-bottom:5px;padding:8px 9px}.sgroup{margin-top:4px}body.view-seats .sgroup{padding-top:1px}}
 .seatbox.pinned{border-color:var(--primary);background:var(--primary-soft)}
 .seatbox>h3{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--text-3);margin:0 0 6px}
+  text-transform:uppercase;color:var(--text-3);margin:0 0 5px;cursor:help}
 .seatbox>h3 .k{font-size:10px;color:var(--text-3);background:var(--surface-2);border-radius:var(--radius-pill);padding:1px 7px;letter-spacing:0}
-.seatbox>h3 .at{margin-left:auto;font-size:11px;letter-spacing:0;text-transform:none;color:var(--text-3);font-variant-numeric:tabular-nums}
-.seatbox .why{font-size:11.5px;color:var(--text-3);margin:-2px 0 8px}
-.sgroup{margin:8px 0 0}
-.sgroup>h4{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;margin:0 0 4px}
+.seatbox>h3 .at{margin-left:auto;font-size:11px;letter-spacing:0;text-transform:none;color:var(--text-3);font-variant-numeric:tabular-nums;font-weight:500}
+.sgroup{margin:7px 0 0}
+/* every group header is a fold button: one tap compresses a course out of the way */
+.sgroup>h4{font-size:12px;font-weight:600}
+.sgroup .fold{display:flex;align-items:center;gap:7px;width:100%;font:inherit;text-align:left;
+  padding:3px 4px 4px;border-radius:var(--radius-xs);color:inherit}
+.sgroup .fold:hover{background:var(--surface-2)}
+.sgroup .fold .chev{width:12px;height:12px;color:var(--text-3);flex:none;transition:transform var(--dur-fast) var(--ease-out)}
+.sgroup.folded .fold .chev{transform:rotate(-90deg)}
 .sgroup>h4 .sw{width:9px;height:9px;border-radius:3px;background:var(--line);flex:none}
 .sgroup>h4 .n{margin-left:auto;font-size:11px;color:var(--text-3);font-weight:500;font-variant-numeric:tabular-nums}
+.sgroup.folded .srow{display:none}
+.sgroup.folded>h4{padding-bottom:2px;border-bottom:1px solid var(--border)}
 .srow{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;padding:6px;border-radius:var(--radius-sm);
   border:1px solid transparent;font-size:12px}
 .srow:hover{background:var(--surface-2)}
@@ -611,6 +680,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   .srow .exs{gap:6px}
   .srow{padding:7px 6px}
 }
+/* on a phone the panel header keeps its icons and drops its words */
+@media (max-width:640px){
+  .rail-h .pagebtn .pt,.rail-h .sembtn .pt{display:none}
+  .rail-h .pagebtn,.rail-h .sembtn{padding:1px 6px}
+  .rail-h .pagebtn svg,.rail-h .sembtn>svg:first-child{width:13px;height:13px}
+}
 </style>
 </head>
 <body>
@@ -641,6 +716,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></symbol>
   <symbol id="i-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></symbol>
+  <symbol id="i-page" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12h8m-2.5-2.5L16 12l-2.5 2.5"/></symbol>
+  <symbol id="i-win" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="12" rx="2"/><path d="M9 20h9a2 2 0 0 0 2-2V9"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
 </svg>
 
 <header class="app-header">
@@ -648,10 +726,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <a class="lockup" href="#">
       <svg class="mark" aria-hidden="true"><use href="#prohor-mark"/></svg>
       <span class="wordmark">Prohor</span>
-      <span class="unofficial">for BRAC University · unofficial</span>
+      <span class="unofficial" data-tip="An unofficial student project, not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag the portal — always confirm in BRACU Connect before pre-advising.">BRACU</span>
     </a>
     <div class="hdr-right">
-      <button class="pill" id="livePill" data-state="busy" aria-expanded="false" aria-controls="livePop"><span class="dot"></span><span class="full">loading section data…</span><span class="short">Loading…</span></button>
+      <button class="pill" id="livePill" data-state="busy" aria-expanded="false" aria-controls="livePop"><span class="dot"></span><span class="full">Loading data…</span><span class="short">Loading…</span></button>
       <div class="popover" id="livePop" hidden>
         <h4>Section data</h4>
         <dl class="kv" id="dataKv"><dt>Status</dt><dd>loading…</dd></dl>
@@ -668,11 +746,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   <div class="columns">
     <!-- STEP 1 -->
     <section id="step1" aria-labelledby="h1">
-      <div class="step-head"><h2 id="h1">Pick your courses</h2><span class="count tnum" id="courseCount">0 of 6 courses</span></div>
-      <p class="step-desc">Search by code or title. Leave <b>Time slots</b>, <b>Sections</b> and <b>Faculty</b> on “All …” to consider every option, or narrow any of them. Everything is saved on this device, so the page works even if the feed is slow.</p>
+      <div class="step-head"><h2 id="h1" data-tip="Everything you pick is saved on this device, so the page keeps working while the section feed is still loading.">Pick your courses</h2><span class="count tnum" id="courseCount">0 of 6 courses</span></div>
       <div class="combo">
         <svg class="ico"><use href="#i-search"/></svg>
-        <input id="courseSearch" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="courseList" placeholder="Search a course — CSE221, Algorithms…" autocomplete="off">
+        <input id="courseSearch" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="courseList" placeholder="Search by code or title — CSE221, Algorithms…" autocomplete="off">
         <span class="kbd" id="searchKbd">/</span>
         <button class="clr" id="searchClr" hidden aria-label="Close this list and clear the search"><svg width="13" height="13"><use href="#i-x"/></svg></button>
         <div class="listbox" id="courseList" role="listbox" hidden></div>
@@ -684,11 +761,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <aside id="step2" class="panel prefs" aria-labelledby="h2">
       <button class="prefs-toggle" id="prefsToggle" aria-expanded="true"><span>Set your preferences <span class="faint" id="prefsActive"></span></span><svg width="16" height="16"><use href="#i-chev"/></svg></button>
       <div class="prefs-body">
-        <div class="step-head" style="margin-bottom:2px"><h2 id="h2">Set your preferences</h2></div>
-        <p class="step-desc" style="margin-bottom:10px">Constraints filter routines out; the switches change how they’re ranked.</p>
+        <div class="step-head" style="margin-bottom:2px"><h2 id="h2" data-tip="Anything on this panel narrows the routines that come out. Constraints (avoid faculty, time and days) rule a routine out; the switches only change the order they are ranked in.">Set your preferences</h2></div>
 
         <div class="pref-section">
-          <div class="pref-title"><span>Days on campus</span><span class="val" id="daysVal">1 – 6 days</span></div>
+          <div class="pref-title"><span data-tip="How many different days you are willing to be on campus for.">Days on campus</span><span class="val" id="daysVal">1 – 6 days</span></div>
           <div class="range-dual" id="daysRange">
             <div class="track"></div><div class="fill" id="daysFill"></div>
             <input type="range" min="1" max="6" value="1" id="dayMin" aria-label="At least this many days">
@@ -698,32 +774,33 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         </div>
 
         <div class="pref-section" id="switches">
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="examClash" aria-labelledby="sw1"></button><div class="txt" data-for="examClash"><div class="t" id="sw1">Check exam clashes</div><div class="h">Rejects routines whose mid or final exams overlap.</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="minGaps" aria-labelledby="sw2"></button><div class="txt" data-for="minGaps"><div class="t" id="sw2">Minimise gaps and long days</div><div class="h">Ranks compact days higher.</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="moreChoices" aria-labelledby="sw3"></button><div class="txt" data-for="moreChoices"><div class="t" id="sw3">Prefer patterns with more section choices</div><div class="h">Better odds of getting a seat.</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="examClash" aria-labelledby="sw1"></button><div class="txt" data-for="examClash" data-tip="Routines whose mid or final exams overlap are thrown out. Not every course really has a final — the feed still lists a date for some of them — so confirm in BRACU Connect before you drop a routine you liked."><div class="t" id="sw1">Check exam clashes</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="fewerDays" aria-labelledby="sw2"></button><div class="txt" data-for="fewerDays" data-tip="Puts the routines that need you on campus on fewer different days at the top. Turn it off and the number of days stops mattering."><div class="t" id="sw2">Fewer days on campus</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="lessTime" aria-labelledby="sw3"></button><div class="txt" data-for="lessTime" data-tip="Puts the routines that keep you on campus for fewer hours in total at the top — a few long days instead of many short ones."><div class="t" id="sw3">Less time on campus</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="minGaps" aria-labelledby="sw4"></button><div class="txt" data-for="minGaps" data-tip="Puts the routines with the fewest empty hours between classes, and the shortest longest day, at the top."><div class="t" id="sw4">Minimise gaps and long days</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="moreChoices" aria-labelledby="sw5"></button><div class="txt" data-for="moreChoices" data-tip="Pushes routines whose time slot has more sections to the top, so you have better odds of still getting a seat."><div class="t" id="sw5">Prefer patterns with more section choices</div></div></div>
         </div>
 
         <div class="pref-section">
-          <div class="subhead"><span class="label">Avoid faculty</span><button class="link-btn" id="clearFac" hidden>Clear</button></div>
+          <div class="subhead"><span class="label" data-tip="Anyone you never want to be taught by. Suggestions come from the faculty teaching the courses you picked.">Avoid faculty</span><button class="link-btn" id="clearFac" hidden>Clear</button></div>
           <div class="fac-input">
             <input id="facSearch" type="text" placeholder="Type initials or a name…" autocomplete="off" aria-label="Avoid faculty">
             <div class="listbox" id="facList" hidden></div>
           </div>
           <div class="chips" id="facChips"></div>
-          <div class="caption" id="facHint">Suggestions come from faculty teaching your selected courses.</div>
         </div>
 
         <div class="pref-section">
-          <div class="subhead"><span class="label">Avoid time</span><button class="link-btn" id="clearTime" hidden>Clear</button></div>
+          <div class="subhead"><span class="label" data-tip="Any routine that meets during these hours is left out, whatever the day.">Avoid time</span><button class="link-btn" id="clearTime" hidden>Clear</button></div>
           <div class="chipgrid" id="timeChips"></div>
         </div>
 
         <div class="pref-section">
-          <div class="subhead"><span class="label">Avoid day</span><button class="link-btn" id="clearDay" hidden>Clear</button></div>
+          <div class="subhead"><span class="label" data-tip="Any routine that has a class on these days is left out entirely.">Avoid day</span><button class="link-btn" id="clearDay" hidden>Clear</button></div>
           <div class="chipgrid days" id="dayChips"></div>
         </div>
 
-        <div class="pref-section" style="padding-bottom:0"><button class="btn btn-ghost btn-sm" id="resetPrefs">Reset preferences</button></div>
+        <div class="pref-section" style="padding-bottom:0"><button class="btn btn-ghost btn-sm" id="resetPrefs" data-tip="Puts every preference on this panel back to its default. Your courses and locked slots stay.">Reset preferences</button></div>
       </div>
     </aside>
 
@@ -732,15 +809,16 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 
   <!-- STEP 3 -->
   <section id="step3" class="results" aria-labelledby="h3" tabindex="-1">
-    <div class="step-head"><h2 id="h3">Compare routines</h2></div>
+    <div class="step-head"><h2 id="h3" data-tip="Every course keeps its own colour. A hatched block is a lab. A red ring means two of your exams land at the same time. TBA means the faculty has not been published for that section yet.">Compare routines</h2></div>
     <p class="step-desc" id="resultsDesc">Generate to see every conflict-free routine that fits your preferences.</p>
     <div id="resultsBody"></div>
     <div class="sr-only" aria-live="polite" id="live"></div>
   </section>
   <footer class="wrap">
-  Prohor is an unofficial student project and is not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag behind the portal — always confirm in BRACU Connect before pre-advising. · <a href="https://github.com/NishadIslamUtso" target="_blank" rel="noopener noreferrer">GitHub</a> ·
-  <a id="feedbackLink" href="https://mail.google.com/mail/?view=cm&fs=1&to=nishadislamutso@gmail.com&su=Prohor%20routine%20planner%20feedback" target="_blank" rel="noopener noreferrer">Send feedback on Gmail</a>
-  (<a href="mailto:nishadislamutso@gmail.com?subject=Prohor%20routine%20planner%20feedback">or via your mail app</a>)
+  <span data-tip="An unofficial student project, not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag the portal.">Unofficial</span> · always confirm in BRACU Connect ·
+  <a href="https://github.com/NishadIslamUtso" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+  <a id="feedbackLink" href="https://mail.google.com/mail/?view=cm&fs=1&to=nishadislamutso@gmail.com&su=Prohor%20routine%20planner%20feedback" target="_blank" rel="noopener noreferrer">Gmail</a>
+  or <a href="mailto:nishadislamutso@gmail.com?subject=Prohor%20routine%20planner%20feedback">mail app</a>
 </footer>
 </main>
 
@@ -758,20 +836,22 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <aside id="rail" class="rail" role="region" aria-labelledby="railH">
     <div class="rail-top">
     <div class="rail-h"><h2 id="railH">Seats &amp; sections</h2><span class="sub" id="railSub">—</span>
-      <button class="more" id="railMore" aria-expanded="true" title="Fold the panel down to a status strip">Hide sections</button>
+      <span class="semwrap"><button class="more sembtn" id="semBtn" aria-expanded="false" aria-controls="semPop"><svg width="11" height="11"><use href="#i-cal"/></svg><span class="pt" id="semLabel">—</span><svg class="caret" width="10" height="10"><use href="#i-chev"/></svg></button>
+      <div class="sempop" id="semPop" hidden></div></span>
+      <button class="more" id="railMore" aria-expanded="true" title="Fold the panel down to a status strip">Hide</button>
       <a class="more pagebtn backbtn" id="railBack" hidden href="./" title="Back to the routine planner"><svg width="11" height="11" style="transform:rotate(90deg)"><use href="#i-chev"/></svg>Planner</a>
-      <button class="more pagebtn" id="railPop" title="Turn this panel into its own page. The planner stays open in the same tab — use Back to come home.">Open as page</button>
-      <button class="more pagebtn" id="railWin" title="Open the seats page in a new window, so you can watch seats while you plan">New window</button>
+      <button class="more pagebtn" id="railPop" title="Turn this panel into its own page. The planner keeps running underneath — use Planner to come back."><svg width="11" height="11"><use href="#i-page"/></svg><span class="pt">Open as page</span></button>
+      <button class="more pagebtn" id="railWin" title="Open the seats page in a second window, so you can watch seats while you plan"><svg width="11" height="11"><use href="#i-win"/></svg><span class="pt">New window</span></button>
       <button class="icon-btn rail-x" id="seatsClose" aria-label="Close the seats panel"><svg><use href="#i-x"/></svg></button></div>
     <div class="rail-live" id="railLive" data-state="idle">
     <span class="dot"></span><span id="seatAgo">not polled yet</span>
     <span class="peek" id="railPeek" hidden></span>
     <button class="link-btn" id="seatPause" aria-pressed="false">Pause</button>
-    <button class="link-btn" id="seatNow">Check now</button>
+    <button class="link-btn" id="seatNow">Refresh</button>
     </div>
     <div class="rail-search">
     <svg><use href="#i-search"/></svg>
-    <input id="seatSearch" type="text" placeholder="Filter course, code, section, faculty, room…" autocomplete="off" aria-label="Filter the seat lists">
+    <input id="seatSearch" type="text" placeholder="Filter sections…" autocomplete="off" aria-label="Filter the seat lists">
     <button class="clr" id="seatClr" hidden aria-label="Clear the seat filter"><svg width="13" height="13"><use href="#i-x"/></svg></button>
     </div>
     </div>
@@ -785,15 +865,14 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   <h3>How Prohor works</h3>
   <p class="muted">A <em>prohor</em> (প্রহর) is one-eighth of a day. Pick yours in three steps:</p>
   <ol>
-    <li><b>Pick your courses.</b> Search, add up to six. Lock time slots or faculty or sections per course if you care.</li>
-    <li><b>Set your preferences.</b> How many days on campus, exam-clash checks, times and days to avoid.</li>
-    <li><b>Compare routines.</b> Every conflict-free combination, ranked. Download any as PNG.</li>
-    <li><b>Watch seats.</b> Open <i>Seats</i> for a panel that splits the screen with the page — drag the handle
-      between them to size it, tap it to fold the panel to a strip. Pin up to 50 sections and their seat counts
-      stay at the top. Or press <i>Open as page</i> / <i>New window</i> and the seats become their own page
-      (<span class="kbd">?view=seats</span>) that you can park on another screen while you keep planning.</li>
+    <li><b>Pick your courses.</b> Add up to six — lock slots, sections or faculty per course if you care.</li>
+    <li><b>Set your preferences.</b> Days on campus, exam-clash checks, times and days to avoid.</li>
+    <li><b>Compare routines.</b> Every conflict-free combination, ranked. Download any as a PNG.</li>
   </ol>
-  <p class="muted" style="font-size:13px">Shortcuts: <span class="kbd">/</span> focus course search · <span class="kbd">Ctrl/⌘ + Enter</span> generate</p>
+  <p class="muted" style="font-size:13px">Open <i>Seats</i> for a panel that splits the screen — drag its edge to size
+  it, tap it to fold to a strip, pin sections to keep their seat counts on top. It also stands alone as a page
+  (<span class="kbd">?view=seats</span>). Anything unexplained is one hover away.
+  Shortcuts: <span class="kbd">/</span> search · <span class="kbd">Ctrl/⌘ + Enter</span> generate.</p>
   <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" id="howClose">Got it</button></div>
 </dialog>
 
@@ -815,9 +894,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   var state = {
     index: null, meta: null, names: {}, ready: false, pending: false,
     courses: [],
-    prefs: { dayMin: 1, dayMax: 6, examClash: true, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] },
+    prefs: { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] },
     view: "grid", sort: "best", pageSize: 50, page: 1,
-    results: null, picks: {}, search: null, blockedNote: "", droppedUrl: ""
+    results: null, picks: {}, search: null, blockedNote: "", droppedUrl: "",
+    semesters: {}, sem: "live"
   };
 
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -850,6 +930,57 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     setTimeout(function () { t.style.opacity = "0"; t.style.transition = "opacity 200ms"; setTimeout(function () { t.remove(); }, 220); }, 3200);
   }
   function say(msg) { var l = $("#live"); if (l) l.textContent = msg; }
+
+  /* ------------------------------ hover / focus tips ------------------------------
+     The page keeps only what a person needs at a glance; everything that explains *why*
+     lives one hover (or one Tab) away, so nothing is lost by not printing it.          */
+  var tipEl = null, tipFor = null, tipTimer = null;
+  function tipPlace(target) {
+    var text = target.getAttribute("data-tip");
+    if (!text) return;
+    if (!tipEl) {
+      tipEl = document.createElement("div");
+      tipEl.className = "tip";
+      tipEl.setAttribute("role", "tooltip");
+      document.body.appendChild(tipEl);
+    }
+    tipEl.textContent = text;
+    tipEl.setAttribute("data-show", "");
+    var r = target.getBoundingClientRect();
+    if (!r.width && !r.height) return;
+    var w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+    var vw = window.innerWidth || 1280, vh = window.innerHeight || 800;
+    var x = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, vw - w - 8));
+    var y = r.top - h - 8;
+    if (y < 8) y = Math.min(r.bottom + 8, vh - h - 8);
+    tipEl.style.left = Math.round(x) + "px";
+    tipEl.style.top = Math.round(Math.max(4, y)) + "px";
+  }
+  function tipHide() { if (tipEl) tipEl.removeAttribute("data-show"); tipFor = null; }
+  function tipTarget(node) {
+    while (node && node !== document.body) {
+      if (node.getAttribute && node.getAttribute("data-tip")) return node;
+      node = node.parentNode;
+    }
+    return null;
+  }
+  document.addEventListener("mouseover", function (e) {
+    var t = tipTarget(e.target);
+    if (!t) { if (tipFor) { clearTimeout(tipTimer); tipHide(); } return; }
+    if (t === tipFor) return;
+    clearTimeout(tipTimer);
+    tipFor = t;
+    tipTimer = setTimeout(function () { if (tipFor === t && t.isConnected !== false) tipPlace(t); }, 320);
+  });
+  document.addEventListener("mouseout", function (e) {
+    var t = tipTarget(e.target);
+    if (t && t === tipFor) { clearTimeout(tipTimer); tipHide(); }
+  });
+  document.addEventListener("focusin", function (e) { var t = tipTarget(e.target); if (t) { tipFor = t; tipPlace(t); } });
+  document.addEventListener("focusout", function (e) { if (tipTarget(e.target)) tipHide(); });
+  window.addEventListener("scroll", tipHide, true);
+  window.addEventListener("resize", tipHide);
+
   function copy(text, msg) {
     function fallback() {
       var ta = document.createElement("textarea");
@@ -894,7 +1025,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var kv = [
       ["Session", M.session ? "<span class=\"mono\">" + esc(M.session) + "</span>" : "—"],
       ["Classes", M.start ? "<span class=\"tnum\">" + esc(C.fmtDate(M.start)) + " → " + esc(C.fmtDate(M.end)) + "</span>" : "—"],
-      ["Courses", "<span class=\"tnum\">" + num(I.codes.length) + " courses · " + num(I.count) + " sections</span>"],
+      ["Feed", "<span class=\"tnum\">" + num(I.codes.length) + " courses · " + num(I.count) + " sections</span>"],
       ["Patterns", "<span class=\"tnum\">" + num(I.groupCount) + " schedule patterns</span>"],
       ["Exam slots", "<span class=\"tnum\">" + num(I.examsKnown) + " sections have published mid + final slots</span>"],
       ["Source", "<span class=\"mono\">" + esc(M.origin || "") + "</span>"],
@@ -903,7 +1034,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     $("#dataKv").innerHTML = kv.map(function (r) { return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>"; }).join("");
     var o = String(M.origin || "") + " " + String(M.label || "");
     var word = /stale/.test(o) ? "Stale copy" : /snapshot/.test(o) ? "Offline copy" : /cache/.test(o) ? "Cached" : "Live";
-    setPill(M.warn ? "warn" : "ok", word + " · <span class=\"tnum\">" + num(I.count) + "</span> section" + (I.count === 1 ? "" : "s") + " · updated " + ago(M.at) +
+    setPill(M.warn ? "warn" : "ok", word +
       (M.warn ? "" : " · auto-refresh in <span class=\"tnum\">" + nextRefresh() + "</span>"));
     updateCourseCount();
   }
@@ -925,9 +1056,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function adopt(sections, meta) {
     var first = !state.ready;
+    var leaving = state.index, leavingMeta = state.meta;
     state.index = C.buildIndex(sections);
     state.meta = meta;
     state.ready = true;
+    if (leaving && leavingMeta && String(leavingMeta.session || "") !== String(meta.session || "")) semFile(leaving, leavingMeta);
     if (state.pins && state.pins.length) {          // a section the feed dropped must not hold a pin slot
       var lived = state.pins.length;
       state.pins = state.pins.filter(function (x) { return !!findSec(x.code, x.sec); });
@@ -937,6 +1070,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     indexSeats();
     afterChange();
     renderRail();                   // fill the seats rail straight away, not one frame later
+    semRender();                    // and name the semester that just arrived
     if (first && state.pending) { state.pending = false; setGen(false); generate(); }
     if (state.search) { state.search.stale = true; renderStatus(); }
   }
@@ -956,7 +1090,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function loadData(force) {
     if (inflight && !force) return inflight;
     inflight = (async function () {
-      setPill("busy", "loading section data…");
+      setPill("busy", "Loading data…");
       var cached = null;
       try { cached = await store.get(CACHE_KEY); } catch (e) { }
       if (cached && cached.at && (Date.now() - cached.at) < C.REFRESH_MS && !force) {
@@ -1138,8 +1272,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       return;
     }
     if (!state.courses.length) {
-      wrap.innerHTML = '<div class="empty"><svg><use href="#i-cal"/></svg><div><b>No courses yet</b>Search above to add your first course (up to ' + MAX_COURSES +
-        " — a full semester). Sections that meet at identical days and times count as one pattern.</div></div>";
+      wrap.innerHTML = '<div class="empty"><svg><use href="#i-cal"/></svg><div><b>No courses yet</b>Search above to add your first course — up to ' + MAX_COURSES +
+        ', a full semester.</div></div>';
       return;
     }
     wrap.innerHTML = state.courses.map(courseCardHtml).join("");
@@ -1179,10 +1313,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
           '<button class="select-btn" data-act="open-fac" data-code="' + esc(c.code) + '" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="l-f-' + esc(c.code) + '"><span>' + esc(facLabel) + '</span><svg class="caret"><use href="#i-chev"/></svg></button></div>' +
       '</div>' +
       (chips ? '<div class="chips">' + chips + '</div>' : "") +
-      '<div class="caption">' + num(Cc.sections.length) + " sections · " + num(Cc.groups.length) + " patterns" +
+      '<div class="caption">' + num(Cc.sections.length) + " sections" +
+        (anyFilter()
+          ? " · <b>" + num(viable.length) + " of " + num(Cc.groups.length) + " patterns · " + num(vSections) +
+            " section" + (vSections === 1 ? "" : "s") + " match</b>"
+          : " · " + num(Cc.groups.length) + " patterns") +
         ((c.secs || []).length ? ' · <b>' + c.secs.length + " section" + (c.secs.length === 1 ? "" : "s") + " picked</b>" : "") +
-        (anyFilter() ? ' · <b>' + num(viable.length) + " pattern" + (viable.length === 1 ? "" : "s") + " · " + num(vSections) +
-          " section" + (vSections === 1 ? "" : "s") + " match</b>" : "") +
       '</div></article>';
   }
 
@@ -1512,9 +1648,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         '<button class="rm" data-rf="' + esc(f) + '" aria-label="Stop avoiding ' + esc(f) + '">×</button></span>';
     }).join("");
     $$(".switch").forEach(function (sw) { sw.setAttribute("aria-checked", String(!!state.prefs[sw.dataset.pref])); });
-    var n = (state.prefs.dayMin > 1 || state.prefs.dayMax < 6 ? 1 : 0) + (state.prefs.avoidFac.length ? 1 : 0) +
-      (state.prefs.avoidTime.length ? 1 : 0) + (state.prefs.avoidDay.length ? 1 : 0);
-    $("#prefsActive").textContent = n ? "· " + n + " active" : "";
+    var d = defaultPrefs(), n = 0;
+    Object.keys(d).forEach(function (k) {
+      if (Array.isArray(d[k])) { if (state.prefs[k].length) n++; } else if (state.prefs[k] !== d[k]) n++;
+    });
+    $("#prefsActive").textContent = n ? "· " + n + " changed" : "";
+    $("#resetPrefs").hidden = !n;
   }
   function renderFacSuggestions() {
     var input = $("#facSearch"), host = $("#facList");
@@ -1584,7 +1723,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     renderChips(); renderFacSuggestions(); updateSummary(); renderCourses(); save(); noteStale();
   });
   $("#resetPrefs").onclick = function () {
-    state.prefs = { dayMin: 1, dayMax: 6, examClash: true, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] };
+    state.prefs = defaultPrefs();
     renderRange(); renderChips(); renderFacSuggestions(); updateSummary(); renderCourses(); save(); toast("Preferences reset");
   };
   $("#prefsToggle").onclick = function () { setPrefsOpen($("#step2").classList.contains("collapsed")); };
@@ -1694,7 +1833,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     state.blockedNote = "";
     var prefs = {
       minDays: state.prefs.dayMin, maxDays: state.prefs.dayMax,
-      preferShortDay: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
+      preferFewerDays: state.prefs.fewerDays, preferLessTime: state.prefs.lessTime,
+      preferGaps: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
       ignoreExams: !state.prefs.examClash
     };
     var sp = state.search = {
@@ -1765,7 +1905,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       sp.running = true;
       sp.all = !!all;
       sp.once = !all;
-      sp.wantMore = all ? 1e9 : (state.page + 1) * state.pageSize;
+      sp.wantMore = all ? 1e9 : state.pageSize;
       if (sp.restored) {                       // saved pages: rebuild the enumerator and re-derive the same order
         sp.en = sp.en || C.createEnumerator(sp.rows, sp.prefs);
         sp.items = []; sp.renderedCount = -1; sp.restored = false;
@@ -1956,9 +2096,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       '<div class="seg" role="group" aria-label="View"><button data-view="grid" aria-pressed="' + (state.view === "grid") + '">Grid</button>' +
       '<button data-view="list" aria-pressed="' + (state.view === "list") + '">Day list</button></div></div>' +
       '<div class="ctl"><button class="btn btn-secondary btn-sm" id="copyLink"><svg width="14" height="14"><use href="#i-link"/></svg>Copy link</button>' +
-      '<button class="btn btn-secondary btn-sm" id="printAll">Print all</button></div></div>' +
-      '<div class="legend"><i style="background:var(--c1-line)"></i><i style="background:var(--c2-line)"></i><i style="background:var(--c3-line)"></i>' +
-      "colour = course · hatched = lab · red ring = exam clash · TBA = faculty not published yet</div>";
+      '<button class="btn btn-secondary btn-sm" id="printAll">Print all</button></div></div>';
     // collect which sections this page shows so the seats rail can follow the paging
     var acc = state.courses.map(function (c) { return { code: c.code, seen: {} }; });
     var html = page.map(function (it, i) {
@@ -1985,10 +2123,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function placeholderHtml(msg) {
     return '<div class="placeholder"><b>' + esc(msg || "Your routines will appear here.") + "</b>" +
-      "Add courses in step 1, tune step 2, then press Generate — or <span class=\"kbd mono\" style=\"font-size:11px;border:1px solid var(--border);border-radius:4px;padding:1px 6px\">Ctrl/⌘ + Enter</span>." +
-      "<ol><li>Sections sharing identical days and times are one pattern, so the list stays readable.</li>" +
-      "<li>Every routine is checked for class, lab <b>and</b> exam clashes.</li>" +
-      "<li>Swap to any alternative section inside a card, or download it as a PNG.</li></ol></div>";
+      "Add courses, set your preferences, then press Generate — or <span class=\"kbd mono\" style=\"font-size:11px;border:1px solid var(--border);border-radius:4px;padding:1px 6px\">Ctrl/⌘ + Enter</span>. " +
+      '<span class="muted" data-tip="Sections that meet at identical days and times count as one pattern, so the list never repeats itself. Every routine is checked for class, lab and exam clashes, and you can swap to any alternative section inside a card or download it as a PNG.">Sections at identical times count as one pattern.</span></div>';
   }
   function zeroHtml() {
     var hints = [];
@@ -1996,7 +2132,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       if (state.prefs.dayMax < 6) hints.push("allow " + Math.min(6, state.prefs.dayMax + 1) + " days on campus");
       if (state.prefs.avoidTime.length) hints.push(state.prefs.avoidTime.length > 1 ? "clear one of the " + state.prefs.avoidTime.length + " avoided time slots" : "clear the avoided time slot");
       if (state.prefs.avoidDay.length) hints.push("clear an avoided day");
-      if (state.prefs.examClash) hints.push("turn off “Check exam clashes” — clashing exams then get flagged instead of rejecting the routine");
+      if (state.prefs.examClash) hints.push("turn off “Check exam clashes” — clashing exams are then flagged in red instead of ruling the routine out");
       state.courses.forEach(function (c) {
         if (c.locked.length) hints.push("unlock time slots for " + esc(c.code));
         if ((c.secs || []).length) hints.push("widen the section" + (c.secs.length > 1 ? "s" : "") + " [" + esc(c.secs.join(", ")) + "] on " + esc(c.code));
@@ -2004,7 +2140,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       });
     }
     var sp = state.search;
-    return '<div class="zero"><b>No routine fits these constraints.</b><span class="muted">' +
+    var clashNote = state.prefs.examClash
+      ? ' data-tip="An exam clash means two of your courses have a mid or a final on the same date and time. Not every course really has a final — the feed still lists a date for some of them — so confirm in BRACU Connect before you drop a routine you liked."'
+      : "";
+    return '<div class="zero"><b>No routine fits these constraints.</b><span class="muted"' + clashNote + ">" +
       (sp ? num(sp.tried || sp.space || 0) + " combinations were checked. " : "") + (state.blockedNote ? state.blockedNote : "Try one of these:") +
       "</span>" + (hints.length ? "<ul>" + hints.map(function (h) { return "<li>" + h + "</li>"; }).join("") + "</ul>" : "") + "</div>";
   }
@@ -2014,27 +2153,39 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function routineHtml(r, gi, rank, bestMatch) {
     var v = C.buildView(r, { hueOf: hueOf });
     var sum = r.summary;
-    var dots = C.DAY_ABBR.slice(0, 6).map(function (d, i) {
-      return '<i class="' + (sum.days[i] ? "on" : "") + '" title="' + C.DAY_LABEL[C.DAYS[i]] + '"></i>';
-    }).join("");
+    var dayNames = C.DAYS.filter(function (_, i) { return sum.days[i]; }).map(function (d) { return C.DAY_LABEL[d]; }).join(", ") || "no class days";
     var clashCount = r.picks.filter(function (p) { return p.conflict; }).length;
-    var gapBadge = sum.gapCount ? '<span class="badge b-neutral">' + sum.gapCount + " gap" + (sum.gapCount > 1 ? "s" : "") + " · " + sum.gapMin + " min</span>" : '<span class="badge b-good">no gaps</span>';
+    var gapBadge = sum.gapCount
+      ? '<span class="badge b-neutral" data-tip="Empty hours between classes on the same day: ' + sum.gapCount + " gap" + (sum.gapCount > 1 ? "s" : "") + ", " + dur(sum.gapMin) + ' in total.">' + sum.gapCount + " gap" + (sum.gapCount > 1 ? "s" : "") + " · " + dur(sum.gapMin) + "</span>"
+      : '<span class="badge b-good" data-tip="No empty hours between classes on any day of this routine.">no gaps</span>';
     return '<article class="panel routine" data-gi="' + gi + '">' +
       '<div class="print-hdr"><svg width="24" height="24" style="color:var(--primary-text)"><use href="#prohor-mark"/></svg>Prohor · ' +
         esc(state.meta && state.meta.session ? "session " + state.meta.session : "class routine") + "</div>" +
-      '<div class="r-head"><span class="rank">#' + rank + "</span>" +
-        (bestMatch ? '<span class="badge b-accent">★ Best match</span>' : "") +
-        '<span class="badge b-neutral"><span class="day-dots">' + dots + "</span>" + sum.dayCount + " day" + (sum.dayCount > 1 ? "s" : "") + "</span>" +
-        '<span class="badge b-neutral tnum">' + fmt12(sum.minStart) + " → " + fmt12(sum.maxEnd) + "</span>" + gapBadge +
-        '<span class="badge b-neutral">longest day ' + dur(sum.longest) + "</span>" +
-        '<span class="badge ' + (r.alt > 1 ? "b-accent" : "b-neutral") + '">' + r.alt + " section option" + (r.alt > 1 ? "s" : "") + "</span>" +
-        (clashCount ? '<span class="badge b-bad">exam clash</span>' : "") +
+      '<div class="r-head"><span class="rank" data-tip="' + r.alt + " section option" + (r.alt > 1 ? "s" : "") + ' across your courses — more means more chance of still getting a seat.">#' + rank + "</span>" +
+        (bestMatch ? '<span class="badge b-accent" data-tip="The routine that scores best against the preferences you set.">★ Best match</span>' : "") +
+        '<span class="badge b-neutral" data-tip="' + esc(dayNames) + " · longest day " + dur(sum.longest) + '">' + sum.dayCount + " day" + (sum.dayCount > 1 ? "s" : "") + "</span>" +
+        '<span class="badge b-neutral tnum" data-tip="Earliest class starts at ' + fmt12(sum.minStart) + ", the latest ends at " + fmt12(sum.maxEnd) + '.">' + fmt12(sum.minStart) + " → " + fmt12(sum.maxEnd) + "</span>" + gapBadge +
+        '<span class="r-secs" data-tip="The sections this routine is built from — a lab shares its course’s section number.">' +
+        r.picks.map(function (p) {
+          return '<span class="r-sec" style="' + hueVars(hueOf(p.code)) + '">' + esc(p.code) + ' <b class="mono">[' + esc(p.chosen.sec) + "]</b></span>";
+        }).join("") + "</span>" +
+        (clashCount ? '<span class="badge b-bad" data-tip="Two of these exams fall at the same time. Turn off “Check exam clashes” in preferences if you want to keep this routine anyway.">exam clash</span>' : "") +
         '<div class="r-actions">' +
           '<button class="icon-btn" data-ra="copy" data-gi="' + gi + '" aria-label="Copy section list" title="Copy sections"><svg><use href="#i-copy"/></svg></button>' +
           '<button class="icon-btn" data-ra="png" data-gi="' + gi + '" aria-label="Download routine as PNG" title="Download PNG"><svg><use href="#i-down"/></svg></button>' +
         "</div></div>" +
       '<div class="grid-wrap">' + (state.view === "grid" ? gridHtml(v) : dayListHtml(v)) + "</div>" +
       examHtml(v) + altHtml(v, gi) + "</article>";
+  }
+  function blockTip(b) {
+    var t = b.tip;
+    if (b.lab) t += " · lab" + (b.labCourse ? " " + b.labCourse : "") + " — hatched, in a lab room";
+    if (b.clash) t += " · ringed in red: this section's exam lands at the same time as another course's in this routine";
+    return t;
+  }
+  function facCell(b) {          // TBA is the one abbreviation worth spelling out on hover
+    return b.faculty && b.faculty !== "TBA" ? esc(b.faculty)
+      : '<span class="tba" data-tip="TBA — the faculty for this section has not been published yet.">TBA</span>';
   }
   function gridHtml(v) {
     var tpl = "grid-template-columns:56px repeat(" + v.nCols + ",minmax(118px,1fr));min-width:" + (56 + 118 * v.nCols) + "px;grid-template-rows:30px " +
@@ -2057,9 +2208,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     });
     v.blocks.forEach(function (b) {
       h += '<div class="blk' + (b.lab ? " lab" : "") + (b.clash ? " clash" : "") + '" role="cell" tabindex="0" style="' + hueVars(b.hue) +
-        ";grid-column:" + (b.col + 2) + ";grid-row:" + b.row + " / span " + b.rowSpan + '" title="' + esc(b.tip) + '"><b>' + esc(b.label) +
-        (b.lab ? '<span class="tag">LAB</span>' : "") + "</b>" + esc(b.time) +
-        '<span class="meta">' + esc((b.room || "—") + " · " + (b.faculty || "TBA")) + "</span></div>";
+        ";grid-column:" + (b.col + 2) + ";grid-row:" + b.row + " / span " + b.rowSpan + '" title="' + esc(blockTip(b)) + '"><b>' + esc(b.label) +
+        "</b>" + esc(b.time) +
+        '<span class="meta">' + esc((b.room || "—") + " · ") + facCell(b) + "</span></div>";
     });
     v.cols.forEach(function (c, ci) { if (c.free) h += '<div class="free-lbl" style="grid-column:' + (ci + 2) + ';grid-row:2">free</div>'; });
     return h + "</div>";
@@ -2070,14 +2221,16 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     return '<div class="daylist">' + v.cols.map(function (c, ci) {
       var list = (byDay[ci] || []).sort(function (a, b) { return a.time < b.time ? -1 : 1; });
       return '<div class="dl-day"><h4>' + esc(c.full) + "</h4>" + (list.length ? list.map(function (b) {
-        return '<div class="dl-item" style="' + hueVars(b.hue) + '"><i></i><span class="t">' + esc(b.time) + "</span><span>" + esc(b.label) +
-          (b.lab ? ' <span class="tag">LAB</span>' : "") + ' <span class="mono faint">' + esc((b.room || "—") + " · " + (b.faculty || "TBA")) + "</span></span></div>";
+        return '<div class="dl-item" style="' + hueVars(b.hue) + '" title="' + esc(blockTip(b)) + '"><i></i><span class="t">' + esc(b.time) + "</span><span>" + esc(b.label) +
+          ' <span class="mono faint">' + esc((b.room || "—") + " · ") + facCell(b) + "</span></span></div>";
       }).join("") : '<div class="dl-free">free</div>') + "</div>";
     }).join("") + "</div>";
   }
   function examHtml(v) {
-    return '<div class="exam-wrap"><table class="exam"><caption class="sr-only">Mid and final exam slots for the sections in this routine</caption>' +
-      '<thead><tr><th scope="col">Course</th><th scope="col">Mid</th><th scope="col">Final</th><th scope="col">Section</th><th scope="col">Faculty</th></tr></thead><tbody>' +
+    return '<div class="exam-wrap"><table class="exam"><caption class="sr-only">Mid and final exam slots for the sections in this routine, soonest first</caption>' +
+      '<thead><tr><th scope="col">Course</th><th scope="col">Mid</th>' +
+      '<th scope="col" data-tip="Rows run soonest first, on the mid. The feed lists a date for some finals the course does not really have — confirm in BRACU Connect before you plan around one.">Final</th>' +
+      '<th scope="col">Section</th><th scope="col">Faculty</th></tr></thead><tbody>' +
       v.exams.map(function (e) {
         function cell(x) {
           if (!x) return '<span class="s">not published</span>';
@@ -2088,20 +2241,19 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       }).join("") + "</tbody></table></div>";
   }
   function altHtml(v, gi) {
+    // Only the courses that really offer a choice. A course with a single section in its group has
+    // nothing to pick, and listing it just pads the panel out.
+    var choices = [];
+    v.exams.forEach(function (e, ci) { if (e.sections.length > 1) choices.push([e, ci]); });
+    if (!choices.length) return "";
     function courseCards(fn) {
-      return v.exams.map(function (e, ci) {
+      return choices.map(function (p) {
+        var e = p[0], ci = p[1];
         return '<div class="alt-course" style="' + hueVars(e.hue) + '"><div class="ct"><span class="hue-num">' + (e.hue + 1) + "</span>" + esc(e.code) +
           ' <span class="faint" style="font-weight:400">· ' + esc(e.pattern) + "</span></div>" + fn(e, ci) + "</div>";
       }).join("");
     }
-    if (!v.altCount) {
-      return '<details class="alt"><summary>Alternative sections (0)</summary><div class="alt-grid">' +
-        courseCards(function (e, ci) {
-          return '<label><input type="radio" checked name="alt-' + gi + "-" + ci + '"><span class="mono">[' + esc(e.sec) + "]</span>" +
-            '<span class="fac">' + esc(e.fac + (e.sections[0] && e.sections[0].room ? " · " + e.sections[0].room : "")) + "</span></label>";
-        }) + "</div></details>";
-    }
-    return '<details class="alt"><summary>Alternative sections (' + v.altCount + ")</summary>" +
+    return '<details class="alt"><summary>Alternative sections (' + choices.length + ")</summary>" +
       '<div class="caption" style="margin:6px 0 0">These sections meet at exactly the same days and times, so any of them keeps this routine valid — pick one and this card updates.</div>' +
       '<div class="alt-grid">' + courseCards(function (e, ci) {
         return e.sections.map(function (s, k) {
@@ -2120,11 +2272,17 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     setTimeout(function () {
       try {
         var canvas = document.createElement("canvas");
-        var scale = Math.min(3, Math.max(2, Math.round((window.devicePixelRatio || 1) * 2)));
+        var scale = 2;                                   // 2x keeps the file small and the text crisp
         var info = C.paintRoutine(canvas.getContext("2d"), r, {
           scale: scale, title: "Prohor", hueOf: hueOf,
-          subtitle: (state.meta && state.meta.session ? "Session " + state.meta.session + " · " : "") + "unofficial · confirm in BRACU Connect",
+          // the term, never the session id: "20263" means nothing to anyone reading the image
+          subtitle: (function () {
+            var rec = semActive(), id = rec ? rec.session : semNow();
+            return id ? semLabel(id) : "";
+          })(),
           meta: r.picks.map(function (p) { return p.code + " [" + p.chosen.sec + "]"; }).join(" · "),
+          site: "prohor-rg.vercel.app",
+          caveat: "Unofficial · always confirm in BRACU Connect",
           footer: "Data: BRACU Connect via Connect-CDN (unofficial) · generated " + new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
         });
         var a = document.createElement("a");
@@ -2154,6 +2312,14 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var top = document.querySelector(".rail-top");
     var px = top ? Math.round(top.getBoundingClientRect().bottom + 10) : 0;
     if (px > 40) document.documentElement.style.setProperty("--stick", px + "px");
+  }
+  // a full-height header is fine at rest and a nuisance once the rows are scrolling under it
+  function railCompact() {
+    var top = document.querySelector(".rail-top");
+    if (!top) return;
+    var y = SEATS_VIEW ? (window.pageYOffset || document.documentElement.scrollTop || 0)
+      : ((document.querySelector("#railBody") || {}).scrollTop || 0);
+    top.classList.toggle("compact", y > 28);
   }
   function toggleRailSlim() {
     if (!state.rail) readRailPrefs();
@@ -2208,7 +2374,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       layer.classList.toggle("slim", slim);
       layer.classList.toggle("tight", railStacked() && state.rail.h < Math.round((window.innerHeight || 800) * 0.56));
       var more = $("#railMore");
-      if (more) { more.textContent = slim ? "Show sections" : "Hide sections"; more.title = slim ? "Give the panel its rows back" : "Shrink the panel to a status strip"; }
+      if (more) { more.textContent = slim ? "Show" : "Hide"; more.title = slim ? "Give the panel its rows back" : "Shrink the panel to a status strip"; }
       if (more) more.setAttribute("aria-expanded", String(!slim));
     }
     if (!railSlim()) state.rail.was = state.rail.h;
@@ -2339,10 +2505,15 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     return location.pathname + "?" + u.toString();
   }
   function openSeatsWindow() {
-    var url = seatsPageUrl(), w = null;
-    try { w = window.open(url, "_blank", "noopener"); } catch (e) { }
-    if (!w) { toast("The browser blocked the new window — opening the seats page in this tab"); location.href = url; }
-    else toast("Seats opened in a new window — it follows this tab as you plan");
+    var url = seatsPageUrl(), w = null, threw = false;
+    try { w = window.open(url, "_blank", "noopener"); } catch (e) { threw = true; }
+    if (w) { toast("Seats opened in a new window — it follows this tab as you plan"); return; }
+    // A missing reference is ambiguous: some browsers hand one back even when the window did
+    // open, and a blocker hands one back when it did not. Navigating this tab on that guess is
+    // what made a single click both open a window and flip the planner into the seats page, so
+    // this tab is left exactly where it is and the user is told what to press instead.
+    if (threw) { toast("This browser would not open a second window — press Open as page instead."); return; }
+    toast("If no second window opened, your browser blocked the pop-up — allow pop-ups here, or press Open as page.");
   }
   // the panel as a page: same document, same state, no band and no split
   function setSeatsView(on, push) {
@@ -2394,12 +2565,15 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   $("#seatsClose").addEventListener("click", function () { setSeatsMode("closed"); try { $("#seatsBtn").focus(); } catch (e) { } });
   $("#railMore").addEventListener("click", function (e) { e.stopPropagation(); toggleRailSlim(); });
   window.addEventListener("resize", function () {
-    stickInset();
+    stickInset(); railCompact(); semPlace();
     if (state.rail) setRailSize(railSize(), true);          // keep the split legal for the new viewport
     fitOverlays();
     if (!state.seats || state.seats.mode !== "open") return;
     renderRail();
   });
+  window.addEventListener("scroll", function () { railCompact(); semPlace(); }, { passive: true });
+  var railScroller = $("#railBody");                  // the split panel scrolls on its own
+  if (railScroller) railScroller.addEventListener("scroll", function () { railCompact(); }, { passive: true });
   // the handle: drag it, double-click it for the default size, or nudge it with the arrow keys
   (function railDrag() {
     var grip = $("#railGrip");
@@ -2481,7 +2655,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   var SEAT_MS = 30000, SEAT_MS_OPEN = 8000, SEAT_MAX_BACKOFF = 480000;
   var seatWorker = null, seatBusy = false, seatTimer = null, rowCache = {};
-  state.seats = { map: {}, at: null, error: null, paused: false, backoff: SEAT_MS, lastTry: 0, query: "", open: {}, showAll: false, mode: "closed" };
+  state.seats = { map: {}, at: null, error: null, paused: false, backoff: SEAT_MS, lastTry: 0, query: "", open: {}, fold: {}, showAll: false, mode: "closed" };
   state.pins = [];
   state.railPage = [];
   state.rail = { w: 430, h: 320, was: 320 };
@@ -2511,20 +2685,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     });
     state.seats.map = map;
   }
-  function sectionRow(code, sec) {
-    var key = code + "|" + sec;
-    if (rowCache[key]) return rowCache[key];
-    var s = findSec(code, sec);
-    if (!s) return (rowCache[key] = null);
-    var Cc = K(code), pat = "no schedule", g = null;
-    if (Cc) for (var i = 0; i < Cc.groups.length; i++) {
-      var gg = Cc.groups[i];
-      for (var j = 0; j < gg.sections.length; j++) if (gg.sections[j] === s) { g = gg; break; }
-      if (g) break;
-    }
-    if (g) pat = patternLabel(g);
-    var fin = null, mid = null;
-    (s.exams || []).forEach(function (x) { if (x.kind === "FINAL") fin = x; else if (x.kind === "MID") mid = x; });
+  function fmtRange(lo, hi) {           // "3:30–4:50 PM" — the repeated meridiem only earns its keep once
+    var a = fmt12(lo), b = fmt12(hi);
+    return a.slice(-2) === b.slice(-2) ? a.slice(0, -3) + "\u2013" + b : a + "\u2013" + b;
+  }
+  function patternLabelOf(events) { return patternLabel({ events: events }); }
+  /* one row of the seat lists, built from the live feed or from a saved semester */
+  function rowBuild(code, sec, s, events, exams, facNames, name) {
     function dayChips(list) {
       var by = {};
       list.forEach(function (e) { (by[e.day] = by[e.day] || []).push(e); });
@@ -2532,45 +2699,60 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         var l = by[day];
         var lo = Math.min.apply(null, l.map(function (q) { return q.start; }));
         var hi = Math.max.apply(null, l.map(function (q) { return q.end; }));
-        return '<span class="dt"><span class="k-day">' + C.DAY_ABBR[day] + '</span> <span class="k-time">' + fmt12(lo) + "–" + fmt12(hi) + "</span></span>";
-      }).join(" · ");
+        return '<span class="dt"><span class="k-day">' + C.DAY_ABBR[day] + '</span> <span class="k-time">' + fmtRange(lo, hi) + "</span></span>";
+      }).join(" \u00b7 ");
     }
-    var clsL = g ? g.events.filter(function (e) { return e.kind !== "LAB"; }) : [];
-    var labL = g ? g.events.filter(function (e) { return e.kind === "LAB"; }) : [];
+    var clsL = events.filter(function (e) { return e.kind !== "LAB"; });
+    var labL = events.filter(function (e) { return e.kind === "LAB"; });
+    var patText = patternLabelOf(events);
     var patHtml = clsL.length ? dayChips(clsL) : '<span class="k-none">no class meetings</span>';
     if (labL.length) patHtml += ' <span class="k-lab">Lab</span> ' + dayChips(labL);
+    var mid = null, fin = null;
+    exams.forEach(function (x) { if (x.kind === "FINAL") fin = x; else if (x.kind === "MID") mid = x; });
     function examChip(kind, x) {
       return '<span class="dt"><span class="' + (kind === "MID" ? "k-mid" : "k-fin") + '">' + (kind === "MID" ? "Mid" : "Fin") + "</span> " +
         '<span class="k-date">' + esc(C.fmtDate(x.date).replace(/^\w+, /, "")) + '</span> <span class="k-time">' + fmt12(x.start) + "</span></span>";
     }
-    var exHtml = (mid ? examChip("MID", mid) : "") + (fin ? (mid ? "&nbsp; " : "") + examChip("FINAL", fin) : "");
+    var exHtml = (mid ? examChip("MID", mid) : "") + (fin ? (mid ? " " : "") + examChip("FINAL", fin) : "");
     if (!exHtml) exHtml = '<span class="k-none">no exam slot published</span>';
     var exam = (mid ? "Mid " + C.fmtDate(mid.date) + " " + fmt12(mid.start) + " " : "") + (fin ? "Fin " + C.fmtDate(fin.date) + " " + fmt12(fin.start) : "");
-    var facNames = s.faculties.map(function (f) { return state.names[f] || ""; }).filter(Boolean).join(" ");
-    var tip = s.label + " · " + s.faculty + (facNames ? " (" + facNames + ")" : "") + " · " + (s.room || "no room") +
-      (s.labCourse ? " · lab " + s.labCourse + " " + (s.labRoom || "") : "") +
-      (fin ? " · final " + C.fmtDate(fin.date) + " " + fmt12(fin.start) + "–" + fmt12(fin.end) : "") +
-      (mid ? " · mid " + C.fmtDate(mid.date) + " " + fmt12(mid.start) + "–" + fmt12(mid.end) : "");
-    var hay = [code, Cc && Cc.name || "", sec, s.faculty, facNames, s.room || "", s.labRoom || "", s.labCourse || "", pat, exam].join(" ").toLowerCase();
-    return (rowCache[key] = {
+    var tip = code + " [" + sec + "] \u00b7 " + s.faculty + (facNames ? " (" + facNames + ")" : "") + " \u00b7 " + (s.room || "no room") +
+      (s.labCourse ? " \u00b7 lab " + s.labCourse + " " + (s.labRoom || "") : "") +
+      (fin ? " \u00b7 final " + C.fmtDate(fin.date) + " " + fmt12(fin.start) + "\u2013" + fmt12(fin.end) : "") +
+      (mid ? " \u00b7 mid " + C.fmtDate(mid.date) + " " + fmt12(mid.start) + "\u2013" + fmt12(mid.end) : "");
+    var hay = [code, name || "", sec, s.faculty, facNames, s.room || "", s.labRoom || "", s.labCourse || "", patText, exam].join(" ").toLowerCase();
+    return {
       code: code, sec: String(sec), faculty: s.faculty, names: facNames, room: s.room, labRoom: s.labRoom,
-      pattern: pat, patternHtml: patHtml, examHtml: exHtml, exam: exam, tip: tip, hay: hay, hue: hueOf(code)
-    });
+      pattern: patText, patternHtml: patHtml, examHtml: exHtml, exam: exam, tip: tip, hay: hay, hue: hueOf(code)
+    };
   }
-  function seatPill(code, sec) {
-    var st = seatOf(code, sec);
-    if (!st || st.free == null) return '<span class="seat unknown" title="no seat figures in the feed for this section">–</span>';
+  function sectionRow(code, sec) {
+    var key = code + "|" + sec;
+    if (rowCache[key]) return rowCache[key];
+    var s = findSec(code, sec);
+    if (!s) return (rowCache[key] = null);
+    var Cc = K(code), g = null;
+    if (Cc) for (var i = 0; i < Cc.groups.length; i++) {
+      for (var j = 0; j < Cc.groups[i].sections.length; j++) if (Cc.groups[i].sections[j] === s) { g = Cc.groups[i]; break; }
+      if (g) break;
+    }
+    var facNames = s.faculties.map(function (f) { return state.names[f] || ""; }).filter(Boolean).join(" ");
+    return (rowCache[key] = rowBuild(code, sec, s, g ? g.events : s.all, s.exams || [], facNames, Cc && Cc.name));
+  }
+  function seatPill(code, sec, st) {
+    st = st || seatState(code, sec);
+    if (!st || st.free == null) return '<span class="seat unknown" data-tip="No seat figures in the feed for this section.">\u2013</span>';
     var cls = st.free <= 0 ? (st.over ? "over" : "full") : (st.free <= 3 ? "low" : "");
-    var label = st.free <= 0 ? (st.over ? "full · +" + st.over + " over" : "full") : st.free + " free";
-    return '<span class="seat ' + cls + '" title="capacity ' + st.cap + " · enrolled " + st.used + '">' + label + "</span>";
+    var label = st.free <= 0 ? (st.over ? "full \u00b7 +" + st.over + " over" : "full") : st.free + " free";
+    return '<span class="seat ' + cls + '" data-tip="Capacity ' + st.cap + " \u00b7 enrolled " + st.used + ' \u00b7 free = capacity \u2212 enrolled.">' + label + "</span>";
   }
   function seatRow(r, inUse, showCode) {
     var pinned = state.pins.some(function (x) { return x.code === r.code && x.sec === r.sec; });
-    return '<div class="srow' + (inUse ? " inuse" : "") + '" style="' + hueVars(r.hue) + '" title="' + esc(r.tip) + '">' +
+    return '<div class="srow' + (inUse ? " inuse" : "") + '" style="' + hueVars(r.hue) + '" data-tip="' + esc(r.tip) + '">' +
       '<button class="pinbtn" data-pin="' + esc(r.code + "|" + r.sec) + '" aria-pressed="' + pinned +
-        '" aria-label="' + (pinned ? "Unpin" : "Pin") + " " + esc(r.code) + " section " + esc(r.sec) + '" title="' +
-        (pinned ? "Unpin this section" : "Pin this section — it keeps its seat count at the top of the panel") +
-        " · " + state.pins.length + " of " + PIN_MAX + " pinned" + '"><svg><use href="#i-pin"/></svg></button>' +
+        '" aria-label="' + (pinned ? "Unpin" : "Pin") + " " + esc(r.code) + " section " + esc(r.sec) + '" data-tip="' +
+        (pinned ? "Unpin this section" : "Pin this section \u2014 its seat count then stays at the top of the panel") +
+        " \u00b7 " + state.pins.length + " of " + PIN_MAX + " pinned" + '"><svg><use href="#i-pin"/></svg></button>' +
       '<div class="meta">' + (showCode ? '<span class="cc">' + esc(r.code) + "</span>" : "") +
       '<span class="sec">[' + esc(r.sec) + ']</span><span class="f">' + esc(r.faculty) + "</span>" +
       '<span class="t">' + (r.patternHtml || esc(r.pattern)) + '</span><span class="exs">' + (r.examHtml || esc(r.exam)) + "</span>" +
@@ -2579,94 +2761,275 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function qMatch(row) { return !state.seats.query || row.hay.indexOf(state.seats.query) >= 0; }
   function bySec(rows) { return rows.slice().sort(function (a, b) { return String(a.sec).localeCompare(String(b.sec)); }); }
-  function groupHtml(title, sub, rows, hue) {
+  // every group header is a fold button: one tap compresses a whole course out of the way
+  function groupHtml(title, sub, rows, hue, foldKey) {
     if (!rows.length) return "";
-    return '<div class="sgroup"' + (hue != null ? ' style="' + hueVars(hue) + '"' : "") + "><h4>" +
+    var folded = !!(foldKey && state.seats.fold[foldKey]);
+    return '<div class="sgroup' + (folded ? " folded" : "") + '"' + (hue != null ? ' style="' + hueVars(hue) + '"' : "") + ">" +
+      '<h4><button class="fold" data-fold="' + esc(foldKey || "") + '" aria-expanded="' + (!folded) + '" data-tip="' +
+        (folded ? "Show" : "Hide") + " " + esc(title) + "\u2019s sections\">" +
+      '<svg class="chev"><use href="#i-chev"/></svg>' +
       (hue != null ? '<span class="sw"></span>' : "") + esc(title) +
       (sub ? ' <span class="faint" style="font-weight:400">' + esc(sub) + "</span>" : "") +
-      '<span class="n">' + rows.length + " section" + (rows.length === 1 ? "" : "s") + "</span></h4>" +
+      '<span class="n">' + rows.length + " section" + (rows.length === 1 ? "" : "s") + "</span></button></h4>" +
       rows.map(function (x) { return seatRow(x.r, x.inUse); }).join("") + "</div>";
   }
-  function renderRail() {
-    var body = $("#railBody");
-    if (!body) return;
-    if (!state.index) { body.innerHTML = '<div class="rail-empty">Waiting for section data…</div>'; $("#railSub").textContent = "—"; return; }
-    var out = [], i;
-    // pinned sections — any course, any number up to PIN_MAX, always the first box
-    if (state.pins.length) {
-      var pr = state.pins.map(function (x) { return sectionRow(x.code, x.sec); }).filter(Boolean)
-        .sort(function (a, b) {
-          return String(a.code).localeCompare(String(b.code)) || String(a.sec).localeCompare(String(b.sec), undefined, { numeric: true });
-        });
-      if (pr.length) out.push('<div class="seatbox pinned"><h3><svg width="12" height="12"><use href="#i-pin"/></svg>Pinned' +
-        '<span class="at">' + pr.length + " of " + PIN_MAX + ' · <button class="link-btn" data-clearpins>clear all</button></span></h3>' +
-        '<div class="why">Kept at the top of this panel and refreshed with everything else.</div>' +
-        pr.map(function (r) { return seatRow(r, false, true); }).join("") + "</div>");
+  /* ------------------------------ saved semesters ------------------------------
+     The moment a *different* session turns up in the feed, the semester we were reading is
+     filed away on this device, so the seats panel can still show it months later: faculty,
+     rooms, meeting times, exam slots and the seat counts exactly as they stood.            */
+  var LS_SEM = "prohor.semesters", SEM_KEEP = 8;
+  function semLabel(session) {
+    var s = String(session == null ? "" : session);
+    if (!/^\d{5}$/.test(s)) return "Session " + (s || "?");
+    var y = s.slice(0, 4), t = s.slice(4);
+    return ({ "1": "Spring", "2": "Summer", "3": "Fall" })[t] ? ({ "1": "Spring", "2": "Summer", "3": "Fall" })[t] + " " + y : "Term " + t + " " + y;
+  }
+  function semNow() { return state.meta && state.meta.session ? String(state.meta.session) : null; }
+  function semActive() { return state.sem !== "live" ? (state.semesters[state.sem] || null) : null; }
+  function semSeat(code, sec) {
+    var rec = semActive(), flat = rec && rec.rows[code + "|" + sec];
+    if (!flat || flat[4] == null || flat[5] == null) return null;
+    var cap = +flat[4], used = +flat[5];
+    return { cap: cap, used: used, free: Math.max(0, cap - used), over: used > cap ? used - cap : 0 };
+  }
+  function seatState(code, sec) { return semActive() ? semSeat(code, sec) : seatOf(code, sec); }
+  function semWrite() {
+    var keys = Object.keys(state.semesters).sort();
+    while (keys.length > SEM_KEEP) delete state.semesters[keys.shift()];
+    var payload = { list: state.semesters };
+    try { localStorage.setItem(LS_SEM, JSON.stringify(payload)); } catch (e) { }
+    store.set(LS_SEM, payload);                       // IndexedDB carries what localStorage will not
+  }
+  // file the semester we are leaving, the moment a new one arrives
+  function semFile(index, meta) {
+    if (!index || !meta || !meta.session) return;
+    var key = String(meta.session);
+    if (state.semesters[key] || !index.codes) return;             // already on file
+    var rec = { session: key, label: semLabel(key), at: meta.at || Date.now(), start: meta.start || null,
+      end: meta.end || null, count: 0, courses: {}, rows: {} };
+    index.codes.forEach(function (code) {
+      var Cc = index.courses[code];
+      rec.courses[code] = Cc.name || code;
+      Cc.sections.forEach(function (s) {
+        var ev = [], i;
+        for (i = 0; i < s.all.length; i++) ev.push(s.all[i].day, s.all[i].start, s.all[i].end, s.all[i].kind === "LAB" ? 1 : 0);
+        var ex = [];
+        (s.exams || []).forEach(function (x) { ex.push(x.kind === "MID" ? 0 : 1, x.date, x.start, x.end); });
+        rec.rows[code + "|" + s.sec] = [s.faculty, s.room || "", s.labRoom || "", s.labCourse || "",
+          s.cap == null ? null : +s.cap, s.used == null ? null : +s.used, ev, ex];
+      });
+    });
+    rec.count = Object.keys(rec.rows).length;
+    state.semesters[key] = rec;
+    semWrite();
+  }
+  function semByCode() {
+    var rec = semActive();
+    if (!rec) return {};
+    if (!rec._byCode) {
+      rec._byCode = {};
+      Object.keys(rec.rows).forEach(function (k) {
+        var at = k.indexOf("|");
+        (rec._byCode[k.slice(0, at)] || (rec._byCode[k.slice(0, at)] = [])).push(k.slice(at + 1));
+      });
     }
-    // 1) the sections on the routine page being read
-    if (state.railPage.length) {
-      var b = state.railPage.map(function (g) {
-        var rows = g.rows.filter(function (x) { return qMatch(x.r); }).map(function (x) { return { r: x.r, inUse: x.inUse > 0 }; });
-        return rows.length ? groupHtml(g.code, "", rows, g.hue) : "";
-      }).join("");
-      if (b) out.push('<div class="seatbox"><h3>On this routine page<span class="at">page ' + state.page + "</span></h3>" +
-        '<div class="why">Sections shown by the ' + state.pageSize + " routines on page " + state.page + " — they change as you page through.</div>" + b + "</div>");
+    return rec._byCode;
+  }
+  function semDecode(flat) {
+    var ev = flat[6] || [], ex = flat[7] || [], events = [], exams = [], i;
+    for (i = 0; i + 3 < ev.length; i += 4) events.push({ day: ev[i], start: ev[i + 1], end: ev[i + 2], kind: ev[i + 3] ? "LAB" : "CLASS" });
+    for (i = 0; i + 3 < ex.length; i += 4) exams.push({ kind: ex[i] ? "FINAL" : "MID", date: ex[i + 1], start: ex[i + 2], end: ex[i + 3] });
+    return { faculty: flat[0], room: flat[1] || null, labRoom: flat[2] || null, labCourse: flat[3] || null, events: events, exams: exams };
+  }
+  function semRow(code, sec) {
+    var key = "sem|" + code + "|" + sec;
+    if (rowCache[key] !== undefined) return rowCache[key];
+    var rec = semActive(), flat = rec && rec.rows[code + "|" + sec];
+    if (!flat) return (rowCache[key] = null);
+    var d = semDecode(flat);
+    var facNames = String(d.faculty || "").split(/[^A-Za-z]+/).filter(Boolean)
+      .map(function (f) { return state.names[f] || ""; }).filter(Boolean).join(" ");
+    return (rowCache[key] = rowBuild(code, sec, d, d.events, d.exams, facNames, rec.courses[code]));
+  }
+  // one resolver per question, so the renderers never have to branch on the source
+  function rowFor(code, sec) { return semActive() ? semRow(code, sec) : sectionRow(code, sec); }
+  function courseName(code) {
+    var rec = semActive();
+    if (rec) return rec.courses[code] || code;
+    var Cc = K(code);
+    return Cc ? (Cc.name || code) : code;
+  }
+  function courseSections(code) {
+    var rec = semActive();
+    if (rec) return bySec((semByCode()[code] || []).map(function (s) { return semRow(code, s); }).filter(Boolean));
+    var Cc = K(code);
+    return Cc ? bySec(Cc.sections.map(function (s) { return sectionRow(code, s.sec); }).filter(Boolean)) : [];
+  }
+  function courseCount(code) {
+    var rec = semActive();
+    if (rec) return (semByCode()[code] || []).length;
+    var Cc = K(code);
+    return Cc ? Cc.sections.length : 0;
+  }
+  function catalogueList() {
+    var rec = semActive(), out = [];
+    if (rec) {
+      Object.keys(rec.courses).forEach(function (code) {
+        var rows = courseSections(code).filter(qMatch);
+        if (rows.length) out.push({ code: code, name: rec.courses[code] || code, rows: rows, count: courseCount(code) });
+      });
+      return out;
     }
-    // 2) every section of the chosen courses
-    if (state.courses.length) {
-      var b2 = state.courses.map(function (c, ci) {
-        var Cc = K(c.code); if (!Cc) return "";
-        var rows = bySec(Cc.sections.map(function (s) { return sectionRow(c.code, s.sec); }).filter(Boolean))
-          .filter(qMatch).map(function (r) { return { r: r, inUse: false }; });
-        return rows.length ? groupHtml(c.code, Cc.name || "", rows, ci) : "";
-      }).join("");
-      if (b2) out.push('<div class="seatbox"><h3>Your courses<span class="at">' + state.courses.length + " selected</span></h3>" +
-        '<div class="why">All sections of the courses you added, in section-number order.</div>' + b2 + "</div>");
-    }
-    // 3) the whole catalogue, alphabetical, expandable
-    var codes = state.index.codes, shown = 0, matched = [];
+    var codes = state.index.codes, matched = [];
     if (state.seats.query) {
       codes.forEach(function (code) {
         var Cc = state.index.courses[code];
         var hit = (code + " " + (Cc.name || "")).toLowerCase().indexOf(state.seats.query) >= 0;
         var rows = Cc.sections.map(function (s) { return sectionRow(code, s.sec); }).filter(Boolean).filter(qMatch);
-        if (hit || rows.length) matched.push({ code: code, name: Cc.name || "", rows: hit ? null : rows, all: Cc });
+        if (hit || rows.length) matched.push({ code: code, name: Cc.name || "", rows: hit ? null : rows, count: Cc.sections.length });
       });
+      return matched;
     }
-    var list = state.seats.query ? matched : codes.map(function (code) { var Cc = state.index.courses[code]; return { code: code, name: Cc.name || "", rows: null, all: Cc }; });
-    // keep the DOM bounded: a query must not expand every one of 500+ courses
-    var EXPAND_CAP = 12, ROW_CAP = 300;
+    return codes.map(function (code) {
+      var Cc = state.index.courses[code];
+      return { code: code, name: Cc.name || "", rows: null, count: Cc.sections.length };
+    });
+  }
+  function semOptions() {
+    var now = semNow(), out = [{ key: "live", label: (now ? semLabel(now) : "This semester") + " · live", live: true, count: state.index ? state.index.count : 0 }];
+    Object.keys(state.semesters).sort().forEach(function (k) {
+      if (k === now) return;                          // the live row already speaks for it
+      var r = state.semesters[k];
+      out.push({ key: k, label: r.label, at: r.at, count: r.count });
+    });
+    return out;
+  }
+  function semRender() {
+    var btn = $("#semBtn"), label = $("#semLabel"), pop = $("#semPop");
+    if (!btn || !label) return;
+    var now = semNow(), past = semActive();
+    label.textContent = past ? past.label : (now ? semLabel(now) : "Semester");
+    btn.setAttribute("data-past", past ? "1" : "0");
+    if (!pop) return;
+    var here = past ? state.sem : "live";
+    var rows = semOptions().map(function (o) {
+      return '<button role="menuitemradio" data-sem="' + esc(o.key) + '" aria-checked="' + (here === o.key) + '">' +
+        '<svg width="13" height="13"><use href="#' + (o.live ? "i-refresh" : "i-cal") + '"/></svg>' +
+        "<span>" + esc(o.label) + (o.count ? ' <span class="faint">· ' + num(o.count) + " sections</span>" : "") + "</span>" +
+        '<svg class="tick"><use href="#i-check"/></svg></button>';
+    }).join("");
+    pop.innerHTML = "<h4>Semester</h4>" + rows;
+  }
+  function semSet(key) {
+    state.sem = (key && key !== "live" && state.semesters[key]) ? key : "live";
+    rowCache = {};
+    setPop(false);
+    var pop = $("#semPop");
+    if (pop) pop.hidden = true;
+    var btn = $("#semBtn");
+    if (btn) btn.setAttribute("aria-expanded", "false");
+    renderRail();
+    semRender();
+    save();
+    if (state.sem !== "live") toast("Showing " + state.semesters[state.sem].label + " — switch back to " + (semNow() ? semLabel(semNow()) : "the live feed") + " for today's seats.");
+  }
+  function semBoot() {
+    var raw = null;
+    try { raw = JSON.parse(localStorage.getItem(LS_SEM) || "null"); } catch (e) { }
+    if (raw && raw.list && typeof raw.list === "object") state.semesters = raw.list;
+    else store.get(LS_SEM).then(function (v) {
+      if (v && v.list && typeof v.list === "object") { state.semesters = v.list; if (state.sem !== "live" && !state.semesters[state.sem]) state.sem = "live"; renderRail(); semRender(); }
+    }).catch(function () { });
+    if (state.sem !== "live" && !state.semesters[state.sem]) state.sem = "live";
+    semRender();
+  }
+
+  function renderRail() {
+    var body = $("#railBody");
+    if (!body) return;
+    if (!state.index) { body.innerHTML = '<div class="rail-empty">Waiting for section data…</div>'; $("#railSub").textContent = "—"; return; }
+    var out = [], i, pinnedBox = "";
+    var past = semActive();
+    // pinned sections — any course, any number up to PIN_MAX, always the first box
+    if (state.pins.length) {
+      var pr = state.pins.map(function (x) { return rowFor(x.code, x.sec); }).filter(Boolean)
+        .sort(function (a, b) {
+          return String(a.code).localeCompare(String(b.code)) || String(a.sec).localeCompare(String(b.sec), undefined, { numeric: true });
+        });
+      if (pr.length) {
+        pinnedBox = '<div class="seatbox pinned"><h3 data-tip="Kept at the top of this panel and refreshed with everything else. Tap the pin on any row to add or remove one."><svg width="12" height="12"><use href="#i-pin"/></svg>Pinned' +
+          '<span class="at">' + pr.length + " of " + PIN_MAX + ' · <button class="link-btn" data-clearpins>clear all</button></span></h3>' +
+          pr.map(function (r) { return seatRow(r, false, true); }).join("") + "</div>";
+      }
+    }
+    // 1) the sections on the routine page being read
+    if (state.railPage.length) {
+      var b = state.railPage.map(function (g) {
+        var rows = g.rows.map(function (x) { return { r: rowFor(x.r.code, x.r.sec), inUse: x.inUse > 0 }; })
+          .filter(function (x) { return x.r && qMatch(x.r); });
+        return rows.length ? groupHtml(g.code, "", rows, g.hue, "page|" + g.code) : "";
+      }).join("");
+      if (b) {
+        var pageTip = "The sections the " + state.pageSize + " routines on page " + state.page +
+          " of your results are showing. It follows you as you page through or re-sort.";
+        out.push('<div class="seatbox"><h3 data-tip="' + esc(pageTip) + '">On this routine page<span class="at">page ' +
+          state.page + "</span></h3>" + b + "</div>");
+      }
+    }
+    // 2) every section of the chosen courses
+    if (state.courses.length) {
+      var b2 = state.courses.map(function (c, ci) {
+        var rows = bySec(courseSections(c.code)).filter(qMatch).map(function (r) { return { r: r, inUse: false }; });
+        return rows.length ? groupHtml(c.code, courseName(c.code), rows, ci, "mine|" + c.code) : "";
+      }).join("");
+      if (b2) out.push('<div class="seatbox"><h3 data-tip="Every section of the courses you added, in section-number order.">Your courses<span class="at">' +
+        state.courses.length + " selected</span></h3>" + b2 + "</div>");
+    }
+    // 3) the whole catalogue, alphabetical, expandable
+    var list = catalogueList();
     var cap = state.seats.showAll ? list.length : Math.min(list.length, state.seats.query ? 60 : 120);
     var expanded = 0, rowsTotal = 0;
     var rows3 = list.slice(0, cap).map(function (m) {
-      var open = state.seats.open[m.code] || (state.seats.query && m.rows && expanded < EXPAND_CAP && rowsTotal < ROW_CAP);
+      var open = state.seats.open[m.code] || (past ? (expanded < 12 && rowsTotal < 300)
+        : (state.seats.query && m.rows && expanded < 12 && rowsTotal < 300));
       var inner = "";
       if (open) {
         expanded++;
-        var secs = bySec(m.rows || m.all.sections.map(function (s) { return sectionRow(m.code, s.sec); }).filter(Boolean))
+        var secs = bySec(m.rows || courseSections(m.code))
           .filter(qMatch).map(function (r) { return { r: r, inUse: false }; });
         rowsTotal += secs.length;
         inner = secs.length ? '<div class="sgroup">' + secs.map(function (x) { return seatRow(x.r, false); }).join("") + "</div>" : '<div class="rail-empty">no section matches the filter</div>';
       }
-      return '<div class="coursebtn" role="button" tabindex="0" data-course="' + esc(m.code) + '" aria-expanded="' + (!!open) + '">' +
+      return '<div class="coursebtn" role="button" tabindex="0" data-course="' + esc(m.code) + '" aria-expanded="' + (!!open) +
+        '" data-tip="Open ' + esc(m.code) + ' to see its sections and seats">' +
         '<svg><use href="#i-chev"/></svg><span class="code">' + esc(m.code) + '</span><span class="nm">' + esc(m.name) + "</span>" +
-        '<span class="n">' + m.all.sections.length + " sec</span></div>" + inner;
+        '<span class="n">' + m.count + " sec</span></div>" + inner;
     }).join("");
     var more = list.length > cap ? '<button class="btn btn-ghost btn-sm" data-showall>Show all ' + list.length + " courses</button>" : "";
-    out.push('<div class="seatbox"><h3>All courses<span class="at">' + list.length + (state.seats.query ? " match" : "") + "</span></h3>" +
-      '<div class="why">Every course in the feed, A→Z. Open one to see its sections and seats.</div>' +
+    out.push('<div class="seatbox"><h3 data-tip="Every course on file, A→Z. Open one to see its sections and their seats.">All courses<span class="at">' +
+      list.length + (state.seats.query ? " match" : "") + "</span></h3>" +
       (rows3 || '<div class="rail-empty">Nothing matches “' + esc(state.seats.query) + '”.</div>') +
       (state.seats.query && list.length > cap ? '<div class="rail-empty">' + (list.length - cap) + ' more matching course' + (list.length - cap === 1 ? "" : "s") + ' — open one from the list or refine the search.</div>' : "") + more + "</div>");
-    body.innerHTML = out.join("");
+    body.innerHTML = pinnedBox + wrapCols(out);
     renderPeek();
     var known = 0, freeTotal = 0;
     for (i in state.seats.map) { var v = state.seats.map[i]; if (v.free != null) { known++; if (v.free > 0) freeTotal++; } }
     var narrow = railStacked();
-    $("#railSub").textContent = num(known) + " tracked" +
-      (narrow ? "" : " · " + num(freeTotal) + " open · " + num(state.pins.length) + " pinned");
+    $("#railSub").textContent = (past ? "saved copy" : num(known) + " tracked") +
+      (narrow || past ? "" : " · " + num(freeTotal) + " open · " + num(state.pins.length) + " pinned");
     stickInset();
-    var sc = $("#seatsCount"); if (sc) sc.textContent = known ? num(known) : "—";
+    var sc = $("#seatsCount"); if (sc) sc.textContent = past ? "—" : (known ? num(known) : "—");
     railClock();
+  }
+  // on a wide seats page the boxes read better in two columns that scroll on their own
+  function wrapCols(boxes) {
+    if (!SEATS_VIEW || (window.innerWidth || 0) < 980 || boxes.length < 2) return boxes.join("");
+    var a = boxes.slice(0, 1).concat(boxes.slice(2));       // this page's routines + the catalogue
+    var b = boxes.slice(1, 2);                              // your own courses
+    if (!b.length) return '<div class="rail-cols"><div class="rail-col one">' + boxes.join("") + "</div></div>";
+    if (!a.length) return '<div class="rail-cols"><div class="rail-col one">' + b.join("") + "</div></div>";
+    return '<div class="rail-cols"><div class="rail-col">' + a.join("") + '</div><div class="rail-col">' + b.join("") + "</div></div>";
   }
   // the one-line pinned summary the folded band shows instead of the rows
   function renderPeek() {
@@ -2675,7 +3038,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     // only meaningful in the stacked band, where it is what you see when folded
     if (!state.pins.length || !railStacked()) { el2.hidden = true; el2.innerHTML = ""; return; }
     var parts = state.pins.slice(0, 24).map(function (x) {
-      var st = seatOf(x.code, x.sec);
+      var st = seatState(x.code, x.sec);
       var free = st && st.free != null ? st.free : null;
       var cls = free == null ? "" : (free <= 0 ? (st.over ? "full low" : "full") : (free <= 3 ? "low" : ""));
       return "<i class=\"" + cls + "\" style=\"" + hueVars(hueOf(x.code)) + "\"><b>" + esc(x.code) + " [" + esc(x.sec) + "]</b>" +
@@ -2686,21 +3049,35 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     el2.innerHTML = parts.join("");
   }
   function railFootText() {
+    var past = semActive();
+    if (past) return "Saved copy of " + past.label + " · " + num(past.count) + " sections as they were on " +
+      C.fmtDate(String(past.at).slice(0, 10)) + ". Seats are not live here.";
     var every = Math.round((state.seats.every || SEAT_MS) / 1000);
-    return "Free seats = capacity − enrolled from the same live feed, refreshed every " + every + " s " +
-      (state.seats.mode === "closed" ? "in the background" : "while this panel is open") +
-      " in its own worker, so searching and paging are never blocked. " + seatsHelp();
+    return "Free seats = capacity − enrolled, refreshed every " + every + " s " +
+      (state.seats.mode === "closed" ? "in the background" : "while this panel is open") + ".";
   }
   function railClock() {
     var el2 = $("#seatAgo"); if (!el2) return;
     var live = $("#railLive");
+    var foot = $("#railFoot"); if (foot) foot.textContent = railFootText();
+    var past = semActive();
+    if (past) {
+      live.setAttribute("data-state", "idle");
+      el2.textContent = "saved copy · not live";
+      var pause = $("#seatPause"), now = $("#seatNow");
+      if (pause) pause.hidden = true;
+      if (now) now.hidden = true;
+      return;
+    }
+    var pause2 = $("#seatPause"), now2 = $("#seatNow");
+    if (pause2) pause2.hidden = false;
+    if (now2) now2.hidden = false;
     if (state.seats.paused) { live.setAttribute("data-state", "paused"); el2.textContent = "paused"; return; }
     if (state.seats.error) { live.setAttribute("data-state", "error"); el2.textContent = "retry in " + Math.round(state.seats.backoff / 1000) + " s (" + state.seats.error + ")"; return; }
     live.setAttribute("data-state", seatBusy ? "busy" : "idle");
-    var foot = $("#railFoot"); if (foot) foot.textContent = railFootText();
     var every = Math.round((state.seats.every || SEAT_MS) / 1000);
     el2.textContent = state.seats.at
-      ? "seats updated " + Math.max(0, Math.round((Date.now() - state.seats.at) / 1000)) + " s ago · every " + (every || 0) + " s"
+      ? "updated " + Math.max(0, Math.round((Date.now() - state.seats.at) / 1000)) + " s ago · every " + (every || 0) + " s"
       : "first seat check…";
   }
   var railQueued = false;
@@ -2730,7 +3107,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     railClock(); queueRail();
   }
   function seatTick(force) {
-    if (!state.ready) return;
+    if (!state.ready || semActive()) return;          // a saved semester has no live seats to poll
     if (!force && (state.seats.paused || document.visibilityState === "hidden")) return;
     if (seatBusy) return;
     if (!force && Date.now() - (state.seats.lastTry || 0) < state.seats.backoff) return;
@@ -2785,13 +3162,46 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       return;
     }
     if (e.target.closest("[data-clearpins]")) { state.pins = []; save(); renderRail(); return; }
+    var fb = e.target.closest("[data-fold]");                     // compress a whole course away
+    if (fb && fb.dataset.fold) { toggleFold(fb.dataset.fold); return; }
     var cb = e.target.closest("[data-course]");
     if (cb) { var c = cb.dataset.course; state.seats.open[c] = !state.seats.open[c]; renderRail(); return; }
     if (e.target.closest("[data-showall]")) { state.seats.showAll = true; renderRail(); return; }
   });
+  // the semester switch: one popover, live first, saved semesters under it
+  $("#semBtn").addEventListener("click", function (e) {
+    e.stopPropagation();
+    var pop = $("#semPop");
+    if (!pop) return;
+    var show = pop.hidden;
+    semRender();
+    pop.hidden = !show;
+    this.setAttribute("aria-expanded", String(show));
+    if (show) semPlace();
+  });
+  // the popover hangs off its own button, so it only has to be kept inside the viewport
+  function semPlace() {
+    var pop = $("#semPop"), btn = $("#semBtn");
+    if (!pop || !btn || pop.hidden) { if (pop) { pop.style.left = ""; pop.style.right = ""; } return; }
+    pop.style.left = "0"; pop.style.right = "auto";
+    var b = btn.getBoundingClientRect(), r = pop.getBoundingClientRect();
+    var over = r.right - ((window.innerWidth || 1280) - 12);
+    if (over > 0) pop.style.left = Math.max(12 - b.left, -over) + "px";
+  }
+  $("#semPop").addEventListener("click", function (e) {
+    e.stopPropagation();
+    var b = e.target.closest("[data-sem]");
+    if (b) semSet(b.dataset.sem);
+  });
+  function toggleFold(key) {
+    if (!key) return;
+    state.seats.fold[key] = !state.seats.fold[key];
+    renderRail();
+  }
   $("#railBody").addEventListener("keydown", function (e) {
     if (e.key !== "Enter" && e.key !== " ") return;
-    var cb = e.target.closest("[data-course]"); if (!cb) return;
+    var cb = e.target.closest("[data-course]");
+    if (!cb) { var fb = e.target.closest("[data-fold]"); if (fb) { e.preventDefault(); toggleFold(fb.dataset.fold); } return; }
     e.preventDefault(); var c = cb.dataset.course; state.seats.open[c] = !state.seats.open[c]; renderRail();
   });
   var seatDebounce = null;
@@ -2852,9 +3262,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function prefsFor() {
     return {
       minDays: state.prefs.dayMin, maxDays: state.prefs.dayMax,
-      preferShortDay: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
+      preferFewerDays: state.prefs.fewerDays, preferLessTime: state.prefs.lessTime,
+      preferGaps: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
       ignoreExams: !state.prefs.examClash
     };
+  }
+  function defaultPrefs() {
+    return { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] };
   }
   // Stable across reloads: the selection + prefs + a fingerprint of the feed itself
   // (not the fetch time), so a saved search can be reopened on a later visit.
@@ -2927,8 +3341,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     };
     sp.requestMore = function (all) {
       if (sp.running) return;
+      var have = sp.items.length;                 // the list is rebuilt from the top, so `want` is a total
       sp.all = !!all; sp.running = true;
-      sp.wantMore = all ? 1e9 : (state.page + 1) * state.pageSize;
+      sp.wantMore = all ? 1e9 : have + state.pageSize;
       setGen(true, all ? "Searching everything…" : "Finding " + state.pageSize + " more…");
       $("#prog").hidden = false;
       sp.resume();
@@ -2944,7 +3359,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       localStorage.setItem(LS_STATE, JSON.stringify({
         courses: state.courses.map(function (c) { return { code: c.code, locked: c.locked, faculty: c.faculty, secs: c.secs }; }),
         prefs: state.prefs, view: state.view, sort: state.sort, pageSize: state.pageSize,
-        pins: state.pins
+        pins: state.pins, sem: state.sem
       }));
     } catch (e) { }
   }
@@ -3010,6 +3425,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       if (s.prefs) Object.keys(state.prefs).forEach(function (k) { if (s.prefs[k] !== undefined) state.prefs[k] = s.prefs[k]; });
       state.view = s.view || "grid"; state.sort = s.sort || "best"; state.pageSize = s.pageSize || 50;
       if (Array.isArray(s.pins)) state.pins = s.pins.filter(function (x) { return x && x.code && x.sec != null; }).slice(0, 50);
+      if (typeof s.sem === "string") state.sem = s.sem;
     }
     if (!readUrl() && s && Array.isArray(s.courses)) {
       state.courses = s.courses.slice(0, MAX_COURSES).map(function (c) {
@@ -3034,6 +3450,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     loadNames();
     readRailPrefs();                // the split the user left it at
     applyRailSize();
+    semBoot();                      // the semesters already filed on this device
     initRail();                     // the seat rail runs on its own clock and its own worker
     if (SEATS_LOADED) { setSeatsView(true, false); }
     else {

@@ -581,7 +581,7 @@
       var sc = scoreOf(ci);
       if (sc.days < minDays || sc.days > maxDays) return null;
       st.valid++;
-      return { ci: ci, days: sc.days, gaps: sc.gaps, span: sc.span, early: sc.early, alt: sc.alt, score: sc.score };
+      return { ci: ci, days: sc.days, gaps: sc.gaps, span: sc.span, longest: sc.longest, early: sc.early, alt: sc.alt, score: sc.score };
     }
 
     function scoreOf(ci) {
@@ -597,19 +597,23 @@
         }
       }
       var dayNos = Object.keys(perDay).map(Number).sort(function (a, b) { return a - b; });
-      var gaps = 0, early = 0, span = 0;
+      var gaps = 0, early = 0, span = 0, longest = 0;
       dayNos.forEach(function (dn) {
         var l = perDay[dn].slice().sort(function (a, b) { return a.start - b.start; });
-        span += (l[l.length - 1].end - l[0].start);
+        var dspan = l[l.length - 1].end - l[0].start;
+        span += dspan;
+        if (dspan > longest) longest = dspan;
         if (l[0].start <= 480) early++;
         for (var t = 1; t < l.length; t++) { var gp = l[t].start - l[t - 1].end; if (gp > 0) gaps += gp; }
       });
       void events;
-      var v = dayNos.length * 100000;
-      if (prefs.preferShortDay !== false) v += span * 10;
-      v += gaps;
+      // Each ranking switch owns one term, so turning one off really removes it from the order.
+      var v = 0;
+      if (prefs.preferFewerDays !== false) v += dayNos.length * 100000;
+      if (prefs.preferLessTime !== false) v += span * 10;
+      if (prefs.preferGaps !== false) v += gaps + longest * 10;
       if (prefs.preferAlt && alt > 1) v -= Math.min(90000, 30000 * (Math.log(alt) / Math.LN2));
-      return { days: dayNos.length, dayNos: dayNos, gaps: gaps, span: span, early: early, alt: alt, score: v };
+      return { days: dayNos.length, dayNos: dayNos, gaps: gaps, span: span, longest: longest, early: early, alt: alt, score: v };
     }
 
     function next(opts) {
@@ -735,9 +739,11 @@
       lines.push((DAY_LABEL[d] || d) + "  (" + l.length + " class" + (l.length > 1 ? "es" : "") + ")");
       l.forEach(function (e) {
         var s = e.section || {};
-        lines.push("  " + fmtTime(e.start) + " – " + fmtTime(e.end) + "  " +
-          (e.kind === "LAB" && s.labCourse ? s.labCourse : s.label) +
-          (e.kind === "LAB" ? " (LAB)" : "") + "  ·  " + e.faculty + "  ·  " + (e.room || "-"));
+        // plain text cannot hatch, so the lab keeps a word for it; the code carries the rest
+        var nm = e.kind === "LAB" ? (s.labCourse || s.code) : s.code;
+        lines.push("  " + fmtTime(e.start) + " – " + fmtTime(e.end) + "  " + nm + "-[" + s.sec + "]" +
+          (e.kind === "LAB" ? " (LAB)" : "") +
+          "  ·  " + e.faculty + "  ·  " + (e.room || "-"));
       });
       lines.push("");
     });
@@ -854,29 +860,32 @@
       var sec = ev.section || {};
       // a block is ringed when the section in use has a clashing mid or final
       var clash = !!(clashMap[sec.code + "|MID"] || clashMap[sec.code + "|FINAL"]);
+      // A lab is named for the lab course itself. A lab bolted onto a lecture carries the lab's
+      // own code (CSE221 -> CSE221L); a course that is nothing but a lab already has it.
+      var shown = ev.kind === "LAB" ? (sec.labCourse || sec.code) : sec.code;
       var first = Math.max(p0, lo), last = Math.min(Math.max(p1, first), hi);
       blocks.push({
         col: col, row: rowOf(first), rowSpan: Math.max(1, (last - first) * 2 + 1),
-        code: sec.code, label: ev.kind === "LAB" ? (sec.labCourse || (sec.code + "L")) : (sec.code + " · [" + sec.sec + "]"),
+        code: sec.code, label: shown + " · [" + sec.sec + "]",
         time: fmtTime(ev.start) + " – " + fmtTime(ev.end),
         room: ev.room || "—", faculty: ev.faculty || "TBA",
-        lab: ev.kind === "LAB", clash: clash,
+        lab: ev.kind === "LAB", labCourse: sec.labCourse || null, clash: clash,
         hue: opts.hueOf ? opts.hueOf(sec.code) : 0,
-        tip: sec.label + " · " + (ev.kind === "LAB" ? (sec.labCourse || "") + " lab" : sec.name || "") +
+        tip: sec.label + " · " + (ev.kind === "LAB" ? (sec.labCourse || "lab") : sec.name || "") +
              " · " + (ev.faculty || "TBA") + " · " + (ev.room || "no room") +
              (sec.exams && sec.exams.length ? " · " + sec.exams.map(function (x) { return x.kind + " " + fmtDate(x.date) + " " + fmtTime(x.start); }).join(" · ") : "")
       });
     });
     blocks.sort(function (x, y) { return x.col - y.col || x.row - y.row; });
 
-    // exam table (dates come straight from the chosen sections)
+    // exam table (dates come straight from the chosen sections), ordered by when it happens
     var clashInfo = examClashMap(routine);
     var exams = routine.picks.map(function (p, pi) {
       function cell(kind) {
         var x = null;
         (p.chosen.exams || []).forEach(function (z) { if (z.kind === kind) x = z; });
         if (!x) return null;
-        return { date: x.date, time: fmtTime(x.start) + " – " + fmtTime(x.end), clock: fmtTime(x.start) + " – " + fmtTime(x.end), clash: clashInfo[p.code + "|" + kind] || false };
+        return { date: x.date, start: x.start, end: x.end, time: fmtTime(x.start) + " – " + fmtTime(x.end), clock: fmtTime(x.start) + " – " + fmtTime(x.end), clash: clashInfo[p.code + "|" + kind] || false };
       }
       return {
         code: p.code, hue: opts.hueOf ? opts.hueOf(p.code) : pi, sec: p.chosen.sec, fac: p.chosen.faculty,
@@ -886,10 +895,25 @@
                    clash: s.examKey !== p.chosen.examKey };
         })
       };
+    }).sort(function (a, b) {
+      var ka = examKeyOf(a), kb = examKeyOf(b);
+      if (ka !== kb) return ka < kb ? -1 : 1;
+      return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
     });
-    var altCount = routine.picks.reduce(function (n, p) { return n + (p.count - 1); }, 0);
+    // how many courses in this routine actually offer a section to swap to
+    var altCount = routine.picks.reduce(function (n, p) { return n + (p.sections.length > 1 ? 1 : 0); }, 0);
 
     return { cols: cols, rows: rows, blocks: blocks, exams: exams, summary: sum, altCount: altCount, nCols: nCols, lo: lo, hi: hi, rowOf: rowOf };
+  }
+
+  // Sort key for the exam table: the final's date and clock, for every course alike, so both
+  // columns read down the page in order. Courses with no final go last, ordered by their mid,
+  // and courses with neither go after those. Minutes are padded, so 8:30 never sorts after 10:30.
+  function examKeyOf(e) {
+    function stamp(x) { return String(x.date) + "|" + String(10000 + (x.start || 0)).slice(1); }
+    if (e.fin) return "0|" + stamp(e.fin);
+    if (e.mid) return "1|" + stamp(e.mid);
+    return "2";
   }
 
   // which (course, exam kind) pairs actually collide with another course in this routine
@@ -908,6 +932,240 @@
     return map;
   }
 
+  /* ------------------------------ QR code (Model 2, byte mode) ----------------------------- */
+  /* Enough of the standard to encode a short URL: versions 1-10, error-correction level M, byte
+     mode only. No image or network dependency, so the export works offline. */
+
+  var QR_BLOCKS = {   // version -> [ec codewords per block, [[block count, data codewords], ...]]
+    1: [10, [[1, 16]]], 2: [16, [[1, 28]]], 3: [26, [[1, 44]]], 4: [18, [[2, 32]]], 5: [24, [[2, 43]]],
+    6: [16, [[4, 27]]], 7: [18, [[4, 31]]], 8: [22, [[2, 38], [2, 39]]],
+    9: [22, [[3, 36], [2, 37]]], 10: [26, [[4, 43], [1, 44]]]
+  };
+  var QR_ALIGN = { 1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46], 10: [6, 28, 50] };
+
+  var QR_GF = (function () {
+    var exp = [], log = [], x = 1;
+    for (var i = 0; i < 255; i++) { exp[i] = x; log[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d; }
+    for (var j = 255; j < 512; j++) exp[j] = exp[j - 255];
+    return { exp: exp, log: log };
+  })();
+  function qrMul(a, b) { return (!a || !b) ? 0 : QR_GF.exp[QR_GF.log[a] + QR_GF.log[b]]; }
+  // generator polynomial of degree n, highest power first (so g[0] is the leading 1)
+  function qrGen(n) {
+    var g = [1];
+    for (var i = 0; i < n; i++) {
+      var nx = [];
+      for (var j = 0; j < g.length; j++) {
+        nx[j] = (nx[j] || 0) ^ qrMul(g[j], QR_GF.exp[i]);
+        nx[j + 1] = (nx[j + 1] || 0) ^ g[j];
+      }
+      g = nx;
+    }
+    return g.reverse();                                  // built lowest power first
+  }
+  function qrParity(data, ecLen) {
+    var g = qrGen(ecLen), res = [];
+    for (var i = 0; i < ecLen; i++) res.push(0);
+    for (var i = 0; i < data.length; i++) {
+      var f = data[i] ^ res[0];
+      for (var j = 0; j < ecLen - 1; j++) res[j] = res[j + 1];
+      res[ecLen - 1] = 0;
+      for (var j = 0; j < ecLen; j++) res[j] ^= qrMul(g[j + 1], f);
+    }
+    return res;
+  }
+  // BCH remainder used by the format and version information
+  function qrBch(val, poly, deg) {
+    var v = val << deg;
+    while (bitLen(v) >= deg + 1) v ^= poly << (bitLen(v) - deg - 1);
+    return v;
+  }
+  function bitLen(x) { var n = 0; while (x) { n++; x >>>= 1; } return n; }
+
+  // -> array of rows of 0/1, or null if the text is too long
+  function qrMatrix(text) {
+    var bytes = [];
+    for (var i = 0; i < text.length; i++) {
+      var c = text.charCodeAt(i);
+      if (c > 255) return null;
+      bytes.push(c);
+    }
+    var V = 0, cap = 0;
+    for (var v = 1; v <= 10; v++) {
+      var n = 0;
+      QR_BLOCKS[v][1].forEach(function (g) { n += g[0] * g[1]; });
+      // the mode and the character count have to fit alongside the bytes themselves
+      var need = Math.ceil((4 + (v <= 9 ? 8 : 16) + bytes.length * 8) / 8);
+      if (n >= need) { V = v; cap = n; break; }
+    }
+    if (!V) return null;
+
+    var bits = [];
+    function put(val, len) { for (var i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); }
+    put(4, 4);                                          // byte mode
+    put(bytes.length, V <= 9 ? 8 : 16);
+    bytes.forEach(function (b) { put(b, 8); });
+    put(0, Math.min(4, cap * 8 - bits.length));          // terminator
+    while (bits.length % 8) bits.push(0);
+    for (var p = 0; bits.length / 8 < cap; p++) put([0xEC, 0x11][p % 2], 8);
+
+    // split into blocks, attach parity, interleave
+    var blocks = [], at = 0;
+    QR_BLOCKS[V][1].forEach(function (g) {
+      for (var b = 0; b < g[0]; b++) {
+        var d = [];
+        for (var j = 0; j < g[1]; j++) {
+          var byte = 0;
+          for (var k = 0; k < 8; k++) byte = (byte << 1) | bits[at++];
+          d.push(byte);
+        }
+        blocks.push({ d: d, e: qrParity(d, QR_BLOCKS[V][0]) });
+      }
+    });
+    var stream = [], wide = 0;
+    QR_BLOCKS[V][1].forEach(function (g) { wide = Math.max(wide, g[1]); });
+    for (var k = 0; k < wide; k++) blocks.forEach(function (b) { if (k < b.d.length) stream.push(b.d[k]); });
+    for (var k = 0; k < QR_BLOCKS[V][0]; k++) blocks.forEach(function (b) { stream.push(b.e[k]); });
+
+    var N = 17 + V * 4;
+    var base = [];
+    for (var r = 0; r < N; r++) { base.push([]); for (var c = 0; c < N; c++) base[r].push(null); }
+    function mark(r, c, v) { if (r >= 0 && r < N && c >= 0 && c < N) base[r][c] = v; }
+    function inFinder(r, c) { return (r <= 7 && c <= 7) || (r <= 7 && c >= N - 8) || (r >= N - 8 && c <= 7); }
+
+    // finders and their separators
+    [[0, 0], [0, N - 7], [N - 7, 0]].forEach(function (o) {
+      for (var r = -1; r <= 7; r++) for (var c = -1; c <= 7; c++) {
+        var dark = (r >= 0 && r <= 6 && (c === 0 || c === 6)) || (c >= 0 && c <= 6 && (r === 0 || r === 6)) ||
+          (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+        mark(o[0] + r, o[1] + c, dark ? 1 : 0);
+      }
+    });
+    // timing patterns
+    for (var i = 8; i < N - 8; i++) { mark(6, i, i % 2 === 0 ? 1 : 0); mark(i, 6, i % 2 === 0 ? 1 : 0); }
+    // alignment patterns, wherever they do not sit on a finder
+    var al = QR_ALIGN[V];
+    for (var a = 0; a < al.length; a++) for (var b = 0; b < al.length; b++) {
+      var rr = al[a], cc = al[b];
+      if (inFinder(rr, cc)) continue;
+      for (var r = -2; r <= 2; r++) for (var c = -2; c <= 2; c++)
+        mark(rr + r, cc + c, Math.max(Math.abs(r), Math.abs(c)) !== 1 ? 1 : 0);
+    }
+    // the dark module
+    mark(N - 8, 8, 1);
+    // Reserve every cell the format and version information will occupy, so the data walk steps
+    // over them instead of spending codeword bits there and losing them when the format is stamped.
+    var fmtCells = [];
+    for (var i = 0; i < 15; i++) {
+      fmtCells.push([i < 6 ? i : (i < 8 ? i + 1 : N - 15 + i), 8]);
+      fmtCells.push([8, i < 8 ? N - 1 - i : (i === 8 ? 7 : 14 - i)]);
+    }
+    fmtCells.push([N - 8, 8]);
+    fmtCells.forEach(function (o) { mark(o[0], o[1], -1); });
+    if (V >= 7) {
+      for (var i = 0; i < 18; i++) {
+        var x = N - 11 + i % 3, y = Math.floor(i / 3);
+        mark(y, x, -1); mark(x, y, -1);
+      }
+    }
+
+    var best = null;
+    for (var mask = 0; mask < 8; mask++) {
+      var g = base.map(function (row) { return row.slice(); });
+      var at2 = 0, up = true;
+      // data, in the two-module-wide upward/downward zigzag, skipping the timing column
+      for (var c = N - 1; c >= 1; c -= 2) {
+        if (c === 6) c = 5;
+        for (var i2 = 0; i2 < N; i2++) {
+          var r2 = up ? N - 1 - i2 : i2;
+          for (var k2 = 0; k2 < 2; k2++) {
+            var c2 = c - k2;
+            if (g[r2][c2] !== null) continue;
+            var dark = at2 < stream.length * 8 ? (stream[at2 >> 3] >> (7 - (at2 & 7)) & 1) : 0;
+            at2++;
+            if (qrMask(mask, r2, c2)) dark ^= 1;
+            g[r2][c2] = dark;
+          }
+        }
+        up = !up;
+      }
+      // format information (error-correction level M), written twice
+      var fmt = mask;                                    // level M = 0b00 << 3
+      fmt = (fmt << 10 | qrBch(fmt, 0x537, 10)) ^ 0x5412;
+      for (var i3 = 0; i3 < 15; i3++) {
+        var bit = (fmt >>> i3) & 1;
+        g[i3 < 6 ? i3 : (i3 < 8 ? i3 + 1 : N - 15 + i3)][8] = bit;
+        g[8][i3 < 8 ? N - 1 - i3 : (i3 === 8 ? 7 : 14 - i3)] = bit;
+      }
+      g[N - 8][8] = 1;
+      if (V >= 7) {                                      // version information, written twice
+        var vb = (V << 12) | qrBch(V, 0x1F25, 12);
+        for (var i4 = 0; i4 < 18; i4++) {
+          var b4 = (vb >>> i4) & 1, x4 = N - 11 + i4 % 3, y4 = Math.floor(i4 / 3);
+          g[y4][x4] = b4; g[x4][y4] = b4;
+        }
+      }
+      var score = qrPenalty(g);
+      if (!best || score < best.score) best = { score: score, m: g, mask: mask };
+    }
+    return { size: N, version: V, mask: best.mask, modules: best.m };
+  }
+  function qrMask(mask, r, c) {
+    var x = c, y = r;
+    switch (mask) {
+      case 0: return (x + y) % 2 === 0;
+      case 1: return y % 2 === 0;
+      case 2: return x % 3 === 0;
+      case 3: return (x + y) % 3 === 0;
+      case 4: return (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0;
+      case 5: return (x * y) % 2 + (x * y) % 3 === 0;
+      case 6: return ((x * y) % 2 + (x * y) % 3) % 2 === 0;
+      default: return ((x * y) % 3 + (x + y) % 2) % 2 === 0;
+    }
+  }
+  var QR_FINDER = [[1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1]];
+  function qrPenalty(m) {
+    var N = m.length, score = 0, r, c, i;
+    // 1. runs of five or more
+    function runs(line) {
+      var total = 0, run = 1;
+      for (var i = 1; i <= line.length; i++) {
+        if (i < line.length && line[i] === line[i - 1]) { run++; continue; }
+        if (run >= 5) total += 3 + (run - 5);
+        run = 1;
+      }
+      return total;
+    }
+    // 3. the 1:1:3:1:1 finder shape, either way round
+    function finders(line) {
+      var total = 0;
+      for (var i = 0; i + 11 <= line.length; i++) {
+        for (var f = 0; f < 2; f++) {
+          var hit = true;
+          for (var j = 0; j < 11; j++) if (line[i + j] !== QR_FINDER[f][j]) { hit = false; break; }
+          if (hit) total++;
+        }
+      }
+      return total * 40;
+    }
+    for (r = 0; r < N; r++) {
+      var row = [], col = [];
+      for (c = 0; c < N; c++) { row.push(m[r][c]); col.push(m[c][r]); }
+      score += runs(row) + finders(row) + runs(col) + finders(col);
+    }
+    // 2. solid 2x2 blocks
+    for (r = 0; r < N - 1; r++) for (c = 0; c < N - 1; c++) {
+      var v = m[r][c];
+      if (v === m[r][c + 1] && v === m[r + 1][c] && v === m[r + 1][c + 1]) score += 3;
+    }
+    // 4. how far the dark/light balance strays from half
+    var dark = 0;
+    for (r = 0; r < N; r++) for (c = 0; c < N; c++) if (m[r][c]) dark++;
+    var k = Math.floor(Math.abs(dark * 20 - N * N * 10) / (N * N));
+    score += k * 10;
+    return score;
+  }
+
   /* ------------------------------ canvas painter ----------------------------- */
   /* Always light theme with the Prohor header, regardless of the UI theme — the
      image is meant to be printed or shared. Pure 2D-context code, so Node tests can
@@ -922,12 +1180,14 @@
     opts = opts || {};
     var S = opts.scale || 2;
     var view = buildView(routine, { hueOf: function (code) { return opts.hueOf ? opts.hueOf(code) : 0; }, friday: opts.friday });
-    var labelW = 56, colW = opts.colW || 168, rowH = 56, gapH = 7, headH = 74, pad = 18;
+    var labelW = 56, colW = opts.colW || 168, rowH = 56, gapH = 7, headH = 56, pad = 18;
     var gridH = 30;                                   // day header row
     view.rows.forEach(function (r) { gridH += r.kind === "gap" ? gapH : rowH; });
-    var examH = view.exams.length ? 26 + view.exams.length * 24 : 0;
+    var exRowH = 30, exHeadH = 24;                    // the exam table: a row per course, two lines
+    var examH = view.exams.length ? exHeadH + view.exams.length * exRowH : 0;
+    var footH = 78;                                   // the QR block and the site line
     var W = pad * 2 + labelW + colW * view.nCols;
-    var H = pad + headH + gridH + 12 + examH + 26 + pad;
+    var H = pad + headH + gridH + 14 + examH + 16 + footH + pad;
 
     if (ctx.canvas) { ctx.canvas.width = Math.round(W * S); ctx.canvas.height = Math.round(H * S); }
     if (ctx.scale) ctx.scale(S, S);
@@ -943,23 +1203,20 @@
       if (!ctx.measureText) return t;
       t = String(t);
       if (ctx.measureText(t).width <= w) return t;
-      while (t.length > 3 && ctx.measureText(t + "…").width > w) t = t.slice(0, -1);
-      return t + "…";
+      while (t.length > 3 && ctx.measureText(t + "\u2026").width > w) t = t.slice(0, -1);
+      return t + "\u2026";
     }
 
     box(0, 0, W, H, opts.bg || L.bg);
-    // header: mark + wordmark + session
+    // header: the mark, the wordmark, and the semester — nothing else
     drawMark(ctx, pad, pad, 30);
     setFont(21, 400); ctx.fillStyle = L.ink;
-    ctx.fillText(opts.title || "Prohor", pad + 40, pad + 4);
-    setFont(12, 400); ctx.fillStyle = L.ink3;
-    ctx.fillText(clip(opts.subtitle || "BRAC University routine · unofficial", W - 120), pad + 40, pad + 30);
+    ctx.fillText(opts.title || "Prohor", pad + 40, pad + 5);
+    setFont(12.5, 500); ctx.fillStyle = L.ink2;
+    ctx.fillText(clip(opts.subtitle || "", W - 300), pad + 40, pad + 35);
     setFont(12, 600); ctx.fillStyle = L.ink2;
-    var right = opts.meta || (routine.picks.map(function (p) { return p.code; }).join(" · "));
-    ctx.fillText(clip(right, W - 200 - pad * 2), W - pad - ctx.measureText(right).width - 4, pad + 8);
-    setFont(11, 400); ctx.fillStyle = L.ink3;
-    var codes = "colour = course · hatched = lab · red ring = exam clash";
-    ctx.fillText(codes, W - pad - ctx.measureText(codes).width - 4, pad + 28);
+    var right = opts.meta || (routine.picks.map(function (p) { return p.code; }).join(" \u00b7 "));
+    ctx.fillText(clip(right, W - 300 - pad * 2), W - pad - ctx.measureText(right).width - 4, pad + 12);
     var y0 = pad + headH - 14;
 
     // day header
@@ -1021,37 +1278,73 @@
       }
       var tx = bx + 9, ty = by + 6;
       setFont(11.5, 600); ctx.fillStyle = hue.text;
-      ctx.fillText(clip(b.lab ? b.label + "  LAB" : b.label, bw - 14), tx, ty);
+      ctx.fillText(clip(b.label, bw - 14), tx, ty);
       setFont(10.5, 400, true); ctx.fillStyle = hue.text;
       ctx.fillText(clip(b.time, bw - 14), tx, ty + 16);
-      if (bh > 48) { setFont(10, 400, true); ctx.fillStyle = L.ink2; ctx.fillText(clip(b.room + " · " + b.faculty, bw - 14), tx, ty + 31); }
+      if (bh > 48) { setFont(10, 400, true); ctx.fillStyle = L.ink2; ctx.fillText(clip(b.room + " \u00b7 " + b.faculty, bw - 14), tx, ty + 31); }
     });
 
-    // exams
+    // exams: one row per course, the date on the first line and the clock on the second, so
+    // neither is ever truncated to fit
     if (examH) {
       y += 6;
-      setFont(10.5, 600); ctx.fillStyle = L.ink3;
-      ctx.fillText("COURSE", pad + 4, y + 4);
-      ctx.fillText("MID", pad + 96, y + 4);
-      ctx.fillText("FINAL", pad + 300, y + 4);
-      ctx.fillText("SECTION", W - pad - 150, y + 4);
-      ctx.fillText("FACULTY", W - pad - 66, y + 4);
-      y += 22;
+      var exW = W - pad * 2;
+      var CX = [pad, pad + exW * 0.16, pad + exW * 0.46, pad + exW * 0.76, pad + exW * 0.86];
+      var CW = [exW * 0.16, exW * 0.30, exW * 0.30, exW * 0.10, exW * 0.14];
+      box(pad, y, exW, exHeadH, L.head, L.line);
+      setFont(10, 600); ctx.fillStyle = L.ink3;
+      ctx.fillText("COURSE", CX[0] + 4, y + 7);
+      ctx.fillText("MID EXAM", CX[1], y + 7);
+      ctx.fillText("FINAL EXAM", CX[2], y + 7);
+      ctx.fillText("SECTION", CX[3], y + 7);
+      ctx.fillText("FACULTY", CX[4], y + 7);
+      y += exHeadH;
       view.exams.forEach(function (ex) {
         var hue = hueOfIndex(ex.hue);
-        ctx.fillStyle = hue.line; ctx.fillRect(pad + 4, y + 4, 9, 9);
-        setFont(11.5, 600, true); ctx.fillStyle = L.ink; ctx.fillText(ex.code, pad + 20, y + 1);
-        setFont(11, 400); ctx.fillStyle = L.ink2;
-        ctx.fillText(ex.mid ? clip((ex.mid.clash ? "⚠ " : "") + fmtDate(ex.mid.date) + " · " + ex.mid.time, 190) : "not published", pad + 96, y + 1);
-        ctx.fillText(ex.fin ? clip((ex.fin.clash ? "⚠ " : "") + fmtDate(ex.fin.date) + " · " + ex.fin.time, 180) : "not published", pad + 300, y + 1);
-        ctx.fillText("[" + ex.sec + "]", W - pad - 150, y + 1);
-        ctx.fillText(clip(ex.fac, 60), W - pad - 66, y + 1);
-        y += 24;
+        ctx.fillStyle = hue.line; ctx.fillRect(CX[0] + 4, y + 10, 9, 9);
+        setFont(11.5, 600, true); ctx.fillStyle = L.ink; ctx.fillText(ex.code, CX[0] + 19, y + 6);
+        [1, 2].forEach(function (ci) {
+          var x = ex[ci === 1 ? "mid" : "fin"];
+          if (!x) {
+            setFont(10.5, 400); ctx.fillStyle = L.ink3;
+            ctx.fillText("not published", CX[ci], y + 8);
+            return;
+          }
+          setFont(11, 600); ctx.fillStyle = x.clash ? L.danger : L.ink2;
+          ctx.fillText((x.clash ? "\u26a0 " : "") + fmtDate(x.date), CX[ci], y + 4);
+          setFont(10.5, 400, true); ctx.fillStyle = x.clash ? L.danger : L.ink3;
+          ctx.fillText(x.time, CX[ci], y + 17);
+        });
+        setFont(11, 400, true); ctx.fillStyle = L.ink2; ctx.fillText("[" + ex.sec + "]", CX[3], y + 8);
+        setFont(11, 400); ctx.fillStyle = L.ink2; ctx.fillText(clip(ex.fac, CW[4] - 4), CX[4], y + 8);
+        y += exRowH;
       });
     }
+
+    // footer: the QR and the site on the left, the source line on the right
+    var fy = H - pad - footH + 6;
+    var site = opts.site || "prohor-rg.vercel.app";
+    var qr = opts.qr || qrMatrix("https://" + site + "/");
+    if (qr) drawQr(ctx, qr, pad, fy, 60);
+    setFont(12.5, 600); ctx.fillStyle = L.ink;
+    ctx.fillText(site, pad + 74, fy + 6);
+    setFont(11, 400); ctx.fillStyle = L.ink3;
+    ctx.fillText(clip(opts.caveat || "Unofficial \u00b7 always confirm in BRACU Connect", exW * 0.5), pad + 74, fy + 24);
     setFont(10.5, 400); ctx.fillStyle = L.ink3;
-    ctx.fillText(clip(opts.footer || "Data: BRACU Connect via Connect-CDN (unofficial)", W - pad * 2), pad, H - pad - 12);
+    var src = clip(opts.footer || "Data: BRACU Connect via Connect-CDN (unofficial)", exW * 0.42);
+    ctx.fillText(src, W - pad - ctx.measureText(src).width - 4, fy + 24);
     return { width: W, height: H, blocks: view.blocks.length, exams: view.exams.length, cols: view.nCols, rows: view.rows.length };
+  }
+
+  // a QR block, drawn inside its 4-module quiet zone
+  function drawQr(ctx, qr, x, y, box) {
+    if (!qr || !ctx.fillRect) return;
+    var n = qr.size + 8, cell = box / n, off = cell * 4;
+    ctx.fillStyle = L.ink;
+    for (var r = 0; r < qr.size; r++) for (var c = 0; c < qr.size; c++) {
+      if (!qr.modules[r][c]) continue;
+      ctx.fillRect(x + off + c * cell, y + off + r * cell, Math.ceil(cell), Math.ceil(cell));
+    }
   }
 
   function drawMark(ctx, x, y, size) {
@@ -1077,7 +1370,7 @@
     createEnumerator: createEnumerator, orderRows: orderRows, buildRoutine: buildRoutine, generate: generate,
     conflicts: conflicts, scoreRoutine: scoreRoutine, candidateCompatible: candidateCompatible,
     weekGrid: weekGrid,
-    routineText: routineText, examRows: examRows, paintRoutine: paintRoutine,
+    routineText: routineText, examRows: examRows, paintRoutine: paintRoutine, qrMatrix: qrMatrix,
     slotLabel: slotLabel, fmtTime: fmtTime, fmtTimeShort: fmtTimeShort, fmtDate: fmtDate,
     DAY_ABBR: DAY_ABBR, HUES: HUES, hueOfIndex: hueOfIndex, periodIndex: periodIndex,
     buildView: buildView, examClashMap: examClashMap, routineSummary: routineSummary, drawMark: drawMark,

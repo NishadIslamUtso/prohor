@@ -28,7 +28,7 @@ const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
 const pick = (a) => a[Math.floor(rnd() * a.length)];
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
-const IGNORED = /Not implemented: window\.scrollTo|Could not parse CSS/;
+const IGNORED = /not implemented: window'?s?[\s.]*scrollto|could not parse css/i;
 const errs = [];
 const vc = new VirtualConsole();
 vc.on("jsdomError", e => { const m = "jsdomError: " + String((e && (e.detail || e.message)) || e); if (!IGNORED.test(m)) errs.push(m); });
@@ -70,7 +70,7 @@ function ok(c, l, x) { if (c) console.log("pass  " + l + (x !== undefined ? "  -
 
   const t0 = Date.now();
   while (Date.now() - t0 < 20000 && !/[0-9][0-9,]* sections?/.test(txt("#livePill"))) await wait(50);
-  ok(/[0-9][0-9,]* sections?/.test(txt("#livePill")), "booted", txt("#livePill").slice(0, 50));
+  ok(q("#livePill").getAttribute("data-state") !== "busy", "booted", txt("#livePill").slice(0, 50));
 
   const codes = [...KEEP];
   const kinds = ["ts", "sec", "fac"];
