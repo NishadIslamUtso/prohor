@@ -895,7 +895,8 @@
       if (ka !== kb) return ka < kb ? -1 : 1;
       return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
     });
-    var altCount = routine.picks.reduce(function (n, p) { return n + (p.count - 1); }, 0);
+    // how many courses in this routine actually offer a section to swap to
+    var altCount = routine.picks.reduce(function (n, p) { return n + (p.sections.length > 1 ? 1 : 0); }, 0);
 
     return { cols: cols, rows: rows, blocks: blocks, exams: exams, summary: sum, altCount: altCount, nCols: nCols, lo: lo, hi: hi, rowOf: rowOf };
   }

@@ -2235,20 +2235,19 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       }).join("") + "</tbody></table></div>";
   }
   function altHtml(v, gi) {
+    // Only the courses that really offer a choice. A course with a single section in its group has
+    // nothing to pick, and listing it just pads the panel out.
+    var choices = [];
+    v.exams.forEach(function (e, ci) { if (e.sections.length > 1) choices.push([e, ci]); });
+    if (!choices.length) return "";
     function courseCards(fn) {
-      return v.exams.map(function (e, ci) {
+      return choices.map(function (p) {
+        var e = p[0], ci = p[1];
         return '<div class="alt-course" style="' + hueVars(e.hue) + '"><div class="ct"><span class="hue-num">' + (e.hue + 1) + "</span>" + esc(e.code) +
           ' <span class="faint" style="font-weight:400">· ' + esc(e.pattern) + "</span></div>" + fn(e, ci) + "</div>";
       }).join("");
     }
-    if (!v.altCount) {
-      return '<details class="alt"><summary>Alternative sections (0)</summary><div class="alt-grid">' +
-        courseCards(function (e, ci) {
-          return '<label><input type="radio" checked name="alt-' + gi + "-" + ci + '"><span class="mono">[' + esc(e.sec) + "]</span>" +
-            '<span class="fac">' + esc(e.fac + (e.sections[0] && e.sections[0].room ? " · " + e.sections[0].room : "")) + "</span></label>";
-        }) + "</div></details>";
-    }
-    return '<details class="alt"><summary>Alternative sections (' + v.altCount + ")</summary>" +
+    return '<details class="alt"><summary>Alternative sections (' + choices.length + ")</summary>" +
       '<div class="caption" style="margin:6px 0 0">These sections meet at exactly the same days and times, so any of them keeps this routine valid — pick one and this card updates.</div>' +
       '<div class="alt-grid">' + courseCards(function (e, ci) {
         return e.sections.map(function (s, k) {

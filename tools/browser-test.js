@@ -498,6 +498,12 @@ function boot(opts) {
   ok(afterTxt !== beforeTxt, "card re-rendered after swapping a section");
   ok(c0b.querySelector("details.alt") && c0b.querySelector("details.alt").open, "the alternatives panel stays open after the swap");
   ok([...c0b.querySelectorAll(".alt-course input[type=radio]")].filter((i) => i.checked).length === [...c0b.querySelectorAll(".alt-course")].length, "exactly one radio selected per course");
+  // the panel lists only the courses that have somewhere to go
+  const cards = [...c0b.querySelectorAll(".alt-course")];
+  ok(cards.length > 0 && cards.every((x) => x.querySelectorAll("input[type=radio]").length > 1),
+    "only courses with a real choice are listed", cards.map((x) => x.querySelectorAll("input").length + " opts").join(" "));
+  ok(new RegExp("Alternative sections \\(" + cards.length + "\\)").test(c0b.querySelector("details.alt summary").textContent),
+    "and the count is the number of those courses", c0b.querySelector("details.alt summary").textContent.trim());
   ok(/CSE221 · \[\d+\]|CSE221 \[\d+\]/.test(afterTxt), "grid blocks follow the new section", (/\[\d+\]/.exec(afterTxt) || [""])[0]);
   const timesBefore = (beforeTxt.match(/\d\d:\d\d [AP]M – \d\d:\d\d [AP]M/g) || []).length;
   const timesAfter = (afterTxt.match(/\d\d:\d\d [AP]M – \d\d:\d\d [AP]M/g) || []).length;

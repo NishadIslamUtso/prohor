@@ -261,7 +261,7 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(view.blocks.every((b) => /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(b.time)), "block times are 12-hour", view.blocks[0].time);
   ok(view.exams.every((e) => !e.fin || /[AP]M/.test(e.fin.clock)), "exam cells also carry a 12-hour form for prose", (view.exams[0].fin || {}).clock);
   ok(view.exams.every((e) => e.sections.length >= 1 && e.sections.some((x) => x.sel)), "each exam row lists the swappable sections with one selected");
-  ok(view.altCount === r.picks.reduce((n, p) => n + p.count - 1, 0), "alternative count = extra sections", view.altCount);
+  ok(view.altCount === r.picks.filter((p) => p.sections.length > 1).length, "alternative count = courses with a section to swap to", view.altCount);
   ok(sum.dayCount === r.days && sum.longest > 0 && sum.classes >= 1, "summary math", sum.dayCount + " days, longest " + sum.longest + "m");
   ok(Core.periodIndex(480) === 0 && Core.periodIndex(1100) === 6 && Core.periodIndex(845) === 4, "period snapping", [Core.periodIndex(480), Core.periodIndex(845), Core.periodIndex(1100)].join(","));
 
