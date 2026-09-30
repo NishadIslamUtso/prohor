@@ -39,7 +39,7 @@
   --accent:#E8A317;--accent-soft:#FCF1D6;--accent-text:#8A5B00;
   --success:#1B8A5A;--success-soft:#DDF5E8;--warning:#B7791F;--warning-soft:#FCEFD3;--danger:#C62F4A;--danger-soft:#FCE3E8;
   --focus-ring:0 0 0 3px rgba(37,52,148,.28);
-  --knob:#FFFFFF;--knob-shadow:0 1px 2px rgba(0,0,0,.25);--hatch:rgba(127,127,127,.12);--tag-bg:rgba(127,127,127,.18);
+  --knob:#FFFFFF;--knob-shadow:0 1px 2px rgba(0,0,0,.25);--hatch:rgba(127,127,127,.12);
   --shadow-sm:0 1px 2px rgba(19,22,48,.06);--shadow-md:0 4px 16px rgba(19,22,48,.08);--shadow-lg:0 12px 40px rgba(19,22,48,.12);
   --backdrop:rgba(19,22,48,.45);
   --c1-bg:#E8EBFA;--c1-line:#8F9BE8;--c1-text:#1F2C7C; --c2-bg:#DDF4F1;--c2-line:#5FC1B4;--c2-text:#0F5E55;
@@ -56,7 +56,7 @@
   --accent:#F2B84B;--accent-soft:rgba(242,184,75,.16);--accent-text:#F7CB78;
   --success:#3DD68C;--success-soft:rgba(61,214,140,.14);--warning:#F2B84B;--warning-soft:rgba(242,184,75,.16);--danger:#FF6B85;--danger-soft:rgba(255,107,133,.14);
   --focus-ring:0 0 0 3px rgba(154,166,255,.4);
-  --knob:#EDEFFA;--knob-shadow:0 1px 2px rgba(0,0,0,.45);--hatch:rgba(220,226,255,.10);--tag-bg:rgba(220,226,255,.16);
+  --knob:#EDEFFA;--knob-shadow:0 1px 2px rgba(0,0,0,.45);--hatch:rgba(220,226,255,.10);
   --shadow-sm:0 1px 2px rgba(0,0,0,.35);--shadow-md:0 4px 16px rgba(0,0,0,.4);--shadow-lg:0 12px 40px rgba(0,0,0,.55);
   --backdrop:rgba(0,0,0,.6);
   --c1-bg:rgba(140,153,255,.18);--c1-line:#8C99FF;--c1-text:#C7CDFF; --c2-bg:rgba(63,196,178,.18);--c2-line:#3FC4B2;--c2-text:#A9EBE1;
@@ -324,7 +324,6 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .blk .meta{display:block;font-family:var(--font-mono);font-size:10.5px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .blk.lab{background-image:repeating-linear-gradient(135deg,transparent 0 6px,var(--hatch) 6px 8px)}
 .blk.clash{box-shadow:inset 0 0 0 1.5px var(--danger)}
-.blk .tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:0 5px;border-radius:4px;background:var(--tag-bg);margin-left:5px;vertical-align:1px}
 .blk .tip{display:none;position:absolute;left:8px;bottom:calc(100% - 4px)}
 .free-lbl{z-index:1;place-self:center;color:var(--text-3);font-size:11px}
 .exam-wrap{overflow:auto;margin-top:16px}
@@ -395,7 +394,6 @@ dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--b
 @keyframes pulse{50%{opacity:.3}}
 .pill .link-btn{margin-left:4px}
 .option>span:not(.code):not(.meta){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.dl-item .tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:0 5px;border-radius:4px;background:var(--tag-bg);margin-left:4px}
 .alt-course label .mini{margin-left:6px}
 #summary .tnum{font-variant-numeric:tabular-nums}
 .action-bar .sum:empty::after{content:"0 courses"}
@@ -2211,7 +2209,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     v.blocks.forEach(function (b) {
       h += '<div class="blk' + (b.lab ? " lab" : "") + (b.clash ? " clash" : "") + '" role="cell" tabindex="0" style="' + hueVars(b.hue) +
         ";grid-column:" + (b.col + 2) + ";grid-row:" + b.row + " / span " + b.rowSpan + '" title="' + esc(blockTip(b)) + '"><b>' + esc(b.label) +
-        (b.lab ? '<span class="tag">LAB</span>' : "") + "</b>" + esc(b.time) +
+        "</b>" + esc(b.time) +
         '<span class="meta">' + esc((b.room || "—") + " · ") + facCell(b) + "</span></div>";
     });
     v.cols.forEach(function (c, ci) { if (c.free) h += '<div class="free-lbl" style="grid-column:' + (ci + 2) + ';grid-row:2">free</div>'; });
@@ -2224,7 +2222,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       var list = (byDay[ci] || []).sort(function (a, b) { return a.time < b.time ? -1 : 1; });
       return '<div class="dl-day"><h4>' + esc(c.full) + "</h4>" + (list.length ? list.map(function (b) {
         return '<div class="dl-item" style="' + hueVars(b.hue) + '" title="' + esc(blockTip(b)) + '"><i></i><span class="t">' + esc(b.time) + "</span><span>" + esc(b.label) +
-          (b.lab ? ' <span class="tag">LAB</span>' : "") + ' <span class="mono faint">' + esc((b.room || "—") + " · ") + facCell(b) + "</span></span></div>";
+          ' <span class="mono faint">' + esc((b.room || "—") + " · ") + facCell(b) + "</span></span></div>";
       }).join("") : '<div class="dl-free">free</div>') + "</div>";
     }).join("") + "</div>";
   }

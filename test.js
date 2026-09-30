@@ -244,12 +244,16 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(view.blocks.length === r.events.length, "every meeting becomes a block", view.blocks.length);
   ok(view.blocks.every((b) => b.row >= 2 && b.rowSpan >= 1 && b.col >= 0), "blocks are placed on the grid");
   ok(view.blocks.every((b) => b.label && b.time && b.faculty), "blocks carry label, time and faculty");
-  // a lab block reads exactly like a class block: the course and its section, plus a LAB tag
+  // a lab block is named for the lab course itself, and written like any other block
   const labBlock = view.blocks.find((b) => b.lab);
   const classBlock = view.blocks.find((b) => !b.lab);
-  ok(!!labBlock && !!classBlock && labBlock.label === labBlock.code + " · [" + labBlock.label.slice(labBlock.label.indexOf("[") + 1, -1) + "]",
-    "a lab block is labelled exactly like a class block", labBlock && labBlock.label + " vs " + classBlock.label);
-  ok(!!labBlock && /^[A-Z]{3}\d{3} · \[\d+\]$/.test(labBlock.label), "with the course section, not a lab code", labBlock && labBlock.label);
+  ok(!!labBlock && !!classBlock, "a lab and a class block to compare");
+  const labTail = labBlock && labBlock.label.slice(labBlock.label.indexOf(" · "));
+  ok(!!labBlock && labBlock.label === (labBlock.labCourse || labBlock.code) + labTail,
+    "a lab block is named for the lab course, not the lecture it hangs off", labBlock && labBlock.label + " vs " + classBlock.label);
+  ok(!!labBlock && /^[A-Z]{3}\d{3}L? · \[\d+\]$/.test(labBlock.label), "with the section, written the same way as a class", labBlock && labBlock.label);
+  ok(!!labBlock && labBlock.labCourse && labBlock.label.startsWith(labBlock.labCourse), "an attached lab carries its own code", labBlock && labBlock.label);
+  ok(labBlock.lab === true && classBlock.lab === false, "the lab flag survives on the block");
   ok(!!labBlock && !!labBlock.labCourse, "and the lab course code is still carried for the tooltip", labBlock && labBlock.labCourse);
   ok(!!labBlock && /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(labBlock.time),
     "lab block time is 12-hour", labBlock && labBlock.time);
@@ -285,7 +289,9 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   ok(["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"].every((d) => texts.includes(d)), "all day headings painted");
   ok(view.cols.every((c) => c.label.length === 3 && c.full.length > 3), "view carries short labels for the grid and full ones for the image");
   ok(texts.filter((t) => /^\d\d:\d\d [AP]M$/.test(t)).length >= 4, "slot times painted in 12-hour", texts.filter((t) => /AM|PM/.test(t)).slice(0, 2).join(" / "));
-  ok(texts.some((t) => /LAB/.test(t)), "labs marked in the image");
+  ok(view.blocks.filter((b) => b.lab).every((b) => texts.includes(b.label)),
+    "every lab is named in the image by its own code, with no LAB suffix",
+    view.blocks.filter((b) => b.lab).map((b) => b.label).join(" | "));
   ok(texts.some((t) => /MID|COURSE/.test(t)) && texts.some((t) => /FINAL|not published/.test(t)), "exam block painted");
   ok(texts.some((t) => /Jan|Nov/.test(t)), "exam dates include a month");
   ok(ops.some((o) => o[0] === "strokeRect"), "clash/hatch strokes issued");

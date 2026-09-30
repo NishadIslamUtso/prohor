@@ -739,8 +739,10 @@
       lines.push((DAY_LABEL[d] || d) + "  (" + l.length + " class" + (l.length > 1 ? "es" : "") + ")");
       l.forEach(function (e) {
         var s = e.section || {};
-        lines.push("  " + fmtTime(e.start) + " – " + fmtTime(e.end) + "  " + s.label +
-          (e.kind === "LAB" ? " (LAB" + (s.labCourse ? " " + s.labCourse : "") + ")" : "") +
+        // plain text cannot hatch, so the lab keeps a word for it; the code carries the rest
+        var nm = e.kind === "LAB" ? (s.labCourse || s.code) : s.code;
+        lines.push("  " + fmtTime(e.start) + " – " + fmtTime(e.end) + "  " + nm + "-[" + s.sec + "]" +
+          (e.kind === "LAB" ? " (LAB)" : "") +
           "  ·  " + e.faculty + "  ·  " + (e.room || "-"));
       });
       lines.push("");
@@ -858,10 +860,13 @@
       var sec = ev.section || {};
       // a block is ringed when the section in use has a clashing mid or final
       var clash = !!(clashMap[sec.code + "|MID"] || clashMap[sec.code + "|FINAL"]);
+      // A lab is named for the lab course itself. A lab bolted onto a lecture carries the lab's
+      // own code (CSE221 -> CSE221L); a course that is nothing but a lab already has it.
+      var shown = ev.kind === "LAB" ? (sec.labCourse || sec.code) : sec.code;
       var first = Math.max(p0, lo), last = Math.min(Math.max(p1, first), hi);
       blocks.push({
         col: col, row: rowOf(first), rowSpan: Math.max(1, (last - first) * 2 + 1),
-        code: sec.code, label: sec.code + " · [" + sec.sec + "]",
+        code: sec.code, label: shown + " · [" + sec.sec + "]",
         time: fmtTime(ev.start) + " – " + fmtTime(ev.end),
         room: ev.room || "—", faculty: ev.faculty || "TBA",
         lab: ev.kind === "LAB", labCourse: sec.labCourse || null, clash: clash,
@@ -1273,7 +1278,7 @@
       }
       var tx = bx + 9, ty = by + 6;
       setFont(11.5, 600); ctx.fillStyle = hue.text;
-      ctx.fillText(clip(b.lab ? b.label + "  LAB" : b.label, bw - 14), tx, ty);
+      ctx.fillText(clip(b.label, bw - 14), tx, ty);
       setFont(10.5, 400, true); ctx.fillStyle = hue.text;
       ctx.fillText(clip(b.time, bw - 14), tx, ty + 16);
       if (bh > 48) { setFont(10, 400, true); ctx.fillStyle = L.ink2; ctx.fillText(clip(b.room + " \u00b7 " + b.faculty, bw - 14), tx, ty + 31); }

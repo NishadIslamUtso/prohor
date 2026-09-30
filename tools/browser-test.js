@@ -447,9 +447,12 @@ function boot(opts) {
   const blocks = [...c0.querySelectorAll(".blk")].map((b) => b.textContent.replace(/\s+/g, " ").trim());
   console.log("\nfirst routine blocks:\n  " + blocks.join("\n  "));
   ok(blocks.length >= 6, "one block per weekly meeting", blocks.length);
-  ok(c0.querySelectorAll(".blk.lab").length >= 1 && /LAB/.test(c0.querySelector(".blk.lab").textContent), "labs hatched and tagged");
-  ok([...c0.querySelectorAll(".blk.lab b")].every((b) => /^[A-Z]{3}\d{3} · \[\d+\]$/.test(b.firstChild.textContent.trim())),
-     "a lab block carries its course section, written the same way as a class", c0.querySelector(".blk.lab b").firstChild.textContent.trim());
+  ok(c0.querySelectorAll(".blk.lab").length >= 1, "labs hatched", c0.querySelectorAll(".blk.lab").length);
+  ok([...c0.querySelectorAll(".blk.lab b")].every((b) => /^[A-Z]{3}\d{3}L? · \[\d+\]$/.test(b.firstChild.textContent.trim())),
+     "a lab block is named for its lab course, written the same way as a class", c0.querySelector(".blk.lab b").firstChild.textContent.trim());
+  ok(!/LAB/.test(c0.querySelector(".blk.lab").textContent), "and carries no LAB tag of its own", c0.querySelector(".blk.lab").textContent.replace(/\s+/g, " ").trim());
+  ok([...c0.querySelectorAll(".blk.lab b")].some((b) => /L · \[/.test(b.firstChild.textContent)),
+     "at least one of them is a course that has a lab bolted on", [...c0.querySelectorAll(".blk.lab b")].map((b) => b.firstChild.textContent.trim()).join(" | "));
   ok([...c0.querySelectorAll(".blk.lab")].every((b) => /lab/i.test(b.getAttribute("title"))), "and says it is a lab on hover", c0.querySelector(".blk.lab").getAttribute("title").slice(0, 60));
   ok([...c0.querySelectorAll(".blk")].every((b) => /\d\d:\d\d [AP]M – \d\d:\d\d [AP]M/.test(b.textContent) && /·/.test(b.textContent)), "blocks carry a 12-hour time range, room and faculty", [...c0.querySelectorAll(".blk")][0].textContent.replace(/\s+/g, " ").trim());
   ok(!/\d\d:\d\d – \d\d:\d\d(?! [AP]M)/.test(c0.textContent), "no 24-hour times left in the routine table");
