@@ -282,7 +282,7 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 
 /* =============================== ACTION BAR =============================== */
 .action-bar{position:fixed;left:0;right:0;bottom:0;z-index:40;pointer-events:none;display:flex;justify-content:center}
-.action-bar .inner{pointer-events:auto;width:min(100% - 48px,var(--content-max));margin:0 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:10px 12px 10px 16px;display:flex;align-items:center;gap:14px}
+.action-bar .inner{pointer-events:auto;width:min(100% - 48px,var(--content-max));margin:0 24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md) var(--radius-md) 0 0;box-shadow:var(--shadow-md);padding:10px 12px 10px 16px;display:flex;align-items:center;gap:14px}
 .action-bar .sum{font-size:13px;color:var(--text-2);min-width:0}
 .action-bar .sum b{color:var(--text);font-weight:600}
 .action-bar .prog{flex:1;min-width:0;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
@@ -549,6 +549,13 @@ body.view-seats .rail-top.compact{padding-top:4px;padding-bottom:3px}
 body.view-seats .rail-top.compact .rail-h h2{font-size:14px}
 body.view-seats .rail-top.compact .rail-h .sub{display:none}
 body.view-seats .rail-top.compact .rail-live{margin-top:1px}
+body.seats-open .rail-top.compact{padding-top:9px}
+body.seats-open .rail-top.compact .rail-h h2{font-size:14px}
+body.seats-open .rail-top.compact .rail-h .sub{display:none}
+body.seats-open .rail-top.compact .rail-live{margin-top:1px}
+body.seats-open .rail-top.compact .rail-search{margin-top:5px}
+body.seats-open .rail-top.compact .rail-search input{height:32px}
+body.seats-open .rail-top.compact .rail-search svg{top:8px}
 body.view-seats .rail-h{gap:3px 8px}
 body.view-seats .rail-h h2{font-size:16px;transition:font-size var(--dur-base)}
 body.view-seats .rail-live{margin-top:2px}
@@ -619,6 +626,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   background:var(--primary-soft);border:1px solid var(--border);border-radius:var(--radius-pill);padding:1px 8px;cursor:pointer}
 .rail-h .more:hover{background:var(--surface-3)}
 .seatbox{border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 11px;margin-bottom:10px;background:var(--surface)}
+@media (max-width:640px){.seatbox{margin-bottom:5px;padding:8px 9px}.sgroup{margin-top:4px}body.view-seats .sgroup{padding-top:1px}}
 .seatbox.pinned{border-color:var(--primary);background:var(--primary-soft)}
 .seatbox>h3{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.06em;
   text-transform:uppercase;color:var(--text-3);margin:0 0 5px;cursor:help}
@@ -2266,11 +2274,17 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     setTimeout(function () {
       try {
         var canvas = document.createElement("canvas");
-        var scale = Math.min(3, Math.max(2, Math.round((window.devicePixelRatio || 1) * 2)));
+        var scale = 2;                                   // 2x keeps the file small and the text crisp
         var info = C.paintRoutine(canvas.getContext("2d"), r, {
           scale: scale, title: "Prohor", hueOf: hueOf,
-          subtitle: (state.meta && state.meta.session ? "Session " + state.meta.session + " · " : "") + "unofficial · confirm in BRACU Connect",
+          // the term, never the session id: "20263" means nothing to anyone reading the image
+          subtitle: (function () {
+            var rec = semActive(), id = rec ? rec.session : semNow();
+            return id ? semLabel(id) : "";
+          })(),
           meta: r.picks.map(function (p) { return p.code + " [" + p.chosen.sec + "]"; }).join(" · "),
+          site: "prohor-rg.vercel.app",
+          caveat: "Unofficial · always confirm in BRACU Connect",
           footer: "Data: BRACU Connect via Connect-CDN (unofficial) · generated " + new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
         });
         var a = document.createElement("a");
@@ -2303,10 +2317,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   // a full-height header is fine at rest and a nuisance once the rows are scrolling under it
   function railCompact() {
-    if (!SEATS_VIEW) return;
     var top = document.querySelector(".rail-top");
     if (!top) return;
-    var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var y = SEATS_VIEW ? (window.pageYOffset || document.documentElement.scrollTop || 0)
+      : ((document.querySelector("#railBody") || {}).scrollTop || 0);
     top.classList.toggle("compact", y > 28);
   }
   function toggleRailSlim() {
@@ -2560,6 +2574,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     renderRail();
   });
   window.addEventListener("scroll", function () { railCompact(); semPlace(); }, { passive: true });
+  var railScroller = $("#railBody");                  // the split panel scrolls on its own
+  if (railScroller) railScroller.addEventListener("scroll", function () { railCompact(); }, { passive: true });
   // the handle: drag it, double-click it for the default size, or nudge it with the arrow keys
   (function railDrag() {
     var grip = $("#railGrip");
@@ -2897,9 +2913,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var now = semNow(), past = semActive();
     label.textContent = past ? past.label : (now ? semLabel(now) : "Semester");
     btn.setAttribute("data-past", past ? "1" : "0");
-    btn.setAttribute("data-tip", past
-      ? "Showing " + past.label + " exactly as it was saved on this device. Switch back to " + (now ? semLabel(now) : "the live feed") + " for today's seat counts."
-      : "Showing " + (now ? semLabel(now) : "this semester") + " live. Pick an earlier semester to see its faculty, times and seats as they were saved.");
     if (!pop) return;
     var here = past ? state.sem : "live";
     var rows = semOptions().map(function (o) {

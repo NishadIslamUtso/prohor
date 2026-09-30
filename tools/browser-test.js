@@ -543,11 +543,19 @@ function boot(opts) {
   ok(/^prohor-[A-Z0-9-]+\.png$/.test((dl[0] || {}).name || ""), "filename uses the prohor prefix", (dl[0] || {}).name);
   ok(/^data:image\/png/.test((dl[0] || {}).href || ""), "payload is a PNG");
   ok(S.paint.texts[0] === "Prohor", "export carries the wordmark", S.paint.texts[0]);
-  ok(S.paint.texts.some((t) => /Session 20263|unofficial/.test(t)), "export subtitle with session and disclaimer", S.paint.texts[1]);
+  ok(S.paint.texts.some((t) => /^(Fall|Spring|Summer) \d{4}$/.test(t)), "export names the semester, not the session id", S.paint.texts[1]);
+  ok(!S.paint.texts.some((t) => /Session \d{5}/.test(t)), "no session code anywhere in the image", S.paint.texts.slice(0, 4).join(" | "));
+  ok(!S.paint.texts.some((t) => /colour = course|hatched = lab|red ring = exam clash/.test(t)), "the legend is gone from the image");
   ok(S.paint.texts.some((t) => /Saturday/.test(t)), "export paints full day names");
   ok(S.paint.texts.some((t) => t === "free"), "export marks free days");
   ok(S.paint.texts.some((t) => /COURSE/.test(t)) && S.paint.texts.some((t) => /FINAL|not published/.test(t)), "export paints the exam block");
   ok(S.paint.texts.some((t) => /Data: BRACU Connect via Connect-CDN/.test(t)), "export footer credits the source");
+  ok(S.paint.texts.some((t) => /^prohor-rg\.vercel\.app$/.test(t)), "the footer carries the site", S.paint.texts.slice(-3).join(" | "));
+  ok(S.paint.texts.some((t) => /Unofficial · always confirm in BRACU Connect/.test(t)), "and the confirm caveat beside it");
+  const dateLines = S.paint.texts.filter((t) => /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d{4}$/.test(t));
+  const clockLines = S.paint.texts.filter((t) => /^\d\d:\d\d [AP]M – \d\d:\d\d [AP]M$/.test(t));
+  ok(dateLines.length >= 2 && clockLines.length >= 2, "every exam date and clock gets its own line, unclipped",
+    dateLines.length + " dates / " + clockLines.length + " clocks");
   ok(S.paint.rects > 20 && S.paint.strokes > 0, "grid cells and hatch strokes drawn", S.paint.rects + "/" + S.paint.strokes);
   const hueFills = S.paint.fills.filter((f) => /^#(E8EBFA|DDF4F1|FCF1D6|FCE4EA|F0E6FB|E0F5E6|DFF0FB|FDE9DC)$/i.test(f));
   ok(new Set(hueFills).size >= 3, "each course keeps its own hue in the PNG too", [...new Set(hueFills)].join(","));
@@ -557,6 +565,7 @@ function boot(opts) {
   ok(S.W.__printed === 1, "Print all calls window.print");
   S.W.__copied = null;
   S.click("#copyLink"); await wait(80);
+  ok(S.W.getComputedStyle(S.q(".action-bar .inner")).marginBottom === "0px", "the generate bar sits on the bottom edge", S.W.getComputedStyle(S.q(".action-bar .inner")).marginBottom);
   ok(/^https:\/\/routine\.test\/\?c=CSE221/.test(S.W.__copied || ""), "copy link carries the full state", (S.W.__copied || "").slice(0, 80));
   ok(/c=CSE221,MAT216,CSE320/.test(S.W.__copied || ""), "the copied link restores these courses", (S.W.__copied || "").slice(0, 120));
   ok(/\?c=CSE221,MAT216,CSE320/.test(S.W.location.search), "URL rewritten with the current selection", S.W.location.search.slice(0, 80));
@@ -1420,6 +1429,15 @@ function boot(opts) {
   ok(/live/.test(semBtns[0].textContent) && /Summer 2026/.test(semBtns[1].textContent), "labelled with the term, not the session id", semBtns[1].textContent.replace(/\s+/g, " ").trim());
   ok(semBtns[0].getAttribute("aria-checked") === "true" && semBtns[1].getAttribute("aria-checked") === "false", "the live row is the checked one");
   ok(SEM.q("#semPop .note") === null, "the popover carries no paragraph of its own", SEM.q("#semPop").textContent.replace(/\s+/g, " ").trim());
+  ok(SEM.q("#semBtn").getAttribute("data-tip") === null, "and the semester button has no tooltip of its own", SEM.q("#semBtn").getAttribute("data-tip"));
+  // the panel header thins out once the rows scroll under it, in the split view too
+  const railTop = SEM.q(".rail-top"), railBody = SEM.q("#railBody");
+  ok(!!railTop && !railTop.classList.contains("compact"), "the panel header starts full size");
+  Object.defineProperty(railBody, "scrollTop", { value: 200, configurable: true });
+  railBody.dispatchEvent(new SEM.W.Event("scroll", { bubbles: true }));
+  await SEM.wait(120);
+  ok(railTop.classList.contains("compact"), "and compacts once the list scrolls under it");
+  ok(SEM.W.getComputedStyle(railTop.querySelector(".sub")).display === "none", "dropping the sub-line while compact");
   // it hangs off its own button, not off the header row it sits in
   ok(SEM.W.getComputedStyle(SEM.q(".semwrap")).position === "relative", "the popover is anchored to the semester button");
   ok(/left:\s*0(px)?/.test(SEM.q("#semPop").getAttribute("style") || ""), "and opens directly under it", SEM.q("#semPop").getAttribute("style"));
