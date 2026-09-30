@@ -28,7 +28,7 @@ const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
 const pick = (a) => a[Math.floor(rnd() * a.length)];
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
-const IGNORED = /Not implemented: window\.scrollTo|Could not parse CSS/;
+const IGNORED = /not implemented: window'?s?[\s.]*scrollto|could not parse css/i;
 const errs = [];
 const vc = new VirtualConsole();
 vc.on("jsdomError", e => { const m = "jsdomError: " + String((e && (e.detail || e.message)) || e); if (!IGNORED.test(m)) errs.push(m); });

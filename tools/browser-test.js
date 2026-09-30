@@ -39,7 +39,7 @@ console.log(liveRaw ? "feed under test: " + livePath : "feed under test: snapsho
 
 const virtualConsole = new VirtualConsole();
 const errors = [];
-const IGNORED = /Not implemented: window\.scrollTo|Could not parse CSS/;   // jsdom gaps, not app faults
+const IGNORED = /not implemented: window'?s?[\s.]*scrollto|could not parse css/i;   // jsdom gaps, not app faults
 virtualConsole.on("jsdomError", (e) => { const m = "jsdomError: " + String((e && (e.detail || e.message)) || e); if (!IGNORED.test(m)) errors.push(m); });
 virtualConsole.on("error", (...a) => errors.push("console.error: " + a.join(" ")));
 
@@ -109,6 +109,7 @@ function boot(opts) {
       if (opts.seedCache) window.localStorage.setItem("prohor-cache:feed", JSON.stringify({ at: Date.now() - (opts.cacheAge || 60000), sections: snapshotRaw.sections }));
       if (opts.seedState) window.localStorage.setItem("prohor.state", JSON.stringify(opts.seedState));
       if (opts.seedResults) window.localStorage.setItem("prohor-cache:results", JSON.stringify(opts.seedResults));
+      if (opts.seedSemesters) window.localStorage.setItem("prohor.semesters", JSON.stringify({ list: opts.seedSemesters }));
     }
   });
   const d = dom.window.document, W = dom.window;
@@ -423,8 +424,9 @@ function boot(opts) {
   ok(ex.every((r) => /\[\d+\]/.test(r)), "exam rows show the chosen section");
   ok(!!c0.querySelector("table.exam caption"), "exam table has a caption for screen readers");
   ok(c0.querySelector(".day-dots").querySelectorAll("i.on").length >= 3, "day dots mark active days", c0.querySelector(".day-dots").querySelectorAll("i.on").length);
-  ok(/longest day \d/.test(c0.textContent), "longest-day badge", /longest day [^<]+/.exec(c0.textContent.replace(/\s+/g," "))[0]);
-  ok(/\d section option/.test(c0.textContent), "section-options badge", /[\d,]+ section options?/.exec(c0.textContent.replace(/\s+/g," "))[0]);
+  // the two numbers a person does not need at a glance live one hover away, on the badges they belong to
+  ok(/longest day \d/.test(c0.querySelector(".day-dots").closest(".badge").dataset.tip), "longest-day figure, on hover over the days badge", c0.querySelector(".day-dots").closest(".badge").dataset.tip);
+  ok(/\d section option/.test(c0.querySelector(".rank").dataset.tip), "section-option count, on hover over the rank", c0.querySelector(".rank").dataset.tip);
 
   // swapping a section inside the card
   const alt = c0.querySelector("details.alt");
@@ -461,7 +463,7 @@ function boot(opts) {
   // sorting + view
   S.set(S.q("#sortSel"), "choices", "change"); await wait(200);
   ok(S.cards().length === 50, "sorting keeps 50 cards");
-  const optCounts = S.qa(".routine").map((x) => parseInt(/(\d+) section options?/.exec(x.textContent.replace(/\s+/g, " "))[1], 10));
+  const optCounts = S.qa(".routine").map((x) => parseInt(/(\d+) section options?/.exec(x.querySelector(".rank").dataset.tip)[1], 10));
   ok(optCounts[0] >= optCounts[optCounts.length - 1], "sort by most section choices orders the page", optCounts.slice(0, 3).join(">") + "…" + optCounts.slice(-1));
   S.set(S.q("#sortSel"), "best", "change"); await wait(150);
   S.click(S.qa("[data-view]")[1]); await wait(200);
@@ -1122,7 +1124,7 @@ function boot(opts) {
   ok(R.q("#resultsBody").innerHTML === listHtml, "results markup is byte-identical after a seat refresh");
   ok(R.q("#resultsDesc").textContent === descHtml, "the results summary is untouched");
   ok(R.q("#genBtn").disabled === genDisabledBefore, "the search state is untouched");
-  ok(/seats updated \d+ s ago/.test(R.q("#seatAgo").textContent), "the rail reports its own clock", R.q("#seatAgo").textContent);
+  ok(/updated \d+ s ago/.test(R.q("#seatAgo").textContent), "the rail reports its own clock", R.q("#seatAgo").textContent);
   ok(pageRows().length > 0 && pageRows().every((r) => r.querySelector(".seat")), "every seat row keeps a seat pill");
 
   console.log("\n--- a half-delivered feed is refused, not adopted ---");
@@ -1228,6 +1230,140 @@ function boot(opts) {
 
   console.log("\nconsole/jsdom errors: " + (errors.length ? errors.slice(0, 3).join(" | ") : "none"));
   ok(errors.length === 0, "no page errors across every pass", errors.length);
+  /* ---------------- de-clutter: what left the page says the same thing on hover ---------------- */
+  console.log("\n--- de-clutter pass ---");
+  const visibleText = (doc) => {                       // the inline <script> is body text too: strip it
+    const c = doc.body.cloneNode(true);
+    c.querySelectorAll("script,style,.tip").forEach((n) => n.remove());
+    return c.textContent;
+  };
+  const D = boot({ width: 1440 });
+  await D.ready();
+  await D.add("CSE221"); await D.add("MAT216");
+  await D.gen();
+  D.click("#seatsBtn"); await D.wait(240);
+  D.click("#railBody [data-pin]"); await D.wait(200);          // so the pinned box exists
+  const body0 = visibleText(D.d);
+  ok(!/Rejects routines whose mid/.test(body0), "the per-switch explanation is off the page", "gone");
+  ok(/Routines whose mid-term or final exams overlap/.test(D.q('[data-for="examClash"]').dataset.tip), "…and is one hover away on the switch it belongs to", D.q('[data-for="examClash"]').dataset.tip.slice(0, 40));
+  ok(!/saved on this device, so the page works/.test(body0), "the step-1 paragraph no longer spells out the device cache");
+  ok(/saved on this device/.test(D.q("#h1").dataset.tip), "…the reassurance moved to the heading", D.q("#h1").dataset.tip.slice(0, 40));
+  ok(!/TBA = faculty not published yet/.test(body0), "the legend lost its last clause");
+  ok(/TBA means the faculty has not been published/.test(D.q(".legend").dataset.tip), "…which now lives on the legend", D.q(".legend").dataset.tip.slice(0, 40));
+  ok(!/Kept at the top of this panel/.test(body0), "the pinned box stopped explaining itself in print");
+  ok(!/in section-number order/.test(body0), "so did your-courses", "gone");
+  ok(!/Every course in the feed/.test(body0), "and all-courses", "gone");
+  ok(!/Free seats = capacity . enrolled from the same live feed/.test(body0), "the footnote lost its essay");
+  ok(/Kept at the top of this panel/.test(D.q("#railBody .seatbox.pinned h3").dataset.tip), "the pinned box says it on hover instead", D.q("#railBody .seatbox.pinned h3").dataset.tip.slice(0, 40));
+  const mineH3 = [...D.qa("#railBody .seatbox h3")].find((h) => /Your courses/.test(h.textContent));
+  ok(!!mineH3 && /section-number order/.test(mineH3.dataset.tip), "your-courses says it on its heading too", mineH3 && mineH3.dataset.tip.slice(0, 40));
+  const cardBadges = D.q(".routine .r-head").querySelectorAll(".badge").length;
+  ok(cardBadges <= 5, "a routine header keeps five badges at most", cardBadges);
+  ok(!/longest day/.test(D.q(".routine").textContent), "the longest-day figure is not printed on every card");
+  ok(/longest day/.test(D.q(".routine .rank").dataset.tip + " " + D.q(".routine .day-dots").closest(".badge").dataset.tip), "…it is on the rank and the days badge", "hover");
+  // the tooltip is built on demand, follows the pointer's target and never eats a click
+  D.d.querySelector("#h1").dispatchEvent(new D.W.MouseEvent("mouseover", { bubbles: true }));
+  await D.wait(450);
+  const tip = D.d.querySelector(".tip");
+  ok(!!tip && /saved on this device/.test(tip.textContent), "a hover builds one tooltip with the right words", tip && tip.textContent.slice(0, 40));
+  ok(!!tip && tip.getAttribute("role") === "tooltip" && tip.getAttribute("data-show") !== null, "and shows it", tip && tip.getAttribute("data-show"));
+  ok(!!tip && D.W.getComputedStyle(tip).pointerEvents === "none", "it never swallows a click", tip && D.W.getComputedStyle(tip).pointerEvents);
+  D.d.querySelector("#h1").dispatchEvent(new D.W.MouseEvent("mouseout", { bubbles: true }));
+  await D.wait(30);
+  ok(D.d.querySelector(".tip") === null || D.d.querySelector(".tip").getAttribute("data-show") === null, "and leaves again on mouse-out");
+  try { D.dom.close(); } catch (e) { }
+
+  /* ---------------- every group header folds a course away ---------------- */
+  console.log("\n--- fold pass ---");
+  const FD = boot({ width: 1440 });
+  await FD.ready();
+  await FD.add("CSE221"); await FD.add("MAT216");
+  await FD.gen();
+  FD.click("#seatsBtn"); await FD.wait(220);
+  const foldBtn = FD.q('#railBody [data-fold="mine|CSE221"]');
+  ok(!!foldBtn, "your-courses group headers carry a fold button", foldBtn && foldBtn.textContent.trim().slice(0, 30));
+  const grp = foldBtn && foldBtn.closest(".sgroup");
+  ok(!!grp && grp.querySelectorAll(".srow").length > 0 && !grp.classList.contains("folded"), "its sections are showing to begin with", grp ? grp.querySelectorAll(".srow").length : 0);
+  FD.click(foldBtn); await FD.wait(150);
+  const grp2 = FD.q('#railBody [data-fold="mine|CSE221"]').closest(".sgroup");
+  ok(grp2.classList.contains("folded") && FD.q('#railBody [data-fold="mine|CSE221"]').getAttribute("aria-expanded") === "false", "one tap compresses the course away", grp2.className);
+  ok(FD.q("#railBody .srow") !== null, "the other courses keep their rows", FD.qa("#railBody .srow").length);
+  FD.click(FD.q('#railBody [data-fold="mine|CSE221"]')); await FD.wait(150);
+  ok(!FD.q('#railBody [data-fold="mine|CSE221"]').closest(".sgroup").classList.contains("folded"), "and a second tap brings them back");
+  const pageFold = FD.q('#railBody [data-fold^="page|"]');
+  ok(!!pageFold, "the routine-page box folds too", pageFold && pageFold.dataset.fold);
+  // keyboard: it is a real button, so Enter activates it
+  FD.q('#railBody [data-fold="mine|CSE221"]').focus();
+  FD.key(FD.q('#railBody [data-fold="mine|CSE221"]'), "Enter"); await FD.wait(150);
+  ok(FD.q('#railBody [data-fold="mine|CSE221"]').closest(".sgroup").classList.contains("folded"), "Enter folds it as well");
+  try { FD.dom.close(); } catch (e) { }
+
+  /* ---------------- New window must never also flip this tab ---------------- */
+  console.log("\n--- new window pass ---");
+  const N = boot({ width: 1440 });
+  await N.ready();
+  N.click("#seatsBtn"); await N.wait(160);
+  let winCalls = 0;
+  N.W.open = () => { winCalls++; return null; };              // blocked, or opened without a handle
+  N.click("#railWin"); await N.wait(180);
+  ok(winCalls === 1, "one window.open call, no retry loop", winCalls);
+  ok(!N.d.body.classList.contains("view-seats"), "an ambiguous null never turns this tab into the seats page", N.d.body.className);
+  ok(!/view=seats/.test(N.W.location.search), "and never rewrites the URL either", N.W.location.search || "(root)");
+  ok(N.d.body.classList.contains("seats-open"), "the split view is left exactly as it was", N.d.body.className);
+  ok(/Open as page/.test(N.txt("#toasts")), "the toast points at the button that does it on purpose", (N.txt("#toasts") || "").slice(0, 70));
+  N.W.open = () => { winCalls++; return { closed: false, close() { this.closed = true; } }; };
+  N.click("#railWin"); await N.wait(150);
+  ok(winCalls === 2 && !N.d.body.classList.contains("view-seats"), "and a real handle changes nothing here either", winCalls);
+  try { N.dom.close(); } catch (e) { }
+
+  /* ---------------- saved semesters ---------------- */
+  console.log("\n--- semester pass ---");
+  const PAST = {
+    "20262": {
+      session: "20262", label: "Summer 2026", at: 1750000000000, start: "2026-06-01", end: "2026-08-01", count: 2,
+      courses: { CSE221: "ALGORITHMS" },
+      rows: {
+        // rows are flat arrays: faculty, room, labRoom, labCourse, cap, used, events, exams;
+        // an event is day,start,end,isLab and the app numbers days Sat-first, so 2 = Mon, 4 = Wed
+        "CSE221|01": ["ANK", "09C-16T", "", "", 30, 12, [2, 660, 740, 0, 4, 660, 740, 0], [1, "2026-07-01", 660, 780]],
+        "CSE221|02": ["RBR", "09D-18C", "", "", 30, 0, [0, 480, 650, 1], []]
+      }
+    }
+  };
+  const SEM = boot({ width: 1440, seedSemesters: PAST });
+  await SEM.ready(); await SEM.wait(200);
+  SEM.click("#seatsBtn"); await SEM.wait(220);
+  ok(/Fall 2026/.test(SEM.txt("#semLabel")), "the switch names the semester you are reading", SEM.txt("#semLabel"));
+  SEM.click("#semBtn"); await SEM.wait(120);
+  const semBtns = SEM.qa("#semPop [data-sem]");
+  ok(semBtns.length === 2, "live first, then every semester on file", semBtns.map((b) => b.textContent.replace(/\s+/g, " ").trim()).join(" | "));
+  ok(/live/.test(semBtns[0].textContent) && /Summer 2026/.test(semBtns[1].textContent), "labelled with the term, not the session id", semBtns[1].textContent.replace(/\s+/g, " ").trim());
+  ok(semBtns[0].getAttribute("aria-checked") === "true" && semBtns[1].getAttribute("aria-checked") === "false", "the live row is the checked one");
+  SEM.click(semBtns[1]); await SEM.wait(200);
+  ok(SEM.txt("#semLabel") === "Summer 2026", "picking it switches the panel over", SEM.txt("#semLabel"));
+  ok(/saved copy/.test(SEM.txt("#railSub")), "the sub-line says so", SEM.txt("#railSub"));
+  ok(/not live/.test(SEM.txt("#railFoot")), "and so does the footnote", SEM.txt("#railFoot"));
+  const mRows = SEM.qa("#railBody .srow");
+  ok(mRows.length === 2, "the saved sections are listed", mRows.length);
+  ok(/\[01\]/.test(mRows[0].textContent) && /ANK/.test(mRows[0].textContent), "with their faculty", mRows[0].textContent.replace(/\s+/g, " ").trim());
+  ok(/Mon 11:00/.test(mRows[0].textContent) && /Wed 11:00/.test(mRows[0].textContent), "and their meeting times", mRows[0].textContent.replace(/\s+/g, " ").trim());
+  ok(/18 free/.test(mRows[0].textContent), "and the seats as they stood", mRows[0].querySelector(".seat").textContent);
+  ok(/Jul 1, 2026/.test(mRows[0].textContent), "and the exam slot of that semester", mRows[0].querySelector(".exs").textContent.replace(/\s+/g, " ").trim());
+  ok(/Lab/.test(mRows[1].textContent), "lab meetings survive the round trip too", mRows[1].textContent.replace(/\s+/g, " ").trim());
+  SEM.click("#semBtn"); await SEM.wait(120);
+  SEM.click(SEM.qa("#semPop [data-sem]")[0]); await SEM.wait(200);
+  ok(/Fall 2026/.test(SEM.txt("#semLabel")) && !/saved copy/.test(SEM.txt("#railSub")), "switching back to live restores the feed", SEM.txt("#semLabel") + " / " + SEM.txt("#railSub"));
+  ok(SEM.qa("#railBody .coursebtn").length > 10, "and the live lists come back", SEM.qa("#railBody .coursebtn").length);
+  ok(SEM.q("#seatPause").hidden === false && SEM.q("#seatNow").hidden === false, "the live controls come back too");
+  try { SEM.dom.close(); } catch (e) { }
+
+  // a semester that is filed is never filed twice, and the panel keeps its own copy
+  const SEM2 = boot({ width: 1440, seedSemesters: PAST });
+  await SEM2.ready(); await SEM2.wait(200);
+  const onFile = Object.keys(JSON.parse(SEM2.W.localStorage.getItem("prohor.semesters") || "{}").list || {}).length;
+  ok(onFile === 1, "the archive loads from storage", onFile);
+  try { SEM2.dom.close(); } catch (e) { }
+
   log("\n" + (fail ? fail + " CHECK(S) FAILED" : "ALL BROWSER CHECKS PASSED"));
   process.exit(fail ? 1 : 0);
 })().catch((e) => { log("HARNESS ERROR: " + ((e && e.stack) || e)); process.exit(2); });
