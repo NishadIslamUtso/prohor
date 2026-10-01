@@ -104,7 +104,10 @@ installable as a PWA.
 - **Whenever a section's seat number changes, every row showing that section — in every box —
   pulses a soft translucent green wash exactly once**, in light and dark themes alike. The tint
   sits behind the labels so every detail stays readable, folding or re-filtering never replays
-  the pulse, and the animation is disabled under `prefers-reduced-motion`.
+  the pulse, and the animation is disabled under `prefers-reduced-motion`. A refresh repaints
+  only the numbers that moved, in place — the list never rebuilds around the reader, never
+  scrolls back up, and headers, folds and hover state survive untouched; structural rebuilds
+  (folding, filtering, pinning, a new feed) restore every scroll offset where it was.
 - Each row shows the section, faculty short form, meeting pattern, mid/final dates and a seat
   pill. Folding the panel leaves a 96 px status strip with one line of pinned chips.
 

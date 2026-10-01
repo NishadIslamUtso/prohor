@@ -2792,14 +2792,17 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function seatRow(r, inUse, showCode, liveNow) {
     var pinned = state.pins.some(function (x) { return x.code === r.code && x.sec === r.sec; });
     // the same section can sit in several boxes at once — every copy of it flashes together,
-    // and a change flashes exactly once: renderRail folds "shown" into seats.flashed afterwards,
-    // so re-renders caused by folding, pinning or filtering never replay it
+    // and a change flashes exactly once: a poll marks seats.flashed the moment it paints the
+    // pulse, so a rebuild caused by folding, pinning or filtering can never replay it
     var chAt = state.seats.changed ? state.seats.changed[r.code + "|" + r.sec] : 0;
     var moved = !!chAt && (state.seats.flashed || {})[r.code + "|" + r.sec] !== chAt && Date.now() - chAt < SEAT_FLASH_MS;
     // liveNow rows (every box except All courses) always show the live pill, even while the
-    // catalogue is browsing an archived semester
+    // catalogue is browsing an archived semester; data-live marks them so a poll's in-place
+    // paint never touches a frozen archived pill
     var pill = liveNow ? seatPill(r.code, r.sec, seatOf(r.code, r.sec)) : seatPill(r.code, r.sec);
-    return '<div class="srow' + (inUse ? " inuse" : "") + (moved ? " seat-changed" : "") + '" style="' + hueVars(r.hue) + '" data-tip="' + esc(r.tip) + '">' +
+    return '<div class="srow' + (inUse ? " inuse" : "") + (moved ? " seat-changed" : "") +
+      '" data-k="' + esc(r.code + "|" + r.sec) + '"' + (liveNow ? ' data-live="1"' : "") +
+      '" style="' + hueVars(r.hue) + '" data-tip="' + esc(r.tip) + '">' +
       '<button class="pinbtn" data-pin="' + esc(r.code + "|" + r.sec) + '" aria-pressed="' + pinned +
         '" aria-label="' + (pinned ? "Unpin" : "Pin") + " " + esc(r.code) + " section " + esc(r.sec) + '" data-tip="' +
         (pinned ? "Unpin this section" : "Pin this section \u2014 its seat count then stays at the top of the panel") +
@@ -3099,18 +3102,28 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       list.length + (state.seats.query ? " match" : "") + "</span></h3>" +
       (rows3 || '<div class="rail-empty">Nothing matches “' + esc(state.seats.query) + '”.</div>') +
       (state.seats.query && list.length > cap ? '<div class="rail-empty">' + (list.length - cap) + ' more matching course' + (list.length - cap === 1 ? "" : "s") + ' — open one from the list or refine the search.</div>' : "") + more + "</div>");
+    // a rebuild (fold, filter, pin, adopt) swaps the markup but must never move the reader:
+    // remember every scrollable offset and put it back once the new rows are in place
+    var preY = body.scrollTop, preCols = $$(".rail-col", body).map(function (cj) { return cj.scrollTop; });
     body.innerHTML = pinnedBox + wrapCols(out);
+    // best-effort: a frozen scroll position must never cost the render itself
+    if (preY) try { body.scrollTop = preY; } catch (e) { }
+    $$(".rail-col", body).forEach(function (cj, ci) { if (preCols[ci]) try { cj.scrollTop = preCols[ci]; } catch (e) { } });
     renderPeek();
-    state.seats.flashed = Object.assign({}, state.seats.changed);   // the flash fires once per change
-    var known = 0, freeTotal = 0;
+    Object.assign(state.seats.flashed, state.seats.changed);        // each change flashes exactly once, ever
+    railNumbers(past);
+    stickInset();
+    railClock();
+  }
+  // the only numbers a seat poll is allowed to touch: the counts in the header strip
+  function railNumbers(past) {
+    var known = 0, freeTotal = 0, i;
     for (i in state.seats.map) { var v = state.seats.map[i]; if (v.free != null) { known++; if (v.free > 0) freeTotal++; } }
     var narrow = railStacked();
     $("#railSub").textContent = num(known) + " tracked" +
       (narrow ? "" : " · " + num(freeTotal) + " open · " + num(state.pins.length) + " pinned") +
       (past ? " · catalogue: " + past.label : "");
-    stickInset();
     var sc = $("#seatsCount"); if (sc) sc.textContent = known ? num(known) : "—";
-    railClock();
   }
   // on a wide seats page the boxes read better in two columns that scroll on their own
   function wrapCols(boxes) {
@@ -3179,6 +3192,29 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     state.seats.backoff = Math.min(SEAT_MAX_BACKOFF, (state.seats.backoff || SEAT_MS) * 2);
     railClock();
   }
+  // a poll changes numbers, never shape: repaint the affected live pills in place, flash each
+  // change exactly once, refresh the header counts — and leave the list's scroll, folds,
+  // open groups, hover tips and focus exactly where they were
+  function paintSeats(changed, now) {
+    var body = $("#railBody");
+    if (!body) return;
+    Object.keys(changed || {}).forEach(function (key) {
+      var at = changed[key];
+      if ((state.seats.flashed || {})[key] === at) return;
+      state.seats.flashed[key] = at;                        // consumed: this change will never flash again
+      var pipe = key.indexOf("|"), code = key.slice(0, pipe), sec = key.slice(pipe + 1);
+      var rows2 = $$('.srow[data-live][data-k="' + key + '"]', body);
+      rows2.forEach(function (el) {
+        var pill = el.querySelector(".seat");
+        if (pill) pill.outerHTML = seatPill(code, sec, seatOf(code, sec));
+        el.classList.remove("seat-changed");
+        void el.offsetWidth;                                // restart the pulse honestly if one is mid-flight
+        el.classList.add("seat-changed");
+      });
+    });
+    renderPeek();
+    railNumbers(semActive());
+  }
   function applySeats(rows, at) {
     if (!rows || !rows.length) { seatFail("empty feed"); return; }
     var now = at || Date.now();
@@ -3195,7 +3231,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     }
     state.seats.map = next; state.seats.changed = changed; state.seats.at = now; state.seats.error = null;
     state.seats.backoff = (state.seats.every || SEAT_MS);
-    railClock(); queueRail();
+    railClock(); paintSeats(changed, now);
   }
   function seatTick(force) {
     if (!state.ready) return;                         // polling continues while the catalogue browses a saved semester
@@ -3312,6 +3348,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     seatCadence();
   });
   $("#seatNow").addEventListener("click", function () { seatTick(true); });
+  $("#railBody").addEventListener("animationend", function (e) {
+    var row = e.target && e.target.closest ? e.target.closest(".srow.seat-changed") : null;
+    if (row) row.classList.remove("seat-changed");          // the pulse is a one-shot
+  });
 
   /* ============================ header, shortcuts, misc ============================ */
 
