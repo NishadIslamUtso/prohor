@@ -1443,7 +1443,7 @@ function boot(opts) {
   // the panel header thins out once the rows scroll under it, in the split view too
   const railTop = SEM.q(".rail-top"), railBody = SEM.q("#railBody");
   ok(!!railTop && !railTop.classList.contains("compact"), "the panel header starts full size");
-  Object.defineProperty(railBody, "scrollTop", { value: 200, configurable: true });
+  Object.defineProperty(railBody, "scrollTop", { value: 200, configurable: true, writable: true });
   railBody.dispatchEvent(new SEM.W.Event("scroll", { bubbles: true }));
   await SEM.wait(120);
   ok(railTop.classList.contains("compact"), "and compacts once the list scrolls under it");
@@ -1579,19 +1579,32 @@ function boot(opts) {
     FLASH.click("#seatsBtn"); await FLASH.wait(220);
     const flashed = () => FLASH.qa("#railBody .srow.seat-changed");
     ok(flashed().length === 0, "nothing flashes at rest", flashed().length);
+    // hold onto the exact nodes and the scroll offset: a data refresh may only change data
+    const rail0 = FLASH.q("#railBody");
+    const calm = FLASH.qa("#railBody .srow").filter((r) => !r.textContent.includes("[" + mov.sec + "]"))[0];
+    const calmTip = calm ? calm.getAttribute("data-tip") : null;
+    FLASH.q("#railBody").scrollTop = 150;
     feed = seatMoved;
     FLASH.click("#seatNow");
     await FLASH.waitFor(() => flashed().length > 0, 6000, "flash after the poll");
     const firstFlash = flashed();
     ok(firstFlash.length >= 1, "the moved section flashes", firstFlash.length);
     ok(firstFlash.every((r) => r.textContent.includes("[" + mov.sec + "]")), "and every copy of it in every box flashes together", firstFlash.length + " copies");
+    // the rest of the list must be bit-for-bit untouched: same nodes, same tips, same scroll
+    ok(FLASH.q("#railBody") === rail0, "the rail container itself is never replaced by a poll");
+    const calm2 = FLASH.qa("#railBody .srow").filter((r) => !r.textContent.includes("[" + mov.sec + "]"))[0];
+    ok(!!calm && calm === calm2 && calm.getAttribute("data-tip") === calmTip,
+      "every untouched row is literally the same DOM node — no rebuild around the change");
+    ok(FLASH.q("#railBody").scrollTop === 150, "and the list does not scroll", FLASH.q("#railBody").scrollTop);
     FLASH.click("#railBody [data-fold]");
     await FLASH.wait(150);
     ok(flashed().length === 0, "a re-render (fold) never replays the flash", flashed().length);
+    ok(FLASH.q("#railBody").scrollTop === 150, "and a structural re-render restores the scroll offset", FLASH.q("#railBody").scrollTop);
     feed = seatBase;
     FLASH.click("#seatNow");
     await FLASH.waitFor(() => flashed().length > 0, 6000, "flash on the next change");
     ok(flashed().length > 0, "a fresh change flashes again", flashed().length);
+    ok(FLASH.q("#railBody").scrollTop === 150, "still without moving the list", FLASH.q("#railBody").scrollTop);
     try { FLASH.dom.close(); } catch (e) { }
   }
 
