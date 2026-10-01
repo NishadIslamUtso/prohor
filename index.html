@@ -659,6 +659,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 .srow .e{font-size:11px;color:var(--text-3)}
 .srow .meta{flex-direction:column;gap:2px;align-items:flex-start}
 .srow .right{display:flex;align-items:center;gap:4px}
+.seat-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0}
+.seat-updated{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1;white-space:nowrap;font-size:9px;font-weight:500;color:var(--text-3)}
+.seat-updated .stamp{color:var(--text-2);font-variant-numeric:tabular-nums}
 .seat{font-size:11px;font-weight:600;padding:2px 7px;border-radius:var(--radius-pill);white-space:nowrap;
   font-variant-numeric:tabular-nums;background:var(--success-soft);color:var(--success)}
 .seat.low{background:var(--warning-soft);color:var(--warning)}
@@ -2782,12 +2785,24 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var facNames = s.faculties.map(function (f) { return state.names[f] || ""; }).filter(Boolean).join(" ");
     return (rowCache[key] = rowBuild(code, sec, s, g ? g.events : s.all, s.exams || [], facNames, Cc && Cc.name));
   }
-  function seatPill(code, sec, st) {
+  function seatAgeText(at) {
+    if (at == null || !isFinite(+at)) return "not yet";
+    var mins = Math.max(0, Math.floor((Date.now() - (+at)) / 60000));
+    if (!mins) return "just now";
+    var days = Math.floor(mins / 1440), hours = Math.floor((mins % 1440) / 60), rest = mins % 60, bits = [];
+    if (days) bits.push(days + " day" + (days === 1 ? "" : "s"));
+    if (hours && bits.length < 2) bits.push(hours + " hour" + (hours === 1 ? "" : "s"));
+    if (rest && bits.length < 2) bits.push(rest + " minute" + (rest === 1 ? "" : "s"));
+    return bits.join(" ") + " ago";
+  }
+  function seatPill(code, sec, st, liveData) {
     if (st === undefined) st = seatState(code, sec);      // an explicit null is honoured: "live box, no live figure"
-    if (!st || st.free == null) return '<span class="seat unknown" data-tip="No seat figures in the feed for this section.">\u2013</span>';
+    var age = liveData ? seatAgeText(state.seats.at) : "";
+    var ageHtml = liveData ? '<span class="seat-updated" aria-label="Seat updated ' + esc(age) + '"><span>Seat updated</span><span class="stamp" data-seat-age>' + esc(age) + '</span></span>' : "";
+    if (!st || st.free == null) return '<span class="seat-wrap"><span class="seat unknown" data-tip="No seat figures in the feed for this section.">\u2013</span>' + ageHtml + '</span>';
     var cls = st.free <= 0 ? (st.over ? "over" : "full") : (st.free <= 3 ? "low" : "");
     var label = st.free <= 0 ? (st.over ? "full \u00b7 +" + st.over + " over" : "full") : st.free + " free";
-    return '<span class="seat ' + cls + '" data-tip="Capacity ' + st.cap + " \u00b7 enrolled " + st.used + ' \u00b7 free = capacity \u2212 enrolled.">' + label + "</span>";
+    return '<span class="seat-wrap"><span class="seat ' + cls + '" data-tip="Capacity ' + st.cap + " \u00b7 enrolled " + st.used + ' \u00b7 free = capacity \u2212 enrolled.">' + label + "</span>" + ageHtml + '</span>';
   }
   function seatRow(r, inUse, showCode, liveNow) {
     var pinned = state.pins.some(function (x) { return x.code === r.code && x.sec === r.sec; });
@@ -2796,12 +2811,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     // pulse, so a rebuild caused by folding, pinning or filtering can never replay it
     var chAt = state.seats.changed ? state.seats.changed[r.code + "|" + r.sec] : 0;
     var moved = !!chAt && (state.seats.flashed || {})[r.code + "|" + r.sec] !== chAt && Date.now() - chAt < SEAT_FLASH_MS;
-    // liveNow rows (every box except All courses) always show the live pill, even while the
-    // catalogue is browsing an archived semester; data-live marks them so a poll's in-place
-    // paint never touches a frozen archived pill
-    var pill = liveNow ? seatPill(r.code, r.sec, seatOf(r.code, r.sec)) : seatPill(r.code, r.sec);
+    // every row outside an archived catalogue is live; data-live marks those rows so a poll's
+    // in-place paint never touches a frozen archived pill, while all live rows can show their age
+    var liveData = liveNow || !semActive();
+    var pill = liveData ? seatPill(r.code, r.sec, seatOf(r.code, r.sec), true) : seatPill(r.code, r.sec);
     return '<div class="srow' + (inUse ? " inuse" : "") + (moved ? " seat-changed" : "") +
-      '" data-k="' + esc(r.code + "|" + r.sec) + '"' + (liveNow ? ' data-live="1"' : "") +
+      '" data-k="' + esc(r.code + "|" + r.sec) + '"' + (liveData ? ' data-live="1"' : "") +
       '" style="' + hueVars(r.hue) + '" data-tip="' + esc(r.tip) + '">' +
       '<button class="pinbtn" data-pin="' + esc(r.code + "|" + r.sec) + '" aria-pressed="' + pinned +
         '" aria-label="' + (pinned ? "Unpin" : "Pin") + " " + esc(r.code) + " section " + esc(r.sec) + '" data-tip="' +
@@ -3162,7 +3177,16 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     return "Free seats = capacity − enrolled, refreshed every " + every + " s " +
       (state.seats.mode === "closed" ? "in the background" : "while this panel is open") + ".";
   }
+  function refreshSeatAges() {
+    var age = seatAgeText(state.seats.at);
+    $$("[data-seat-age]").forEach(function (el2) {
+      el2.textContent = age;
+      var wrap = el2.closest(".seat-updated");
+      if (wrap) wrap.setAttribute("aria-label", "Seat updated " + age);
+    });
+  }
   function railClock() {
+    refreshSeatAges();
     var el2 = $("#seatAgo"); if (!el2) return;
     var live = $("#railLive");
     var foot = $("#railFoot"); if (foot) foot.textContent = railFootText();
@@ -3205,8 +3229,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       var pipe = key.indexOf("|"), code = key.slice(0, pipe), sec = key.slice(pipe + 1);
       var rows2 = $$('.srow[data-live][data-k="' + key + '"]', body);
       rows2.forEach(function (el) {
-        var pill = el.querySelector(".seat");
-        if (pill) pill.outerHTML = seatPill(code, sec, seatOf(code, sec));
+        var pill = el.querySelector(".seat-wrap");
+        if (pill) pill.outerHTML = seatPill(code, sec, seatOf(code, sec), true);
         el.classList.remove("seat-changed");
         void el.offsetWidth;                                // restart the pulse honestly if one is mid-flight
         el.classList.add("seat-changed");

@@ -1210,6 +1210,9 @@ function boot(opts) {
   ok(R.q("#resultsDesc").textContent === descHtml, "the results summary is untouched");
   ok(R.q("#genBtn").disabled === genDisabledBefore, "the search state is untouched");
   ok(/updated \d+ s ago/.test(R.q("#seatAgo").textContent), "the rail reports its own clock", R.q("#seatAgo").textContent);
+  const liveAge = R.q("#railBody .srow[data-live] .seat-updated");
+  ok(!!liveAge && /Seat updated/.test(liveAge.textContent) && /ago|just now/.test(liveAge.textContent),
+    "live seat rows show when their feed was received", liveAge && liveAge.textContent.replace(/\s+/g, " ").trim());
   ok(pageRows().length > 0 && pageRows().every((r) => r.querySelector(".seat")), "every seat row keeps a seat pill");
 
   console.log("\n--- a half-delivered feed is refused, not adopted ---");
@@ -1478,6 +1481,8 @@ function boot(opts) {
   ok(mineRows.length === fixture.courses.CSE221.sections.length, "Your courses keeps the live feed even here", mineRows.length + " of " + fixture.courses.CSE221.sections.length);
   ok(mineRows.some((r) => r.textContent.includes("[" + liveSec.sec + "]") && r.textContent.includes(liveSec.faculty)),
     "and shows the live teacher, not the archived one", liveSec.sec + " / " + liveSec.faculty);
+  ok(mineRows.some((r) => r.querySelector(".seat-updated")), "live rows keep their seat update age while browsing an archive");
+  ok(catRows.every((r) => !r.querySelector(".seat-updated")), "archived seat rows omit the live update age");
   SEM.click("#semBtn"); await SEM.wait(120);
   SEM.click(SEM.qa("#semPop [data-sem]")[0]); await SEM.wait(200);
   ok(/Fall 2026/.test(SEM.txt("#semLabel")) && /tracked/.test(SEM.txt("#railSub")) && !/catalogue:/.test(SEM.txt("#railSub")),
