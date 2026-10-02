@@ -100,7 +100,10 @@ installable as a PWA.
 - Free seats = `capacity − consumedSeat`, refreshed from the live feed every 8 s while open and
   every 30 s in the background, in a dedicated worker so polling can never disturb a running
   search. Failures back off up to 8 minutes. Over-subscribed sections read `full · +5 over`,
-  never a negative number.
+  never a negative number. Every live row also says when its seat feed was last received —
+  `Seat updated` over a compact age that counts up second by second (`just now`, `42s ago`,
+  `1m 30s ago`, `4hr 59m ago`, `1day 5hr ago`) — while archived catalogue rows stay frozen and
+  omit it.
 - **Whenever a section's seat number changes, every row showing that section — in every box —
   pulses a soft translucent green wash exactly once**, in light and dark themes alike. The tint
   sits behind the labels so every detail stays readable, folding or re-filtering never replays

@@ -1108,6 +1108,32 @@ function boot(opts) {
   ok(/50 sections at most/.test(K3.txt("#toasts")), "with an explanation", (K3.txt("#toasts") || "").slice(-56));
   try { K2.dom.close(); K3.dom.close(); } catch (e) { }
 
+  /* ------------------------- the seat-update age ladder -------------------------
+     The rows show how long ago the live seat figure was received, and it has to be right at every
+     step of the ladder, not just at "a while ago": seconds under a minute, minutes+seconds under
+     an hour, hours+minutes under a day, days+hours beyond it. The function is pulled straight out
+     of index.html and run against a frozen clock, so the strings below are exact. */
+  console.log("\n--- the seat-update age ladder ---");
+  {
+    const m = /function seatAgeText\(at\)\s*\{([\s\S]*?)\n  \}/.exec(htmlSrc);
+    ok(!!m, "index.html still defines seatAgeText");
+    const T0 = 1700000000000;
+    const ageFn = new Function("Date", "return (" + ("function seatAgeText(at){" + (m ? m[1] : "") + "}") + ")")({ now: () => T0 });
+    const age = (ms) => ageFn(T0 - ms);        // "the feed arrived ms ago"
+    const ladder = [
+      [0, "just now"], [999, "just now"], [1000, "1s ago"], [2000, "2s ago"], [59000, "59s ago"],
+      [60000, "1m ago"], [61000, "1m 1s ago"], [90000, "1m 30s ago"], [3599000, "59m 59s ago"],
+      [3600000, "1hr ago"], [3900000, "1hr 5m ago"], [17940000, "4hr 59m ago"], [86399000, "23hr 59m ago"],
+      [86400000, "1day ago"], [104400000, "1day 5hr ago"], [2591999000, "29day 23hr ago"], [2592000000, "30day ago"]
+    ];
+    ladder.forEach(([ms, want]) => ok(age(ms) === want, "age " + (ms / 1000) + "s reads “" + want + "”", age(ms)));
+    ok(ageFn(T0 + 5000) === "just now", "a feed stamped in the future never shows a negative age", ageFn(T0 + 5000));
+    ok(ageFn(NaN) === "not yet" && ageFn(null) === "not yet" && ageFn(undefined) === "not yet",
+      "no feed yet reads “not yet”", ageFn(NaN) + " / " + ageFn(null));
+    ok(ladder.every(([ms]) => /^(just now|\d+s ago|\d+m( \d+s)? ago|\d+hr( \d+m)? ago|\d+day( \d+hr)? ago)$/.test(age(ms))),
+      "every rung is the compact two-unit shape — no words, no weeks, months or years");
+  }
+
   console.log("\n--- seats rail pass ---");
   ok(A.d.querySelectorAll("#railBody").length === 1, "exactly one seats panel in the document", A.d.querySelectorAll("#railBody").length);
   ok(!!A.d.querySelector("#seatsLayer #railBody"), "it lives inside the drawer, not in the page columns", !!A.d.querySelector("#seatsLayer #railBody"));
@@ -1210,6 +1236,32 @@ function boot(opts) {
   ok(R.q("#resultsDesc").textContent === descHtml, "the results summary is untouched");
   ok(R.q("#genBtn").disabled === genDisabledBefore, "the search state is untouched");
   ok(/updated \d+ s ago/.test(R.q("#seatAgo").textContent), "the rail reports its own clock", R.q("#seatAgo").textContent);
+  const liveAge = R.q("#railBody .srow[data-live] .seat-updated");
+  const ageStamp = liveAge && liveAge.querySelector(".stamp");
+  ok(!!liveAge && /Seat updated/.test(liveAge.textContent) && /ago|just now/.test(liveAge.textContent),
+    "live seat rows show when their feed was received", liveAge && liveAge.textContent.replace(/\s+/g, " ").trim());
+  ok(!!ageStamp && /^(just now|not yet|\d+s ago|\d+m( \d+s)? ago|\d+hr( \d+m)? ago|\d+day( \d+hr)? ago)$/.test(ageStamp.textContent),
+    "and the age itself is second-precision, in the two-unit shape", ageStamp && ageStamp.textContent);
+  ok(liveAge.getAttribute("aria-label") === "Seat updated " + ageStamp.textContent,
+    "the whole line is announced as one sentence", liveAge.getAttribute("aria-label"));
+
+  // The age is per second, not a five-second approximation: hold the feed still, run the page's
+  // own clock forward at real speed from a known offset, and count how often the row relabels
+  // itself. One change per second means the second tick is doing the work; a 5 s rail clock would
+  // manage a single change in the same window.
+  R.click("#seatPause"); await R.wait(160);
+  const BASE = Date.now(), real0 = Date.now(), clock = R.W.Date.now;
+  const stampNow = () => { const s = R.q("#railBody .srow[data-live] .seat-updated .stamp"); return s ? s.textContent : null; };
+  R.W.Date.now = () => BASE + 90000 + (Date.now() - real0);      // a clock 90 s ahead, running true
+  const seen = new Set();
+  for (let i = 0; i < 45; i++) { seen.add(stampNow()); await R.wait(90); }
+  const rungs = [...seen].filter((x) => /^\d+m \d+s ago$/.test(x || ""));
+  ok(seen.size >= 3 && rungs.length >= 3,
+    "the age relabels itself once a second while the feed stands still", [...seen].join(" → "));
+  R.W.Date.now = () => BASE + 104400000 + (Date.now() - real0);
+  await R.wait(1200);
+  ok(stampNow() === "1day 5hr ago", "and a feed a day and five hours old reads exactly that", stampNow());
+  R.W.Date.now = clock;
   ok(pageRows().length > 0 && pageRows().every((r) => r.querySelector(".seat")), "every seat row keeps a seat pill");
 
   console.log("\n--- a half-delivered feed is refused, not adopted ---");
@@ -1478,6 +1530,8 @@ function boot(opts) {
   ok(mineRows.length === fixture.courses.CSE221.sections.length, "Your courses keeps the live feed even here", mineRows.length + " of " + fixture.courses.CSE221.sections.length);
   ok(mineRows.some((r) => r.textContent.includes("[" + liveSec.sec + "]") && r.textContent.includes(liveSec.faculty)),
     "and shows the live teacher, not the archived one", liveSec.sec + " / " + liveSec.faculty);
+  ok(mineRows.some((r) => r.querySelector(".seat-updated")), "live rows keep their seat update age while browsing an archive");
+  ok(catRows.every((r) => !r.querySelector(".seat-updated")), "archived seat rows omit the live update age");
   SEM.click("#semBtn"); await SEM.wait(120);
   SEM.click(SEM.qa("#semPop [data-sem]")[0]); await SEM.wait(200);
   ok(/Fall 2026/.test(SEM.txt("#semLabel")) && /tracked/.test(SEM.txt("#railSub")) && !/catalogue:/.test(SEM.txt("#railSub")),
