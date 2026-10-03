@@ -119,7 +119,7 @@ function ok(c, l, x) { if (c) console.log("pass  " + l + (x !== undefined ? "  -
         else click("#railBack");
         await wait(140); steps++;
       } else if (r < 0.52) {                            // band controls
-        const el = pick(["#railGrip", "#railMore", "#seatsClose", "#seatsBtn", "#seatNow", "#seatPause"]);
+        const el = pick(["#railGrip", "#railMore", "#seatsClose", "#seatsBtn", "#seatPause"]);
         if (el === "#railGrip") { mouse("#railGrip", "mousedown", 200, Math.floor(rnd() * 900)); mouse(W, "mousemove", 200, Math.floor(rnd() * 1200) - 150); mouse(W, "mouseup", 200, 400); key("#railGrip", pick(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home"])); if (rnd() < 0.4) mouse("#railGrip", "click", 200, 400); }
         else click(el);
         await wait(110); steps++;

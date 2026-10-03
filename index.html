@@ -136,6 +136,8 @@ a{color:var(--primary-text)}
 .b-good{background:var(--success-soft);color:var(--success)}
 .b-bad{background:var(--danger-soft);color:var(--danger)}
 .b-warn{background:var(--warning-soft);color:var(--warning)}
+.calwarn{margin:10px 0 0;padding:10px 12px;border:1px solid var(--warning);border-radius:10px;background:var(--warning-soft);color:var(--text-2);font-size:13px;line-height:1.5}
+.calwarn b{color:var(--text)}
 .b-accent{background:var(--accent-soft);color:var(--accent-text)}
 /* the sections a routine is built from, each in its course's colour */
 .r-secs{display:inline-flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;color:var(--text-2);
@@ -148,7 +150,9 @@ a{color:var(--primary-text)}
 /* =============================== HEADER =============================== */
 .app-header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border)}
 .app-header .wrap{height:56px;display:flex;align-items:center;gap:16px}
-.lockup{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.lockup{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;background:none;border:0;padding:0;margin:0;font:inherit;cursor:pointer;border-radius:8px;transition:opacity .15s ease}
+.lockup:hover{opacity:.7}
+.lockup:focus-visible{outline:2px solid var(--primary-text);outline-offset:4px}
 .lockup .mark{width:32px;height:32px;color:var(--primary-text)}
 .wordmark{font-family:var(--font-display);font-size:26px;line-height:1;letter-spacing:-.01em}
 .unofficial{font-size:12px;color:var(--text-3);margin-left:6px;padding-left:12px;border-left:1px solid var(--border)}
@@ -730,17 +734,18 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 
 <header class="app-header">
   <div class="wrap">
-    <a class="lockup" href="#">
+    <button class="lockup" type="button" id="resetBtn" aria-haspopup="dialog"
+            data-tip="Reset Prohor — clears your picked courses, preferences and cached section data on this device and puts everything back to default. Reloading the page will not do this.">
       <svg class="mark" aria-hidden="true"><use href="#prohor-mark"/></svg>
       <span class="wordmark">Prohor</span>
       <span class="unofficial" data-tip="An unofficial student project, not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag the portal — always confirm in BRACU Connect before pre-advising.">BRACU</span>
-    </a>
+    </button>
     <div class="hdr-right">
       <button class="pill" id="livePill" data-state="busy" aria-expanded="false" aria-controls="livePop"><span class="dot"></span><span class="full">Loading data…</span><span class="short">Loading…</span></button>
       <div class="popover" id="livePop" hidden>
         <h4>Section data</h4>
         <dl class="kv" id="dataKv"><dt>Status</dt><dd>loading…</dd></dl>
-        <div class="pop-foot"><span>Always confirm in BRACU Connect before pre-advising.</span><button class="btn btn-secondary btn-sm" id="refreshBtn"><svg width="14" height="14"><use href="#i-refresh"/></svg>Refresh</button></div></div>
+        <div class="pop-foot"><span>Always confirm in BRACU Connect before pre-advising.</span></div></div>
       <button class="pill seats-toggle" id="seatsBtn" aria-expanded="false" aria-controls="seatsLayer" title="Seats &amp; sections — opens beside your work, drag its edge to resize">
         <svg width="14" height="14"><use href="#i-users"/></svg><span class="full">Seats</span><span class="sc tnum" id="seatsCount">—</span></button>
       <button class="text-btn howto" id="howBtn">How it works</button>
@@ -786,6 +791,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
           <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="lessTime" aria-labelledby="sw3"></button><div class="txt" data-for="lessTime" data-tip="Puts the routines that keep you on campus for fewer hours in total at the top — a few long days instead of many short ones."><div class="t" id="sw3">Less time on campus</div></div></div>
           <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="minGaps" aria-labelledby="sw4"></button><div class="txt" data-for="minGaps" data-tip="Puts the routines with the fewest empty hours between classes, and the shortest longest day, at the top."><div class="t" id="sw4">Minimise gaps and long days</div></div></div>
           <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="moreChoices" aria-labelledby="sw5"></button><div class="txt" data-for="moreChoices" data-tip="Pushes routines whose time slot has more sections to the top, so you have better odds of still getting a seat."><div class="t" id="sw5">Prefer patterns with more section choices</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="openSeats" aria-labelledby="sw6"></button><div class="txt" data-for="openSeats" data-tip="Ranks the routines that do not depend on a completely-full section freeing up above the ones that do. Turn it off to rank purely by shape."><div class="t" id="sw6">Prefer sections with free seats</div></div></div>
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="onlyOpen" aria-labelledby="sw7"></button><div class="txt" data-for="onlyOpen" data-tip="Treats completely-full sections as if they did not exist: routines are built only from sections with at least one free seat. A course that is entirely full is reported instead of silently planned."><div class="t" id="sw7">Only sections with seats</div></div></div>
         </div>
 
         <div class="pref-section">
@@ -818,6 +825,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   <section id="step3" class="results" aria-labelledby="h3" tabindex="-1">
     <div class="step-head"><h2 id="h3" data-tip="Every course keeps its own colour. A hatched block is a lab. A red ring means two of your exams land at the same time. TBA means the faculty has not been published for that section yet.">Compare routines</h2></div>
     <p class="step-desc" id="resultsDesc">Generate to see every conflict-free routine that fits your preferences.</p>
+    <div class="calwarn" id="calWarn" hidden></div>
     <div id="resultsBody"></div>
     <div class="sr-only" aria-live="polite" id="live"></div>
   </section>
@@ -854,7 +862,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <span class="dot"></span><span id="seatAgo">not polled yet</span>
     <span class="peek" id="railPeek" hidden></span>
     <button class="link-btn" id="seatPause" aria-pressed="false">Pause</button>
-    <button class="link-btn" id="seatNow">Refresh</button>
     </div>
     <div class="rail-search">
     <svg><use href="#i-search"/></svg>
@@ -883,6 +890,19 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" id="howClose">Got it</button></div>
 </dialog>
 
+<dialog id="resetDlg" aria-labelledby="resetTitle">
+  <h3 id="resetTitle">Reset Prohor?</h3>
+  <p class="muted">This clears <b>everything saved on this device</b> — your picked courses, locked sections
+  and faculty, preferences, pinned seats, saved semesters, the cached section feed and the theme — and puts
+  Prohor back to its defaults.</p>
+  <p class="muted" style="font-size:13px">None of it is stored anywhere else, so <b>it cannot be undone</b>.
+  Reloading the page will <b>not</b> reset anything — this only happens when you ask for it here.</p>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+    <button class="btn btn-secondary" id="resetCancel">Cancel</button>
+    <button class="btn btn-primary" id="resetConfirm">Reset everything</button>
+  </div>
+</dialog>
+
 <div id="toasts"></div>
 
 <script src="./core.js"></script>
@@ -892,6 +912,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   var C = window.RGCore;
   var MAX_COURSES = 6;
   var CACHE_DB = "prohor-cache", CACHE_KEY = "feed";
+  var DATA_MS = 10 * 60 * 1000;              // planner feed refreshed on a 10-minute clock
   var LS_STATE = "prohor.state", LS_THEME = "prohor.theme";
   var cores = navigator.hardwareConcurrency || 2;
   var memGB = navigator.deviceMemory || 4;
@@ -901,7 +922,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   var state = {
     index: null, meta: null, names: {}, ready: false, pending: false,
     courses: [],
-    prefs: { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] },
+    prefs: { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, openSeats: true, onlyOpen: false, avoidFac: [], avoidTime: [], avoidDay: [] },
     view: "grid", sort: "best", pageSize: 50, page: 1,
     results: null, picks: {}, search: null, blockedNote: "", droppedUrl: "",
     semesters: {}, sem: "live",
@@ -1005,7 +1026,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
 
   /* ================================ data layer ================================
-     live feed → device cache (6 h) → bundled snapshot → last known copy          */
+     live feed → device cache (10 min) → bundled snapshot → last known copy        */
 
   function setPill(kind, html) {
     var p = $("#livePill");
@@ -1021,13 +1042,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var h = Math.round(m / 60);
     return h < 48 ? h + " h ago" : Math.round(h / 24) + " d ago";
   }
-  function nextRefresh() {
-    var at = state.meta && state.meta.at;
-    if (!at) return "—";
-    var left = C.REFRESH_MS - (Date.now() - at);
-    if (left <= 0) return "now";
-    var mins = Math.round(left / 60000), h = Math.floor(mins / 60);
-    return (h ? h + " h " : "") + (mins % 60) + " m";
+  // the bundled snapshot is a photograph of an older feed: stamp its age wherever the numbers
+  // it carries are shown, so nobody plans advising off seat counts that predate the live feed
+  function snapStamp(M) {
+    if (!M || !M.at || !/snapshot/i.test(String(M.origin || ""))) return "";
+    var iso = new Date(M.at).toISOString().slice(0, 10);
+    return " · <span class=\"mono\">snapshot saved " + esc(C.fmtDate(iso)) + "</span>";
   }
   function renderData() {
     var I = state.index, M = state.meta || {};
@@ -1039,13 +1059,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       ["Patterns", "<span class=\"tnum\">" + num(I.groupCount) + " schedule patterns</span>"],
       ["Exam slots", "<span class=\"tnum\">" + num(I.examsKnown) + " sections have published mid + final slots</span>"],
       ["Source", "<span class=\"mono\">" + esc(M.origin || "") + "</span>"],
-      ["Fetched", "<span class=\"tnum\">" + ago(M.at) + "</span> · auto-refresh in <span class=\"tnum\">" + nextRefresh() + "</span>"]
+      ["Fetched", "<span class=\"tnum\">" + ago(M.at) + "</span>" + snapStamp(M)]
     ];
     $("#dataKv").innerHTML = kv.map(function (r) { return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>"; }).join("");
     var o = String(M.origin || "") + " " + String(M.label || "");
     var word = /stale/.test(o) ? "Stale copy" : /snapshot/.test(o) ? "Offline copy" : /cache/.test(o) ? "Cached" : "Live";
-    setPill(M.warn ? "warn" : "ok", word +
-      (M.warn ? "" : " · auto-refresh in <span class=\"tnum\">" + nextRefresh() + "</span>"));
+    setPill(M.warn ? "warn" : "ok", word + (/snapshot/i.test(String(M.origin || "")) && M.at
+      ? " · saved " + esc(C.fmtDate(new Date(M.at).toISOString().slice(0, 10))) : ""));
     updateCourseCount();
   }
   function updateCourseCount() {                 // the one writer for that label
@@ -1122,7 +1142,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       setPill("busy", "Loading data…");
       var cached = null;
       try { cached = await store.get(CACHE_KEY); } catch (e) { }
-      if (cached && cached.at && (Date.now() - cached.at) < C.REFRESH_MS && !force) {
+      if (cached && cached.at && (Date.now() - cached.at) < DATA_MS && !force) {
         var p0 = parseFeed({ sections: cached.sections });
         adopt(p0.sections, { origin: "device cache", at: cached.at, start: p0.start, end: p0.end, session: p0.session, label: "cached" });
         revalidate();
@@ -1140,7 +1160,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         loadSnapshotInto("offline copy (live feed is slow)").catch(function () { });
       }, 1400);
       try {
-        var res = await fetch(C.DATA_URL, { cache: "no-store" });
+        var res = await fetch(C.DATA_URL, { cache: "no-cache" });
         if (!res.ok) throw new Error("HTTP " + res.status);
         var p = parseFeed(await res.json());
         var at = Date.now();
@@ -1171,7 +1191,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   async function revalidate() {
     try {
-      var res = await fetch(C.DATA_URL, { cache: "no-store" });
+      var res = await fetch(C.DATA_URL, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       var p = parseFeed(await res.json());
       var at = Date.now();
@@ -1186,15 +1206,17 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       toast("Section data refreshed");
     } catch (e) { /* keep serving what we have */ }
   }
+  // the planner feed follows its own 10-minute clock; the minute tick only repaints
+  // the "fetched N min ago" line between refreshes
   setInterval(function () {
     if (document.visibilityState === "hidden") return;
     var at = state.meta && state.meta.at;
-    if (!at || Date.now() - at > C.REFRESH_MS) loadData(true); else renderData();
+    if (!at || Date.now() - at > DATA_MS) loadData(true); else renderData();
   }, 60000);
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState !== "visible") return;
     var at = state.meta && state.meta.at;
-    if (!at || Date.now() - at > C.REFRESH_MS) loadData(true);
+    if (!at || Date.now() - at > DATA_MS) loadData(true);
   });
 
   var store = (function () {
@@ -1242,6 +1264,36 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
           } catch (e) { ls(k, v); }
           return null;
         });
+      },
+      // Everything this device remembers, gone. The open connection is closed first so
+      // deleteDatabase actually completes instead of blocking on it.
+      wipe: function () {
+        // Returns a promise that settles only once the delete has actually landed: a
+        // fire-and-forget deleteDatabase can otherwise complete *after* the caller has
+        // already refilled the store, throwing the fresh copy away.
+        var pending = dbp;
+        dbp = null;
+        var closed = new Promise(function (res) {
+          if (!pending) return res();
+          pending.then(function (d) { try { if (d) d.close(); } catch (e) { } res(); },
+                       function () { res(); });
+        });
+        var n = 0;
+        try {
+          var keys = [];
+          for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+          keys.forEach(function (k) {
+            if (k && String(k).toLowerCase().indexOf("prohor") === 0) { localStorage.removeItem(k); n++; }
+          });
+        } catch (e) { }
+        return closed.then(function () {
+          return new Promise(function (res) {
+            var rq;
+            try { rq = indexedDB.deleteDatabase(CACHE_DB); } catch (e) { return res(n); }
+            if (!rq) return res(n);
+            rq.onsuccess = rq.onerror = rq.onblocked = function () { res(n); };
+          });
+        });
       }
     };
   })();
@@ -1261,7 +1313,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     return {
       avoidFaculty: state.prefs.avoidFac,
       avoidSlots: state.prefs.avoidTime.map(function (i) { return { start: C.TIME_SLOTS[i].start, end: C.TIME_SLOTS[i].end }; }),
-      avoidDays: state.prefs.avoidDay.map(function (i) { return C.DAYS[i]; })
+      avoidDays: state.prefs.avoidDay.map(function (i) { return C.DAYS[i]; }),
+      onlyOpen: !!state.prefs.onlyOpen
     };
   }
   function courseState(code) {
@@ -1784,6 +1837,33 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     });
     return ok ? n : -1;
   }
+  // The feed carries several academic calendars at once (44 Law sections start Sep 12, the
+  // main undergraduate intake Oct 3, a couple of ENG101 sections Nov 3). A routine mixing
+  // intakes can look valid here and still not exist — say so loudly while picks are mixed.
+  function calMixHtml() {
+    if (!state.index || state.courses.length < 2) return "";
+    var groups = {}, picked = 0;
+    state.courses.forEach(function (c) {
+      var Cc = K(c.code); if (!Cc) return;
+      picked++;
+      var starts = {};
+      (Cc.sections || []).forEach(function (sc) { if (sc.start) starts[sc.start] = 1; });
+      var ks = Object.keys(starts);
+      if (!ks.length) ks = ["unknown"];
+      ks.forEach(function (k) { (groups[k] = groups[k] || []).push(Cc.code); });
+    });
+    var keys = Object.keys(groups);
+    if (!picked || keys.length < 2) return "";
+    var bits = keys.sort().map(function (k) {
+      var cs = groups[k];
+      var show = cs.slice(0, 3).join(", ") + (cs.length > 3 ? " +" + (cs.length - 3) + " more" : "");
+      return "<b>" + esc(show) + "</b> start" + (cs.length > 1 ? "" : "s") + " " +
+        (k === "unknown" ? "an unknown date" : esc(C.fmtDate(k)));
+    });
+    return "These courses run on <b>different academic calendars</b> — " + bits.join(", while ") +
+      ". BRACU runs such intakes on separate schedules, so a routine mixing them can look valid here " +
+      "but not exist in reality. Confirm the class start dates in BRACU Connect before relying on it.";
+  }
   function updateSummary() {
     var locked = state.courses.reduce(function (n, c) { return n + c.locked.length; }, 0);
     var filters = state.prefs.avoidFac.length + state.prefs.avoidTime.length + state.prefs.avoidDay.length;
@@ -1794,6 +1874,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     if (space > 0) bits += " · <span class=\"tnum\">~" + num(space) + " combination" + (space > 1 ? "s" : "") + "</span>";
     else if (space < 0) bits += " · <span style=\"color:var(--warning)\">a course has no viable pattern left</span>";
     $("#summary").innerHTML = bits;
+    var cw = $("#calWarn"), mix = calMixHtml();
+    if (cw) { cw.hidden = !mix; if (mix) cw.innerHTML = mix; }
     var btn = $("#genBtn");
     if (!state.pending && !state.searchRunning) {
       btn.disabled = !state.ready || !state.courses.length;
@@ -1826,6 +1908,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function whyBlocked(Cc, c) {
     var raw = C.candidatesFor(Cc, { sections: [], faculties: [] }, { avoidFaculty: [], avoidSlots: [], avoidDays: [] });
     if (!raw.length) return "has no scheduled sections in this feed";
+    if (avoidSpec().onlyOpen) {                     // distinguish "filters killed it" from "it is all full"
+      var off = C.candidatesFor(Cc, { sections: [], faculties: [] }, (function () { var f = avoidSpec(); f.onlyOpen = false; return f; })());
+      if (off.length && !C.candidatesFor(Cc, { sections: [], faculties: [] }, avoidSpec()).length)
+        return "every section is full right now — turn off “Only sections with seats” to plan with full sections anyway";
+    }
     var noLock = C.candidatesFor(Cc, { sections: [], faculties: [] }, avoidSpec());
     if (!noLock.length) return "has no pattern left once the avoided times, days and faculty are removed";
     var secsTxt = (c.secs || []).length ? "the section" + (c.secs.length > 1 ? "s" : "") + " [" + esc(c.secs.join(", ")) + "]" : "";
@@ -1844,6 +1931,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         candidates: r.candidates.map(function (cd) {
           return {
             key: cd.key, code: cd.code, label: cd.label, count: cd.count, mask: cd.mask, evA: cd.evA, exA: cd.exA,
+            open: cd.open, full: cd.full,
             events: cd.events.map(function (e) { return { day: e.day, start: e.start, end: e.end, kind: e.kind, room: e.room }; })
           };
         })
@@ -1876,6 +1964,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       minDays: state.prefs.dayMin, maxDays: state.prefs.dayMax,
       preferFewerDays: state.prefs.fewerDays, preferLessTime: state.prefs.lessTime,
       preferGaps: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
+      preferOpenSeats: state.prefs.openSeats,
       ignoreExams: !state.prefs.examClash
     };
     var sp = state.search = {
@@ -2167,9 +2256,35 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       "Add courses, set your preferences, then press Generate — or <span class=\"kbd mono\" style=\"font-size:11px;border:1px solid var(--border);border-radius:4px;padding:1px 6px\">Ctrl/⌘ + Enter</span>. " +
       '<span class="muted" data-tip="Sections that meet at identical days and times count as one pattern, so the list never repeats itself. Every routine is checked for class, lab and exam clashes, and you can swap to any alternative section inside a card or download it as a PNG.">Sections at identical times count as one pattern.</span></div>';
   }
+  // Zero results with a fully-scanned search: name the pair of courses that cannot coexist,
+  // so the user does not have to bisect their course list by hand.
+  function blockingPairs(sp) {
+    if (!sp || !sp.rows || sp.rows.length < 2) return [];
+    var ig = !!(sp.prefs && sp.prefs.ignoreExams), out = [];
+    for (var i = 0; i < sp.rows.length; i++) {
+      for (var j = i + 1; j < sp.rows.length; j++) {
+        var A = sp.rows[i].candidates, B = sp.rows[j].candidates, any = false;
+        for (var a = 0; a < A.length && !any; a++)
+          for (var b = 0; b < B.length && !any; b++)
+            if (C.candidateCompatible(A[a], B[b], ig)) any = true;
+        if (!any) out.push({ a: sp.rows[i].code, b: sp.rows[j].code, n: A.length * B.length });
+      }
+    }
+    return out;
+  }
   function zeroHtml() {
     var hints = [];
-    if (!state.blockedNote) {
+    var sp = state.search;
+    var blockers = (sp && sp.done && !sp.valid) ? blockingPairs(sp) : [];
+    if (!state.blockedNote && blockers.length) {
+      blockers.forEach(function (p) {
+        hints.push("<b>The blocker:</b> <b>" + esc(p.a) + "</b> × <b>" + esc(p.b) + "</b> — all " +
+          num(p.n) + " section pair" + (p.n === 1 ? "" : "s") + " of the two collide");
+      });
+      if (state.prefs.examClash) hints.push("the collision can be class times or exam slots — turning off “Check exam clashes” tells you which (clashes then show flagged in red, not fatal)");
+      hints.push("swap one of the two courses named above");
+    } else if (!state.blockedNote) {
+      if (state.prefs.onlyOpen && state.courses.length) hints.push("turn off “Only sections with seats” — a course may be entirely full right now");
       if (state.prefs.dayMax < 6) hints.push("allow " + Math.min(6, state.prefs.dayMax + 1) + " days on campus");
       if (state.prefs.avoidTime.length) hints.push(state.prefs.avoidTime.length > 1 ? "clear one of the " + state.prefs.avoidTime.length + " avoided time slots" : "clear the avoided time slot");
       if (state.prefs.avoidDay.length) hints.push("clear an avoided day");
@@ -2180,7 +2295,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         if (c.faculty.length) hints.push("drop the faculty filter on " + esc(c.code));
       });
     }
-    var sp = state.search;
     var clashNote = state.prefs.examClash
       ? ' data-tip="An exam clash means two of your courses have a mid or a final on the same date and time. Not every course really has a final — the feed still lists a date for some of them — so confirm in BRACU Connect before you drop a routine you liked."'
       : "";
@@ -2694,7 +2808,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     save(); renderRail();
     return true;
   }
-  var SEAT_MS = 30000, SEAT_MS_OPEN = 8000, SEAT_MAX_BACKOFF = 480000;
+  // Seat cadence: a flat 30 s while seats are on, a lazy 60 s when the tab is in the
+  // background (the feed itself only regenerates on a ~60 s clock, so this is plenty).
+  var SEAT_MS = 30000, SEAT_MS_OPEN = 30000, SEAT_MS_HIDDEN = 60000, SEAT_MAX_BACKOFF = 480000;
   var SEAT_FLASH_MS = 6000;                 // how long a seat movement still counts as "just happened"
   var seatWorker = null, seatBusy = false, seatTimer = null, rowCache = {};
   state.seats = { map: {}, changed: {}, flashed: {}, at: null, error: null, paused: false, backoff: SEAT_MS, lastTry: 0, query: "", open: {}, fold: {}, showAll: false, mode: "closed" };
@@ -3158,23 +3274,19 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       return "\u201cAll courses\u201d shows the saved copy of " + past.label + " (" + num(past.count) + " sections as they were on " +
         (isNaN(savedAt) ? "an unknown date" : C.fmtDate(savedAt.toISOString().slice(0, 10))) + ") — the other boxes stay live.";
     }
-    var every = Math.round((state.seats.every || SEAT_MS) / 1000);
-    return "Free seats = capacity − enrolled, refreshed every " + every + " s " +
-      (state.seats.mode === "closed" ? "in the background" : "while this panel is open") + ".";
+    return "Free seats = capacity − enrolled, kept up to date automatically.";
   }
   function railClock() {
     var el2 = $("#seatAgo"); if (!el2) return;
     var live = $("#railLive");
     var foot = $("#railFoot"); if (foot) foot.textContent = railFootText();
-    var pause2 = $("#seatPause"), now2 = $("#seatNow");
+    var pause2 = $("#seatPause");
     if (pause2) pause2.hidden = false;      // the rail stays live even while the catalogue browses a saved semester
-    if (now2) now2.hidden = false;
     if (state.seats.paused) { live.setAttribute("data-state", "paused"); el2.textContent = "paused"; return; }
     if (state.seats.error) { live.setAttribute("data-state", "error"); el2.textContent = "retry in " + Math.round(state.seats.backoff / 1000) + " s (" + state.seats.error + ")"; return; }
     live.setAttribute("data-state", seatBusy ? "busy" : "idle");
-    var every = Math.round((state.seats.every || SEAT_MS) / 1000);
     el2.textContent = state.seats.at
-      ? "updated " + Math.max(0, Math.round((Date.now() - state.seats.at) / 1000)) + " s ago · every " + (every || 0) + " s"
+      ? "updated " + Math.max(0, Math.round((Date.now() - state.seats.at) / 1000)) + " s ago"
       : "first seat check…";
   }
   var railQueued = false;
@@ -3235,7 +3347,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function seatTick(force) {
     if (!state.ready) return;                         // polling continues while the catalogue browses a saved semester
-    if (!force && (state.seats.paused || document.visibilityState === "hidden")) return;
+    if (!force && state.seats.paused) return;         // hidden tabs still poll — just on the slow 60 s cadence
     if (seatBusy) return;
     if (!force && Date.now() - (state.seats.lastTry || 0) < state.seats.backoff) return;
     state.seats.lastTry = Date.now();
@@ -3249,12 +3361,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function seatCadence() {
     var open = !!$("#seatsLayer") && !$("#seatsLayer").hidden;
-    var base = open ? SEAT_MS_OPEN : SEAT_MS;
+    var base = document.visibilityState === "hidden" ? SEAT_MS_HIDDEN : (open ? SEAT_MS_OPEN : SEAT_MS);
     state.seats.every = state.seats.paused ? 0 : base;
     if (seatTimer) clearInterval(seatTimer);
     seatTimer = setInterval(function () {
-      var live = !state.seats.paused && document.visibilityState !== "hidden";
-      if (live && Date.now() - (state.seats.lastTry || 0) >= state.seats.backoff) seatTick(false);
+      // background tabs stay on the 60 s cadence instead of stopping outright, so the
+      // numbers are at most about a minute old whenever the user looks back
+      if (!state.seats.paused && Date.now() - (state.seats.lastTry || 0) >= state.seats.backoff) seatTick(false);
     }, Math.max(4000, Math.round(base / 4)));
     railClock();
   }
@@ -3273,11 +3386,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       } catch (e) { seatWorker = null; }
     }
     seatCadence();
-    setInterval(railClock, 5000);
+    setInterval(railClock, 1000);      // "updated N s ago" ticks every second
     renderRail();               // the lists are index-derived: they are right even offline
     seatTick(true);
   }
   document.addEventListener("visibilitychange", function () {
+    seatCadence();                     // re-arm: 30 s while watched, 60 s while not
     if (document.visibilityState === "visible" && state.seats.at && Date.now() - state.seats.at > 15000) seatTick(true);
   });
   // rail interactions
@@ -3347,7 +3461,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     this.setAttribute("aria-pressed", String(state.seats.paused));
     seatCadence();
   });
-  $("#seatNow").addEventListener("click", function () { seatTick(true); });
   $("#railBody").addEventListener("animationend", function (e) {
     var row = e.target && e.target.closest ? e.target.closest(".srow.seat-changed") : null;
     if (row) row.classList.remove("seat-changed");          // the pulse is a one-shot
@@ -3358,11 +3471,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function setPop(open) { $("#livePop").hidden = !open; $("#livePill").setAttribute("aria-expanded", String(open)); if (open) fitOverlays(); }
   $("#livePill").addEventListener("click", function (e) { e.stopPropagation(); setPop($("#livePop").hidden); });
   $("#livePop").addEventListener("click", function (e) { e.stopPropagation(); });
-  $("#refreshBtn").addEventListener("click", function () {
-    var b = $("#refreshBtn");
-    b.innerHTML = '<svg class="spin" width="14" height="14"><use href="#i-spin"/></svg>Refreshing';
-    loadData(true).then(function () { b.innerHTML = '<svg width="14" height="14"><use href="#i-refresh"/></svg>Refresh'; toast("Section data revalidated"); });
-  });
+  /* manual refresh removed: the conditional poll keeps the feed current on its own */
   $("#howBtn").addEventListener("click", function () { try { $("#howDlg").showModal(); } catch (e) { toast("Search, pick courses, set preferences, then generate."); } });
   $("#howClose").addEventListener("click", function () { try { $("#howDlg").close(); } catch (e) { } });
   $("#genBtn").addEventListener("click", generate);
@@ -3395,11 +3504,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       minDays: state.prefs.dayMin, maxDays: state.prefs.dayMax,
       preferFewerDays: state.prefs.fewerDays, preferLessTime: state.prefs.lessTime,
       preferGaps: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
+      preferOpenSeats: state.prefs.openSeats,
       ignoreExams: !state.prefs.examClash
     };
   }
   function defaultPrefs() {
-    return { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] };
+    return { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, openSeats: true, onlyOpen: false, avoidFac: [], avoidTime: [], avoidDay: [] };
   }
   // Stable across reloads: the selection + prefs + a fingerprint of the feed itself
   // (not the fetch time), so a saved search can be reopened on a later visit.
@@ -3601,6 +3711,69 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       seatTick(true);               // fresh seat numbers right away
     });
   }
+  /* ============================ device reset (the wordmark) ============================
+     Reloading must never reset anything — saved state is meant to survive reloads — so the
+     wipe is only ever reachable from an explicit click on the wordmark, behind a confirm. */
+
+  function resetAll() {
+    // stop everything first, so nothing can write the old state back after the wipe
+    if (state.search && state.search.worker) { try { state.search.worker.terminate(); } catch (e) { } }
+    state.search = null;
+    if (typeof seatTimer !== "undefined" && seatTimer) { clearInterval(seatTimer); seatTimer = null; }
+
+    var wipeDone = store.wipe();
+
+    state.courses = [];
+    state.prefs = defaultPrefs();
+    state.view = "grid"; state.sort = "best"; state.page = 1;
+    state.results = null; state.picks = {}; state.blockedNote = ""; state.droppedUrl = "";
+    state.semesters = {}; state.sem = "live";
+    state.facMem = { sid: null, map: {} };
+    state.pins = []; state.railPage = [];
+    state.seats = { map: {}, changed: {}, flashed: {}, at: null, error: null, paused: false,
+                    backoff: SEAT_MS, lastTry: 0, query: "", open: {}, fold: {},
+                    showAll: false, mode: "closed" };
+
+    // the URL encoded the old picks; drop back to the bare page
+    try { history.replaceState(null, "", location.pathname); } catch (e) { }
+
+    // theme back to whatever the device asks for
+    try {
+      applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    } catch (e) { applyTheme("light"); }
+
+    readRailPrefs(); applyRailSize();
+    // step off the seats page first — its close path re-opens the split — then close the
+    // split for good and remember "closed", so a reload comes back to the default layout
+    try { setSeatsView(false, false); } catch (e) { }
+    try { setSeatsMode("closed"); } catch (e) { }
+
+    renderRange(); renderChips(); renderCourses(); updateSummary(); renderResults();
+    try { renderFacSuggestions(); } catch (e) { }
+    try { if (typeof syncSearchBtn === "function") syncSearchBtn(); } catch (e) { }
+    indexSeats(); renderRail(); seatCadence();
+    try { setGen(false); } catch (e) { }
+    var progEl = $("#prog"); if (progEl) progEl.hidden = true;
+
+    // wait for the wipe to land before refilling, or the delete races the new copy
+    wipeDone.then(function (cleared) {
+      toast("Prohor reset — " + cleared + " saved item" + (cleared === 1 ? "" : "s") + " cleared");
+      loadData(true).then(function () { afterChange(); seatTick(true); });
+    });
+  }
+
+  $("#resetBtn").addEventListener("click", function () {
+    try { $("#resetDlg").showModal(); }
+    catch (e) {
+      if (window.confirm("Reset Prohor? This clears your saved courses, preferences and cached data on this device.")) resetAll();
+    }
+  });
+  $("#resetCancel").addEventListener("click", function () { try { $("#resetDlg").close(); } catch (e) { } });
+  $("#resetConfirm").addEventListener("click", function () {
+    try { $("#resetDlg").close(); } catch (e) { }
+    resetAll();
+  });
+
   boot();
 })();
 </script>

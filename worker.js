@@ -47,7 +47,7 @@
       // queue behind (or interleave with) an enumeration running in the search worker.
       if (m.type === "fetch-seats") {
         try {
-          var res = await fetch(m.url || C.DATA_URL, { cache: "no-store" });
+          var res = await fetch(m.url || C.DATA_URL, { cache: "no-cache" });
           if (!res.ok) throw new Error("HTTP " + res.status);
           var raw = await res.json();
           post({ type: "seats", at: Date.now(), rows: C.seatRows(raw) });

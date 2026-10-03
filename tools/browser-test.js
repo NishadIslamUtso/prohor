@@ -93,6 +93,10 @@ function boot(opts) {
         };
       };
       window.HTMLCanvasElement.prototype.toDataURL = function () { return "data:image/png;base64,AAAA"; };
+      if (window.HTMLDialogElement) {           // jsdom has no dialog implementation yet
+        window.HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); this.open = true; };
+        window.HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); this.open = false; };
+      }
       window.fetch = async function (u) {
         const url = String(u);
         if (url.includes("connect.json")) {
@@ -110,6 +114,7 @@ function boot(opts) {
         if (url.includes("faculty-names.json")) { calls.names++; return { ok: true, status: 200, headers: { get: () => null }, json: async () => namesRaw }; }
         return { ok: false, status: 404, json: async () => { throw new Error("404"); }, headers: { get: () => null } };
       };
+      if (opts.seedPostReset) for (const [k, v] of Object.entries(opts.seedPostReset)) window.localStorage.setItem(k, v);
       if (opts.seedCache) window.localStorage.setItem("prohor-cache:feed", JSON.stringify({ at: Date.now() - (opts.cacheAge || 60000), sections: opts.cacheFeed || snapshotRaw.sections }));
       if (opts.seedState) window.localStorage.setItem("prohor.state", JSON.stringify(opts.seedState));
       if (opts.seedResults) window.localStorage.setItem("prohor-cache:results", JSON.stringify(opts.seedResults));
@@ -194,6 +199,17 @@ function boot(opts) {
   return A;
 }
 
+// jump a page's clock forward and fire visibilitychange: with no manual refresh left,
+// "the user returns to a stale tab" is the honest way for a test to force a poll
+async function forceStalePoll(I, ms) {
+  const realNow = Date.now;
+  I.__skew = (I.__skew || 0) + ms;
+  I.W.Date.now = () => realNow() + I.__skew;
+  I.W.document.dispatchEvent(new I.W.Event("visibilitychange"));
+  await wait(40);
+  I.W.Date.now = realNow;
+}
+
 (async function main() {
   const A = boot({ deviceMemory: 0.5, cores: 4 });
   await A.ready();
@@ -206,11 +222,15 @@ function boot(opts) {
   ok(A.qa("#dataKv dd").length === kv.length && kv.length >= 7, "popover has a full key/value table", kv.join(","));
   ok(kv.indexOf("Exam slots") >= 0 && A.txt("#dataKv").includes(F.exams.toLocaleString("en-US")), "exam-slot count in the popover", A.qa("#dataKv dd")[4].textContent);
   ok(A.txt("#dataKv").includes(F.courses.toLocaleString("en-US")) && A.txt("#dataKv").includes(F.patterns.toLocaleString("en-US")), "courses + pattern counts in the popover");
-  ok(/auto-refresh in/.test(A.txt("#dataKv")), "auto-refresh countdown present", A.txt("#dataKv").split("Fetched")[1] && A.txt("#dataKv").split("Fetched")[1].trim());
+  ok(!/auto-refresh/.test(A.txt("#dataKv")), "no auto-refresh countdown in the popover", A.txt("#dataKv").split("Fetched")[1] && A.txt("#dataKv").split("Fetched")[1].trim());
   ok(A.q("#dataMeta") === null, "no stats paragraph in the main flow anymore");
 
   /* ---------------- branding + chrome ---------------- */
   ok(/Prohor/.test(A.q("title").textContent), "document title is Prohor", A.txt("title"));
+  ok(A.q("a.lockup") === null && !!A.q("button#resetBtn.lockup"), "the wordmark is a reset <button>; the old <a> lockup is gone");
+  ok(/Reset Prohor/.test(A.q("#resetBtn").dataset.tip || ""), "the reset button explains itself on hover", (A.q("#resetBtn").dataset.tip || "").slice(0, 60));
+  ok(A.q("#refreshBtn") === null && A.q("#seatNow") === null, "no manual refresh affordances in the popover or the rail");
+  ok(!!A.q("#seatPause"), "pause survives (a user control, not a refresh indicator)");
   ok(A.q(".wordmark").textContent.trim() === "Prohor", "wordmark rendered");
   ok(A.q(".unofficial").textContent.trim() === "BRACU", "the header wordmark is short again", A.q(".unofficial").textContent.trim());
   ok(/not affiliated with BRAC University/.test(A.q(".unofficial").dataset.tip), "and the disclaimer is one hover away", A.q(".unofficial").dataset.tip.slice(0, 40));
@@ -338,8 +358,8 @@ function boot(opts) {
 
   /* ---------------- preferences ---------------- */
   const sw = A.qa(".switch");
-  ok(sw.length === 5, "five switches, one per thing you can rank on", sw.map((s) => s.dataset.pref).join(","));
-  ok(sw.map((s) => s.dataset.pref + "=" + s.getAttribute("aria-checked")).join(",") === "examClash=true,fewerDays=true,lessTime=false,minGaps=true,moreChoices=false",
+  ok(sw.length === 7, "seven switches: one per rank term plus the only-open constraint", sw.map((s) => s.dataset.pref).join(","));
+  ok(sw.map((s) => s.dataset.pref + "=" + s.getAttribute("aria-checked")).join(",") === "examClash=true,fewerDays=true,lessTime=false,minGaps=true,moreChoices=false,openSeats=true,onlyOpen=false",
     "default switch states", sw.map(s => s.dataset.pref + "=" + s.getAttribute("aria-checked")).join(","));
   const examTxt = sw[0].closest(".pref-row").querySelector(".txt");
   ok(/confirm in BRACU Connect/.test(examTxt.dataset.tip), "the exam switch warns that the feed invents some finals", examTxt.dataset.tip.slice(0, 60));
@@ -423,7 +443,8 @@ function boot(opts) {
   await B.gen();
   ok(B.cards().length === 0, "ACT201 + CHN101: every combination rejected by the exam check");
   ok(/No routine fits these constraints/.test(B.txt("#resultsBody")), "zero state shown");
-  ok(/turn off “Check exam clashes”/.test(B.txt("#resultsBody")), "zero state suggests turning the exam check off");
+  ok(/The blocker: ACT201 × CHN101/.test(B.txt("#resultsBody")) && /all 60 section pairs/.test(B.txt("#resultsBody")), "the zero state names the culprit pair and the size of the collision", B.txt("#resultsBody").slice(0, 200));
+  ok(/off “Check exam clashes”/.test(B.txt("#resultsBody")), "zero state suggests turning the exam check off");
   ok(/mid or a final on the same date and time/.test(B.q("#resultsBody .muted").dataset.tip), "and explains what a clash is", B.q("#resultsBody .muted").dataset.tip.slice(0, 60));
   ok(/Not every course really has a final/.test(B.q("#resultsBody .muted").dataset.tip), "including that the feed invents some finals", "hover");
   ok(/blocked by exam clashes/.test(B.txt("#resultsDesc")) || /combinations/.test(B.txt("#resultsDesc")), "results line reports what was checked", B.txt("#resultsDesc"));
@@ -599,7 +620,7 @@ function boot(opts) {
   const C1 = boot({ liveFails: true, snapshotFails: true });
   await C1.waitFor(() => /no data available/i.test(C1.txt("#livePill")), 8000, "hard-offline pill");
   ok(/no data available/i.test(C1.txt("#livePill")), "both sources failing is stated plainly", C1.txt("#livePill"));
-  ok(/auto-refresh in 6 h 0 m/.test(A.txt("#livePill")) || /updated/.test(A.txt("#livePill")), "the pill carries the freshness line", A.txt("#livePill"));
+  ok(!/auto-refresh/.test(A.txt("#livePill")), "the pill no longer promises an auto-refresh", A.txt("#livePill"));
   ok(!!C1.q("#retryData"), "a retry affordance is offered");
   C1.click("#genBtn"); await wait(80);
   ok(/Waiting for data/.test(C1.txt("#genBtn")), "generate while offline says it is waiting, not broken", C1.txt("#genBtn"));
@@ -607,6 +628,7 @@ function boot(opts) {
   const C2 = boot({ liveFails: true });
   await C2.ready();
   ok(/Offline copy/.test(C2.txt("#livePill")), "falls back to the bundled snapshot automatically", C2.txt("#livePill"));
+  ok(/saved [A-Z][a-z]{2}, [A-Z][a-z]{2} \d+, 20\d\d/.test(C2.txt("#livePill")), "the offline copy is stamped with its snapshot date", C2.txt("#livePill"));
   ok(C2.calls.live >= 1 && C2.calls.snapshot === 1, "live first, then snapshot", JSON.stringify(C2.calls));
   ok(C2.calls.live >= 2, "the seat rail keeps re-checking the live feed on its own timer", JSON.stringify(C2.calls));
   await C2.add("CSE221"); await C2.add("MAT216");
@@ -1058,10 +1080,11 @@ function boot(opts) {
   ok(K2.q("#railBody .seatbox.pinned").querySelectorAll(".srow").length === 2, "unpinning one leaves the others alone");
   // the footnote must match the real cadence
   const k2Foot = K2.q("#railFoot").textContent;
-  ok(/every 8 s/.test(k2Foot) && /while this panel is open/.test(k2Foot), "footnote matches the open-panel cadence", k2Foot.slice(0, 130));
+  ok(/kept up to date automatically/.test(k2Foot), "the footnote promises automatic freshness, not an interval", k2Foot.slice(0, 130));
   K2.click("#seatsClose"); await K2.wait(320);
-  ok(/every 30 s/.test(K2.q("#railFoot").textContent) && /background/.test(K2.q("#railFoot").textContent), "and the background cadence when closed", K2.q("#railFoot").textContent.slice(0, 130));
-  ok(!/every 30 s/.test(k2Foot), "the old hard-coded 30 s claim is gone");
+  ok(/kept up to date automatically/.test(K2.q("#railFoot").textContent), "and the footnote is the same with the panel closed", K2.q("#railFoot").textContent.slice(0, 130));
+  ok(!/every \d+ s/.test(K2.q("#railFoot").textContent) && !/every \d+ s/.test(k2Foot), "no polling interval is quoted anywhere in the rail", k2Foot);
+  ok(!/every \d+ s/.test(K2.q("#seatAgo").textContent), "the freshness line carries no interval suffix", K2.q("#seatAgo").textContent);
   ok(K2.W.localStorage.getItem("prohor.seatsMode") === "closed", "closed is the one setting that is remembered", K2.W.localStorage.getItem("prohor.seatsMode"));
   // exam + day colours in the seat rows
   K2.click("#seatsBtn"); await K2.wait(140);
@@ -1200,16 +1223,18 @@ function boot(opts) {
   R.click("#seatPause"); await R.wait(60);
   ok(R.q("#seatPause").textContent === "Pause", "resume restores it");
 
-  // a seat refresh must not disturb the routine page at all
+  // manual refresh is gone; the once-a-second rail clock must not disturb the routine page
   const listHtml = R.q("#resultsBody").innerHTML;
   const descHtml = R.q("#resultsDesc").textContent;
   const genDisabledBefore = R.q("#genBtn").disabled;
-  R.click("#seatNow");
-  await R.wait(900);
-  ok(R.q("#resultsBody").innerHTML === listHtml, "results markup is byte-identical after a seat refresh");
+  ok(R.q("#seatNow") === null && R.q("#refreshBtn") === null, "no manual refresh buttons anywhere");
+  const ago1 = R.q("#seatAgo").textContent;
+  await R.wait(2300);
+  ok(R.q("#resultsBody").innerHTML === listHtml, "results markup is byte-identical across rail clock repaints");
   ok(R.q("#resultsDesc").textContent === descHtml, "the results summary is untouched");
   ok(R.q("#genBtn").disabled === genDisabledBefore, "the search state is untouched");
   ok(/updated \d+ s ago/.test(R.q("#seatAgo").textContent), "the rail reports its own clock", R.q("#seatAgo").textContent);
+  ok(R.q("#seatAgo").textContent !== ago1, "the freshness line ticks every second", ago1 + " -> " + R.q("#seatAgo").textContent);
   ok(pageRows().length > 0 && pageRows().every((r) => r.querySelector(".seat")), "every seat row keeps a seat pill");
 
   console.log("\n--- a half-delivered feed is refused, not adopted ---");
@@ -1460,7 +1485,7 @@ function boot(opts) {
     "the footnote says the same, bluntly", SEM.txt("#railFoot"));
   ok(/[A-Z][a-z]{2} \d{1,2}, \d{4}/.test(SEM.txt("#railFoot")) && !/\d{10}/.test(SEM.txt("#railFoot")),
     "the footnote names the filing date, not the raw epoch", SEM.txt("#railFoot"));
-  ok(SEM.q("#seatPause").hidden === false && SEM.q("#seatNow").hidden === false, "pause / refresh keep working while browsing the past");
+  ok(SEM.q("#seatPause") !== null && SEM.q("#seatPause").hidden === false, "pause keeps working while browsing the past");
   ok(await SEM.waitFor(() => /updated|first seat/.test(SEM.txt("#seatAgo") || ""), 6000, "live clock while past"),
     "and the seat clock keeps ticking there", SEM.txt("#seatAgo"));
   const boxes = SEM.qa("#railBody .seatbox");
@@ -1483,7 +1508,7 @@ function boot(opts) {
   ok(/Fall 2026/.test(SEM.txt("#semLabel")) && /tracked/.test(SEM.txt("#railSub")) && !/catalogue:/.test(SEM.txt("#railSub")),
     "switching back to live restores the feed", SEM.txt("#semLabel") + " / " + SEM.txt("#railSub"));
   ok(SEM.qa("#railBody .coursebtn").length > 10, "and the live lists come back", SEM.qa("#railBody .coursebtn").length);
-  ok(SEM.q("#seatPause").hidden === false && SEM.q("#seatNow").hidden === false, "the live controls come back too");
+  ok(SEM.q("#seatPause") !== null && SEM.q("#seatPause").hidden === false, "the live controls come back too");
   try { SEM.dom.close(); } catch (e) { }
 
   // a semester that is filed is never filed twice, and the panel keeps its own copy
@@ -1585,7 +1610,7 @@ function boot(opts) {
     const calmTip = calm ? calm.getAttribute("data-tip") : null;
     FLASH.q("#railBody").scrollTop = 150;
     feed = seatMoved;
-    FLASH.click("#seatNow");
+    await forceStalePoll(FLASH, 20000);          // return to a tab whose seat data is 20 s old
     await FLASH.waitFor(() => flashed().length > 0, 6000, "flash after the poll");
     const firstFlash = flashed();
     ok(firstFlash.length >= 1, "the moved section flashes", firstFlash.length);
@@ -1601,7 +1626,7 @@ function boot(opts) {
     ok(flashed().length === 0, "a re-render (fold) never replays the flash", flashed().length);
     ok(FLASH.q("#railBody").scrollTop === 150, "and a structural re-render restores the scroll offset", FLASH.q("#railBody").scrollTop);
     feed = seatBase;
-    FLASH.click("#seatNow");
+    await forceStalePoll(FLASH, 20000);
     await FLASH.waitFor(() => flashed().length > 0, 6000, "flash on the next change");
     ok(flashed().length > 0, "a fresh change flashes again", flashed().length);
     ok(FLASH.q("#railBody").scrollTop === 150, "still without moving the list", FLASH.q("#railBody").scrollTop);
@@ -1629,7 +1654,7 @@ function boot(opts) {
   const facMemLS = () => JSON.parse(FAC.W.localStorage.getItem("prohor.facmem") || "{}");
   const semLS = () => (JSON.parse(FAC.W.localStorage.getItem("prohor.semesters") || "{}").list || {});
   const railRow = (sec) => FAC.qa("#railBody .srow").filter((r) => r.textContent.includes("[" + sec + "]"));
-  const refresh = async () => { FAC.click("#livePill"); await FAC.wait(80); FAC.click("#refreshBtn"); await FAC.ready(); await FAC.wait(150); };
+  const refresh = async () => { await forceStalePoll(FAC, 11 * 60 * 1000); await FAC.ready(); await FAC.wait(150); };
   FAC.click("#seatsBtn"); await FAC.wait(220);
   facFeed = flipFeed("IBA", 20263);                           // A gets a teacher
   await refresh();
@@ -1689,6 +1714,116 @@ function boot(opts) {
   ok(/&lt;img/.test(XF.d.body.innerHTML), "the markup renders as inert visible text instead");
   ok(errors.length === 0, "no page errors through the hostile-feed drive", errors.slice(0, 2).join(" | "));
   try { XF.dom.close(); } catch (e) { }
+
+  /* ---------------------------- seat-aware ranking + only-open ---------------------------- */
+  console.log("\n--- seat-aware ranking, only-open, calendar mix ---");
+  const flip = async (I, pref) => {
+    const sw = I.qa(".switch").find((x) => x.dataset.pref === pref);
+    if (!sw) throw new Error("no switch " + pref);
+    I.click(sw.closest(".pref-row")); await I.wait(60);
+  };
+  ok(A.qa(".switch").some((x) => x.dataset.pref === "openSeats" && x.getAttribute("aria-checked") === "true"), "“prefer free seats” exists and defaults on");
+  ok(A.qa(".switch").some((x) => x.dataset.pref === "onlyOpen" && x.getAttribute("aria-checked") === "false"), "“only sections with seats” exists and defaults off");
+
+  const SO = boot({});
+  await SO.ready();
+  await SO.add("ACT202");                                    // every ACT202 section in the fixture is full
+  await flip(SO, "onlyOpen");
+  await SO.gen();
+  ok(SO.cards().length === 0 && /every section is full right now/.test(SO.txt("#resultsBody")), "a fully-full course is named as such under the only-open filter", SO.txt("#resultsBody").replace(/<[^>]+>/g, "").slice(0, 160));
+  await flip(SO, "onlyOpen");
+  await SO.gen();
+  ok(SO.cards().length > 0, "turning the filter off plans with the full sections again", SO.cards().length);
+  try { SO.dom.close(); } catch (e) { }
+
+  const OL = boot({});
+  await OL.ready();
+  await OL.add("CSE320");                                    // snapshot: only [03] and [02] of 11 sections have seats
+  await flip(OL, "onlyOpen");
+  await OL.gen();
+  ok(OL.cards().length > 0, "CSE320 still generates with only-open on", OL.cards().length);
+  const fullSecs = new Set(fixture.courses.CSE320.sections.filter((x) => x.cap != null && x.used != null && x.used >= x.cap).map((x) => String(x.sec)));
+  const chosenSecs = OL.qa("#resultsBody .routine .r-sec b.mono").map((x) => x.textContent.replace(/[\[\]]/g, "").trim());
+  ok(chosenSecs.length > 0 && chosenSecs.every((x) => !fullSecs.has(x)), "every section the routine uses has a free seat", "chosen [" + chosenSecs.join(", ") + "] vs full [" + [...fullSecs].join(", ") + "]");
+  try { OL.dom.close(); } catch (e) { }
+
+  const MX = boot({});
+  await MX.ready();
+  ok(MX.q("#calWarn") !== null && MX.q("#calWarn").hidden, "no calendar warning on an empty plan");
+  await MX.add("CSE221");
+  ok(MX.q("#calWarn").hidden, "a single course never warns");
+  await MX.add("LAW307");                                    // starts 2026-09-12; CSE221 starts 2026-10-03
+  ok(!MX.q("#calWarn").hidden && /CSE221/.test(MX.q("#calWarn").textContent) && /LAW307/.test(MX.q("#calWarn").textContent) && /different academic calendars/.test(MX.q("#calWarn").textContent), "mixed academic calendars are called out with the dates", MX.q("#calWarn").textContent.slice(0, 160));
+  try { MX.dom.close(); } catch (e) { }
+
+  /* ---------------------------- device reset (the wordmark) ---------------------------- */
+  console.log("\n--- device reset ---");
+  const RS = boot({ url: "https://routine.test/?c=CSE221" });
+  await RS.ready();
+  await RS.add("MAT216");
+  RS.d.documentElement.setAttribute("data-theme", "dark");
+  RS.W.localStorage.setItem("prohor.theme", "dark");
+  ok(RS.qa("#courses .course").length >= 1, "reset setup: a URL pick and a manual pick are in");
+  ok(/c=CSE221/.test(RS.W.location.search), "reset setup: the URL carries the share link", RS.W.location.search);
+  RS.click("#resetBtn"); await RS.wait(120);
+  ok(!!RS.q("#resetDlg") && RS.q("#resetDlg").open, "the wordmark opens a confirm dialog");
+  RS.click("#resetCancel"); await RS.wait(120);
+  ok(!RS.q("#resetDlg").open && RS.qa("#courses .course").length >= 1, "cancel leaves everything untouched");
+  RS.click("#resetBtn"); await RS.wait(80);
+  RS.click("#resetConfirm"); await RS.wait(500);
+  ok(!RS.q("#resetDlg").open, "confirm closes the dialog");
+  ok(RS.qa("#courses .course").length === 0, "courses cleared");
+  ok(/0 courses/.test(RS.q("#summary").textContent), "the summary is back to zero", RS.q("#summary").textContent);
+  ok(!/[?&]c=/.test(RS.W.location.search), "the share-link params are gone", RS.W.location.search || "(bare URL)");
+  ok(RS.W.localStorage.getItem("prohor.semesters") === null, "prohor.semesters wiped");
+  ok(RS.W.localStorage.getItem("prohor.facmem") === null, "prohor.facmem wiped");
+  ok(RS.W.localStorage.getItem("prohor.theme") !== "dark", "the saved theme preference is gone", RS.W.localStorage.getItem("prohor.theme"));
+  const navBefore = (RS.W.performance.getEntriesByType && RS.W.performance.getEntriesByType("navigation") || []).length;
+  const navAfter = (RS.W.performance.getEntriesByType && RS.W.performance.getEntriesByType("navigation") || []).length;
+  ok(navAfter === navBefore, "reset never reloads the page", navBefore + " -> " + navAfter);
+  await RS.waitFor(() => RS.q("#livePill").getAttribute("data-state") !== "busy", 10000, "feed reloaded after reset");
+  ok(/cleared/.test(RS.txt("#toasts")), "a toast says what was cleared", RS.txt("#toasts").slice(0, 90));
+  const cacheAfter = JSON.parse(RS.W.localStorage.getItem("prohor-cache:feed") || "null");
+  ok(cacheAfter && cacheAfter.sections.length === F.sections, "the wipe-and-refetch cycle refilled the cache", cacheAfter && cacheAfter.sections.length);
+  await RS.add("CSE221");
+  ok(RS.qa("#courses .course").length === 1, "the app still accepts courses after a reset");
+  await RS.gen();
+  ok(RS.cards().length > 0, "and still generates routines after a reset", RS.cards().length);
+  RS.click("#resetBtn"); await RS.wait(80);
+  RS.click("#resetConfirm"); await RS.wait(400);
+  ok(RS.qa("#courses .course").length === 0, "a second reset in a row also works");
+  // what a reload after reset sees: exactly what reset left on the device
+  const leftovers = {};
+  for (let i = 0; i < RS.W.localStorage.length; i++) { const k = RS.W.localStorage.key(i); leftovers[k] = RS.W.localStorage.getItem(k); }
+  const RL = boot({ seedPostReset: leftovers });
+  await RL.ready();
+  ok(RL.qa("#courses .course").length === 0, "a reload after reset boots with defaults, nothing resurrected");
+  ok(!RL.q("#resultsBody .routine"), "no stale routines reappear after a post-reset reload");
+  ok(RL.q("#resetBtn").getAttribute("type") === "button" && /outline:2px solid/.test(cssSrc.replace(/\s+/g, " ").match(/\.lockup:focus-visible\{[^}]*\}/)[0]), "reset is a real button with a visible focus ring (keyboard-reachable)");
+  ok(!/@media[^{]*640[^{]*\{[^}]*\.lockup/.test(cssSrc), "the wordmark is never hidden on small screens");
+  try { RL.dom.close(); } catch (e) { }
+  try { RS.dom.close(); } catch (e) { }
+
+  /* -- critic: reset mid-search, and reset with the seats rail open -- */
+  console.log("\n--- reset under fire ---");
+  const RU = boot({});
+  await RU.ready();
+  for (const c of ["CSE221", "MAT216", "CSE320", "CSE250", "CSE101", "PHY111"]) await RU.add(c);
+  RU.click("#genBtn");
+  await RU.wait(120);                                        // the enumeration is running in batches
+  ok(RU.qa("#resultsBody .routine").length > 0 || /combinations/.test(RU.q("#progTxt").textContent), "the 6-course search has a live first batch on the page");
+  RU.click("#seatsBtn"); await RU.wait(160);                 // rail open while it all goes down
+  ok(RU.q("#seatsLayer") && !RU.q("#seatsLayer").hidden, "the seats rail is open");
+  RU.click("#resetBtn"); await RU.wait(80);
+  RU.click("#resetConfirm"); await RU.wait(600);
+  ok(RU.qa("#courses .course").length === 0, "a mid-flight search does not survive a reset");
+  ok(RU.q("#seatsLayer").hidden, "and the open seats rail closes back up", RU.q("#seatsLayer").className);
+  ok(!RU.q("#prog").hidden === false, "the progress bar is stowed");
+  await RU.waitFor(() => RU.q("#livePill").getAttribute("data-state") !== "busy", 10000, "post-reset feed");
+  await RU.add("CSE221");
+  await RU.gen();
+  ok(RU.cards().length > 0, "and the app generates normally afterwards", RU.cards().length);
+  try { RU.dom.close(); } catch (e) { }
 
   log("\n" + (fail ? fail + " CHECK(S) FAILED" : "ALL BROWSER CHECKS PASSED"));
   process.exit(fail ? 1 : 0);

@@ -97,10 +97,10 @@ installable as a PWA.
   in sync through `storage` events.
 - Three boxes — **On this routine page**, **Your courses**, **All courses** (collapsed per
   course) — plus a **Pinned** box (up to 50 sections) for watching specific seat counts.
-- Free seats = `capacity − consumedSeat`, refreshed from the live feed every 8 s while open and
-  every 30 s in the background, in a dedicated worker so polling can never disturb a running
-  search. Failures back off up to 8 minutes. Over-subscribed sections read `full · +5 over`,
-  never a negative number.
+- Free seats = `capacity − consumedSeat`, refreshed from the live feed every 30 s while seats
+  are on and every 60 s when the tab is in the background, in a dedicated worker so polling can
+  never disturb a running search. Failures back off up to 8 minutes. Over-subscribed sections
+  read `full · +5 over`, never a negative number.
 - **Whenever a section's seat number changes, every row showing that section — in every box —
   pulses a soft translucent green wash exactly once**, in light and dark themes alike. The tint
   sits behind the labels so every detail stays readable, folding or re-filtering never replays
@@ -202,18 +202,19 @@ connect.json (live) ──► core.fromApi ──► buildIndex ──► course
 ## Data loading and caching
 
 1. On open, the live feed is fetched and stored in IndexedDB (localStorage fallback).
-2. For the next 6 hours the page paints instantly from cache while a quiet background
-   revalidation runs; after 6 hours the next load, a 60-second tick in a long-open tab, or the tab
-   becoming visible again triggers a refetch.
+2. For the next 10 minutes the page paints instantly from cache while a quiet background
+   revalidation runs; after 10 minutes the next load, a 60-second tick in a long-open tab, or the
+   tab becoming visible again triggers a refetch.
 3. If the live feed cannot be reached, the app falls back to the bundled `snapshot.json`, then
    to the last cached copy of any age. The header pill always states which source is on screen
-   (*Live*, *Cached*, *Offline copy*, *Stale copy*), and **Refresh** forces a re-fetch.
+   (*Live*, *Cached*, *Offline copy*, *Stale copy*). There is no manual refresh — the
+   10-minute poll keeps the feed current on its own.
 4. When the saved feed is old, the page races the live endpoint against `snapshot.json` and
    paints from whichever answers first, then quietly upgrades to live data — pattern keys are
    content-based, so locked slots survive the swap. A pending **Generate** press is queued and
    runs once data lands.
 5. Revalidation compares a **content fingerprint**, not a section count: a refresh that returns
-   the same sections rolls the clock without rebuilding (Refresh is effectively free), and a
+   the same sections rolls the clock without rebuilding (a poll is effectively free), and a
    republish that edits rooms or exams at the *same* section count is noticed and rebuilt
    instead of being served stale while claiming to be live. When the feed moves to a new
    session, the previous semester is filed on the device automatically, pins on dropped sections
@@ -225,11 +226,12 @@ connect.json (live) ──► core.fromApi ──► buildIndex ──► course
   interleave with an enumeration; results never re-render the routine list (a test asserts
   `#resultsBody` is byte-identical across a seat refresh), and rail repaints are coalesced to
   idle time.
-- Cadence: 8 s while the panel is open, 30 s in the background, exponential backoff on failure
-  (30 s → … → 8 min). **Pause** and **Check now** sit in the panel header; the footnote is
-  generated from the live cadence so it always says exactly what is happening.
-- 8 s is a deliberate floor: each poll pulls the ~3.3 MB feed, so faster polling would cost a
-  phone's data plan and the CDN's bandwidth for little gain.
+- Cadence: 30 s while seats are on, 60 s while the tab is hidden, exponential backoff on
+  failure (30 s → … → 8 min). **Pause** sits in the panel header; there is no manual refresh —
+  the polling keeps the numbers current on its own.
+- 30 s is a deliberate floor: each poll pulls the ~3.3 MB feed (the CDN itself regenerates on a
+  ~60 s clock), so faster polling would cost a phone's data plan and the CDN's bandwidth for
+  little gain.
 
 ## Running locally
 
@@ -268,7 +270,7 @@ There is no backend, so "many users" never touches your quota the way a dynamic 
   with Brotli) served as files. On the free Hobby tier (100 GB/month) that is on the order of a
   hundred thousand first visits a month; repeat visitors mostly revalidate.
 - **What a visitor costs themselves:** live feed + seat polling (`≈ 3.3 MB` per poll of
-  `connect.json`, every 8 s with the panel open and 30 s in the background) — this traffic goes
+  `connect.json`, every 30 s with seats on and 60 s in the background) — this traffic goes
   to the Connect-CDN, not to your hosting bandwidth, and it is why the cadence is capped and
   failures back off exponentially instead of hammering the upstream.
 - **No runtime to scale:** the search runs in a worker on the user's own device; there are no

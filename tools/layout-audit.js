@@ -143,7 +143,6 @@ const PAGE_TARGETS = [
   ["#seatSearch", "seat filter", "any"],
   ["#railBody .srow [data-pin]", "a section's pin button", "any"],
   ["#railBody .coursebtn", "a course row", "any"],
-  ["#seatNow", "check now", "any"],
 ];
 
 (async () => {

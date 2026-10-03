@@ -440,9 +440,18 @@
     // events are shared by every section of the group; rooms/exams are per section
     g.events.forEach(function (e) { evA.push([e.day, e.start, e.end]); });
     var exA = (g.exams || []).map(function (x) { return [x.date, x.start, x.end]; });
+    // seat health of the pattern: how many of its sections are completely full vs
+    // still have a seat (an unknown count is never punished, just counted open)
+    var open = 0, full = 0;
+    for (var i = 0; i < sections.length; i++) {
+      var sc = sections[i];
+      if (sc.cap != null && sc.used != null && sc.used >= sc.cap) full++;
+      else open++;
+    }
     return {
       key: g.key, code: code, label: g.label, group: g, sections: sections,
       events: g.events, count: sections.length, evA: evA, exA: exA, mask: g.mask,
+      open: open, full: full,
       examVaried: !!g.examVaried
     };
   }
@@ -467,6 +476,7 @@
     var facs = row && row.faculties && row.faculties.length ? row.faculties : null;
     var only = row && row.onlySections && row.onlySections.length ? row.onlySections.map(String) : null;
     var avoid = filters.avoidFaculty || [];
+    var onlyOpen = !!filters.onlyOpen;
     var out = [];
     (C.groups || []).forEach(function (g) {
       if (picked && picked.indexOf(g.key) < 0) return;
@@ -475,6 +485,8 @@
         if (only && only.indexOf(String(s.sec)) < 0) return false;
         if (facs && !s.faculties.some(function (f) { return facs.indexOf(f) >= 0; })) return false;
         if (avoid.length && s.faculties.some(function (f) { return avoid.indexOf(f) >= 0; })) return false;
+        // "only sections with seats": a completely full section is not a choice
+        if (onlyOpen && s.cap != null && s.used != null && s.used >= s.cap) return false;
         return true;
       });
       if (!secs.length) return;
@@ -585,10 +597,11 @@
     }
 
     function scoreOf(ci) {
-      var perDay = {}, events = [], days = 0, alt = 1, earliest = 1440, latest = 0;
+      var perDay = {}, events = [], days = 0, alt = 1, full = 0, earliest = 1440, latest = 0;
       for (var z = 0; z < N; z++) {
         var cand = R[z].candidates[ci[z]];
         alt *= cand.count;
+        full += cand.full || 0;
         for (var k = 0; k < cand.events.length; k++) {
           var ev = cand.events[k];
           (perDay[ev.day] = perDay[ev.day] || []).push(ev);
@@ -613,6 +626,10 @@
       if (prefs.preferLessTime !== false) v += span * 10;
       if (prefs.preferGaps !== false) v += gaps + longest * 10;
       if (prefs.preferAlt && alt > 1) v -= Math.min(90000, 30000 * (Math.log(alt) / Math.LN2));
+      // a completely-full section is a plan that can still fail at registration: rank the
+      // seat-aware patterns above the ones that depend on someone dropping first (worth
+      // less than an extra day on campus, worth more than a few saved minutes of gaps)
+      if (prefs.preferOpenSeats !== false && full) v += full * 25000;
       return { days: dayNos.length, dayNos: dayNos, gaps: gaps, span: span, longest: longest, early: early, alt: alt, score: v };
     }
 
@@ -1276,8 +1293,17 @@
       ctx.fillStyle = hue.line; ctx.fillRect(bx, by, 3, bh);
       if (b.clash) { ctx.strokeStyle = L.danger; ctx.lineWidth = 1.5; ctx.strokeRect(bx + .75, by + .75, bw - 1.5, bh - 1.5); }
       if (b.lab) {
+        // Hatch strictly inside the lab box. Each 45-degree line runs the full block
+        // height diagonally, so unclipped they poke out of the left edge (s < 0) and
+        // reach into the neighbouring time-slot column (s + bh > bw). The Node test
+        // stub context has no clip, so fall back to the raw strokes there.
         ctx.strokeStyle = "rgba(127,127,127,.16)"; ctx.lineWidth = 1;
+        var clippedHatch = false;
+        if (ctx.save && ctx.beginPath && ctx.rect && ctx.clip && ctx.restore) {
+          ctx.save(); ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip(); clippedHatch = true;
+        }
         for (var s = -bh; s < bw; s += 8) { ctx.beginPath(); ctx.moveTo(bx + s, by + bh); ctx.lineTo(bx + s + bh, by); ctx.stroke(); }
+        if (clippedHatch) ctx.restore();
       }
       var tx = bx + 9, ty = by + 6;
       setFont(11.5, 600); ctx.fillStyle = hue.text;
