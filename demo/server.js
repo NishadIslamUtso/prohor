@@ -1,7 +1,8 @@
 /*
  * Prohor demo server — one process serves both the real app and the mock-data demo.
  *
- *   /                    the real app, unmodified (its feed is still the live CDN)
+ *   /                    redirects to /demo, so the sandbox preview opens the demo
+ *   /app                 the real app, unmodified (its feed is still the live CDN)
  *   /demo                the same app, but fed by a mock CDN that mutates on every poll
  *                        (seats drift, TBA faculties get named, faculties occasionally swap)
  *                        and knows a second semester (Spring 2027) you can switch to, so
@@ -60,6 +61,15 @@ const server = http.createServer((req, res) => {
     return send(res, 200, JSON.stringify({ sems: mock.sems, labels: mock.labels }), "application/json");
   }
 
+  if (p === "/" || p === "") {
+    res.writeHead(302, { Location: "/demo" });
+    return res.end();
+  }
+
+  if (p === "/app") {
+    return send(res, 200, indexHtml, "text/html; charset=utf-8");
+  }
+
   if (p === "/demo" || p === "/demo/") {
     // the real index.html with two demo scripts injected after core.js:
     // the shim retargets the feed + hands the mock URL to the seat worker,
@@ -87,7 +97,8 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log("Prohor demo server");
-  console.log("  real app : http://localhost:" + PORT + "/");
-  console.log("  mock demo: http://localhost:" + PORT + "/demo");
+  console.log("  /        -> demo (redirect)");
+  console.log("  demo     : http://localhost:" + PORT + "/demo");
+  console.log("  real app : http://localhost:" + PORT + "/app");
   console.log("  mock feed: http://localhost:" + PORT + "/mock/connect.json?sem=autumn26|spring27");
 });
