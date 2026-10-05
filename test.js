@@ -354,7 +354,7 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   const choices = Core.sectionChoices(K, {}, noFilters);
   ok(choices.length === K.sections.length, "one row per section", choices.length + " vs " + K.sections.length);
   ok(choices.every((x) => x.viable && !x.reason), "everything is available with no other filters");
-  ok(choices[0].sec < choices[choices.length - 1].sec || true, "rows are ordered by section number", choices[0].sec + "→" + choices[choices.length - 1].sec);
+  ok(choices.every((x, i) => !i || String(choices[i - 1].sec).localeCompare(String(x.sec), undefined, { numeric: true }) <= 0), "rows are ordered by section number", choices[0].sec + "→" + choices[choices.length - 1].sec);
   const sample = choices[0];
   ok(!!sample.label && !!sample.pattern && typeof sample.room === "string" || sample.room === null, "rows carry label, pattern and room", JSON.stringify({ l: sample.label, p: sample.pattern, r: sample.room }));
 
@@ -375,6 +375,34 @@ console.log("\n--- routineText sample ---\n" + txt.split("\n").slice(0, 14).join
   const g = Core.generate(rows, { minDays: 1, maxDays: 6, topK: 20 });
   ok(g.ok && g.routines.every((x) => x.picks[0].count <= 3 && x.alt <= 3), "generate() honours the restriction", g.routines[0] && "alt=" + g.routines[0].alt);
 })();
+
+// A pattern is usable if any eligible section has seats, even when its alternatives are full.
+{
+  const base = Core.candidatesFor(iSnap.courses.CSE221, {}, {})[0];
+  const candidates = [
+    Object.assign({}, base, { key: "mixed", full: 3, open: 1, count: 4 }),
+    Object.assign({}, base, { key: "open", full: 0, open: 1, count: 1 }),
+    Object.assign({}, base, { key: "full", full: 4, open: 0, count: 4 })
+  ];
+  const rows = [{ code: "CSE221", candidates }];
+  const prefs = { preferFewerDays: false, preferLessTime: false, preferGaps: false, preferOpenSeats: true };
+  const items = Core.createEnumerator(rows, prefs).next({ want: 10, sort: false }).items;
+  ok(items[0].score === items[1].score && items[2].score > items[0].score, "seat preference penalises only entirely-full patterns");
+  const ignored = Core.createEnumerator(rows, Object.assign({}, prefs, { preferOpenSeats: false })).next({ want: 10 }).items;
+  ok(ignored.every(it => it.score === 0), "ignoring availability adds no seat penalty");
+  ok(items.every(it => it.earliest === Math.min(...base.events.map(e => e.start)) && it.latest === Math.max(...base.events.map(e => e.end))), "descriptors carry actual earliest start and latest finish");
+}
+
+{
+  const badCounts = ["unknown", "", "Infinity", -1, false, {}, null];
+  for (const cap of badCounts) {
+    const raw = { c: "BAD101", sec: "01", cap, used: 2, cls: [[0, 480, 560]], lab: [] };
+    const seat = Core.seatRows({ sections: [raw] })[0];
+    const section = Core.buildIndex([raw]).courses.BAD101.sections[0];
+    ok(seat[2] === null && seat[4] === null && section.cap === null, "malformed capacity remains unknown in rail and catalogue", JSON.stringify(cap));
+  }
+  ok(Core.fromApi({ sections: { length: 1000000000 } }).length === 0 && Core.seatRows({ data: "bad" }).length === 0, "non-array feed wrappers are rejected");
+}
 
 console.log("\n" + (fail ? fail + " CHECK(S) FAILED" : "ALL CHECKS PASSED"));
 process.exit(fail ? 1 : 0);

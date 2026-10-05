@@ -2,7 +2,7 @@
 """Build a compact offline snapshot (snapshot.json) from a raw connect.json dump.
 
 Usage:
-    python3 tools/build-snapshot.py [--in connect.json] [--out routine-generator/snapshot.json]
+    python3 tools/build-snapshot.py [--in connect.json] [--out snapshot.json]
 
 The app fetches the live URL first and falls back to this file when offline.
 """
@@ -32,7 +32,7 @@ def ev(rows):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="src", default="connect.json")
-    ap.add_argument("--out", dest="dst", default="routine-generator/snapshot.json")
+    ap.add_argument("--out", dest="dst", default="snapshot.json")
     ap.add_argument("--url", default="https://usis-cdn.eniamza.com/connect.json")
     args = ap.parse_args()
 

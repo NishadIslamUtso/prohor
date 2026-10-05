@@ -70,11 +70,16 @@ function boot(opts) {
   reapWindows(3);
   const calls = { live: 0, snapshot: 0, names: 0 };
   const paint = { texts: [], rects: 0, strokes: 0, arcs: 0, fills: [], strokes2: [] };
-  const dom = new JSDOM(htmlSrc.replace('<script src="./core.js"></script>', "<script>" + coreSrc + "</scr" + "ipt>"), {
+  const dom = new JSDOM(htmlSrc.replace(/<script src="\.\/core\.js(?:\?[^"]*)?"><\/script>/, "<script>" + coreSrc + "</scr" + "ipt>"), {
     url: opts.url || "https://routine.test/", runScripts: "dangerously", pretendToBeVisual: true, virtualConsole,
     beforeParse(window) {
       if (opts.deviceMemory !== undefined) Object.defineProperty(window.navigator, "deviceMemory", { value: opts.deviceMemory, configurable: true });
       if (opts.cores) Object.defineProperty(window.navigator, "hardwareConcurrency", { value: opts.cores, configurable: true });
+      if (opts.workerFactory) window.Worker = opts.workerFactory(window);
+      if (opts.fastDeadline) {
+        const timer = window.setTimeout.bind(window);
+        window.setTimeout = (fn, ms, ...args) => timer(fn, ms === 15000 || ms === 20000 ? opts.fastDeadline : ms, ...args);
+      }
       window.matchMedia = (q) => ({ matches: !!opts.mobile && /max-width:\s*700px/.test(String(q)), media: q, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
       try { Object.defineProperty(window, "innerWidth", { value: opts.width || 1280, configurable: true, writable: true }); } catch (e) { }
       try { Object.defineProperty(window, "innerHeight", { value: 900, configurable: true, writable: true }); } catch (e) { }
@@ -101,6 +106,7 @@ function boot(opts) {
         const url = String(u);
         if (url.includes("connect.json")) {
           calls.live++;
+          if (opts.hangLive) return new Promise(() => {});
           if (opts.liveFails) throw new TypeError("Failed to fetch (offline)");
           if (opts.tinyLive) return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ sections: snapshotRaw.sections.slice(0, 3) }) };
           if (opts.slowLive) await wait(opts.slowLive);
@@ -110,7 +116,10 @@ function boot(opts) {
           if (opts.liveFn) return { ok: true, status: 200, headers: { get: () => null }, json: async () => JSON.parse(JSON.stringify(opts.liveFn())) };
           return { ok: true, status: 200, headers: { get: () => null }, json: async () => (opts.liveFeed || liveRaw || snapshotRaw) };
         }
-        if (url.includes("snapshot.json")) { calls.snapshot++; if (opts.snapshotFails) throw new Error("offline"); return { ok: true, status: 200, headers: { get: () => null }, json: async () => snapshotRaw }; }
+        if (url.includes("snapshot.json")) { calls.snapshot++; if (opts.slowSnapshot) await wait(opts.slowSnapshot); if (opts.snapshotFails) throw new Error("offline"); return { ok: true, status: 200, headers: { get: () => null }, json: async () => snapshotRaw }; }
+        if (url.includes("data/semesters/index.json")) return { ok: true, json: async () => ({ schemaVersion: 1, semesters: Object.keys(opts.seedSemesters || {}) }) };
+        const archiveMatch = url.match(/data\/semesters\/(\d{5})\.json/);
+        if (archiveMatch && opts.seedSemesters && opts.seedSemesters[archiveMatch[1]]) return { ok: true, json: async () => opts.seedSemesters[archiveMatch[1]] };
         if (url.includes("faculty-names.json")) { calls.names++; return { ok: true, status: 200, headers: { get: () => null }, json: async () => namesRaw }; }
         return { ok: false, status: 404, json: async () => { throw new Error("404"); }, headers: { get: () => null } };
       };
@@ -118,10 +127,7 @@ function boot(opts) {
       if (opts.seedCache) window.localStorage.setItem("prohor-cache:feed", JSON.stringify({ at: Date.now() - (opts.cacheAge || 60000), sections: opts.cacheFeed || snapshotRaw.sections }));
       if (opts.seedState) window.localStorage.setItem("prohor.state", JSON.stringify(opts.seedState));
       if (opts.seedResults) window.localStorage.setItem("prohor-cache:results", JSON.stringify(opts.seedResults));
-      if (opts.seedSemesters) window.localStorage.setItem("prohor.semesters", JSON.stringify({ list: opts.seedSemesters }));
-      // the store module's localStorage mirror ("prohor-cache:" + key) — how the archive looks
-      // to a browser where IndexedDB is the store that got the fresh write
-      if (opts.seedSemestersStore) window.localStorage.setItem("prohor-cache:prohor.semesters", JSON.stringify({ list: opts.seedSemestersStore }));
+
     }
   });
   const d = dom.window.document, W = dom.window;
@@ -199,8 +205,7 @@ function boot(opts) {
   return A;
 }
 
-// jump a page's clock forward and fire visibilitychange: with no manual refresh left,
-// "the user returns to a stale tab" is the honest way for a test to force a poll
+// Advance the page clock to exercise automatic revalidation on tab return.
 async function forceStalePoll(I, ms) {
   const realNow = Date.now;
   I.__skew = (I.__skew || 0) + ms;
@@ -229,7 +234,7 @@ async function forceStalePoll(I, ms) {
   ok(/Prohor/.test(A.q("title").textContent), "document title is Prohor", A.txt("title"));
   ok(A.q("a.lockup") === null && !!A.q("button#resetBtn.lockup"), "the wordmark is a reset <button>; the old <a> lockup is gone");
   ok(/Reset Prohor/.test(A.q("#resetBtn").dataset.tip || ""), "the reset button explains itself on hover", (A.q("#resetBtn").dataset.tip || "").slice(0, 60));
-  ok(A.q("#refreshBtn") === null && A.q("#seatNow") === null, "no manual refresh affordances in the popover or the rail");
+  ok(A.q("#refreshBtn") === null && !!A.q("#seatNow"), "manual refresh is available only in the seats rail");
   ok(!!A.q("#seatPause"), "pause survives (a user control, not a refresh indicator)");
   ok(A.q(".wordmark").textContent.trim() === "Prohor", "wordmark rendered");
   ok(A.q(".unofficial").textContent.trim() === "BRACU", "the header wordmark is short again", A.q(".unofficial").textContent.trim());
@@ -358,9 +363,24 @@ async function forceStalePoll(I, ms) {
 
   /* ---------------- preferences ---------------- */
   const sw = A.qa(".switch");
-  ok(sw.length === 7, "seven switches: one per rank term plus the only-open constraint", sw.map((s) => s.dataset.pref).join(","));
-  ok(sw.map((s) => s.dataset.pref + "=" + s.getAttribute("aria-checked")).join(",") === "examClash=true,fewerDays=true,lessTime=false,minGaps=true,moreChoices=false,openSeats=true,onlyOpen=false",
+  ok(sw.length === 1 && sw.every(x => x.closest("#advancedPrefs")), "only exam checking remains a switch", sw.map((s) => s.dataset.pref).join(","));
+  ok(sw.map((s) => s.dataset.pref + "=" + s.getAttribute("aria-checked")).join(",") === "examClash=true",
     "default switch states", sw.map(s => s.dataset.pref + "=" + s.getAttribute("aria-checked")).join(","));
+  ok(!A.q("#advancedPrefs").open, "Advanced is collapsed by default");
+  ok(!A.q("#dayMin") && !A.q(".pref-tuning") && !A.q('[data-pref="moreChoices"]'), "minimum days and duplicate ranking controls are removed");
+  ok(A.q("#rankingPreference").value === "balanced", "ranking defaults to Balanced");
+  const prefState = () => JSON.parse(A.W.localStorage.getItem("prohor.state")).prefs;
+  for (const [key, expected] of [["days", [true, false, false]], ["time", [false, true, false]], ["shorter", [false, false, true]], ["balanced", [true, false, true]]]) {
+    A.set("#rankingPreference", key, "change");
+    const p = prefState();
+    ok(JSON.stringify([p.fewerDays, p.lessTime, p.minGaps]) === JSON.stringify(expected), key + " preset persists the correct scoring terms");
+  }
+  for (const [key, expected] of [["ignore", [false, false]], ["require", [true, true]], ["prefer", [false, true]]]) {
+    A.set("#seatPreference", key, "change");
+    const p = prefState();
+    ok(JSON.stringify([p.onlyOpen, p.openSeats]) === JSON.stringify(expected), key + " seat mode persists the correct filtering/ranking flags");
+  }
+  A.set("#seatPreference", "ignore", "change");
   const examTxt = sw[0].closest(".pref-row").querySelector(".txt");
   ok(/confirm in BRACU Connect/.test(examTxt.dataset.tip), "the exam switch warns that the feed invents some finals", examTxt.dataset.tip.slice(0, 60));
   A.click(sw[0].closest(".pref-row"));
@@ -369,14 +389,11 @@ async function forceStalePoll(I, ms) {
   A.click(A.qa(".switch")[0].closest(".pref-row"));
   await wait(30);
   ok(A.qa(".switch")[0].getAttribute("aria-checked") === "true", "exam clash back on");
-  A.set("#dayMin", "2"); A.set("#dayMax", "4");
-  await wait(40);
-  ok(A.txt("#daysVal") === "2 – 4 days", "days label", A.txt("#daysVal"));
-  ok(parseFloat(A.q("#daysFill").style.left) === 20, "range fill tracks the thumbs", A.q("#daysFill").style.left);
-  A.set("#dayMin", "5"); await wait(30);
-  ok(A.txt("#daysVal") === "4 days", "min is clamped to max rather than crossing it", A.txt("#daysVal"));
-  ok(+A.q("#dayMin").value <= +A.q("#dayMax").value, "thumbs stay ordered");
-  A.set("#dayMin", "2"); A.set("#dayMax", "6"); await wait(30);
+  A.set("#dayMax", "4"); await wait(40);
+  ok(A.txt("#daysVal") === "Up to 4 days", "maximum-days label", A.txt("#daysVal"));
+  A.set("#dayMax", "1"); await wait(30);
+  ok(A.txt("#daysVal") === "Up to 1 day", "maximum can reach one without a hidden minimum");
+  A.set("#dayMax", "6"); await wait(30);
   ok(A.qa("#timeChips .chip").length === 7, "seven avoid-time chips", A.qa("#timeChips .chip").length);
   ok(A.qa("#dayChips .chip").length === 7, "seven day chips including a muted Friday", A.qa("#dayChips .chip").length);
   ok(A.q('#dayChips .chip[data-i="6"]').classList.contains("muted-day") === false, "Friday not muted because this feed has Friday classes");
@@ -385,7 +402,7 @@ async function forceStalePoll(I, ms) {
   await wait(60);
   ok(A.q('#timeChips .chip[data-i="0"]').getAttribute("aria-pressed") === "true", "time chip pressed state");
   ok(A.q("#clearTime").hidden === false && A.q("#clearDay").hidden === false, "Clear buttons appear when active");
-  ok(/3 changed/.test(A.txt("#prefsActive")), "the badge counts what differs from the default", A.txt("#prefsActive"));
+  ok(/2 changed/.test(A.txt("#prefsActive")), "the badge counts what differs from the default", A.txt("#prefsActive"));
   ok(A.q("#resetPrefs").hidden === false, "and reset shows up once something has changed");
   A.q("#facSearch").focus();
   A.set("#facSearch", "ANK"); await wait(60);
@@ -410,30 +427,33 @@ async function forceStalePoll(I, ms) {
   ok(A.qa("#courses .course").length === 5, "remove ✕ drops a course card");
   ok(A.q("#courseSearch").disabled === false, "search re-enabled below the cap");
 
-  /* ---------------- the ranking switches each own one term ---------------- */
+  /* ---------------- ranking presets ---------------- */
   const RK = boot({});
   await RK.ready();
   await RK.add("CSE221"); await RK.add("CSE250"); await RK.add("CSE320"); await RK.add("MAT216");
-  const setSwitches = async (want) => {
-    for (const s of RK.qa(".switch")) {
-      const on = s.getAttribute("aria-checked") === "true";
-      if (on !== !!want[s.dataset.pref]) { RK.click(s.closest(".pref-row")); await RK.wait(20); }
-    }
-  };
+  RK.click('[data-pref="examClash"]');
+  const setRanking = (key) => RK.set("#rankingPreference", key, "change");
   const topOrder = async () => {
     await RK.gen();
     return RK.qa("#resultsBody .routine .r-secs").map((x) => x.textContent.replace(/\s+/g, "")).join("|");
   };
-  await setSwitches({ fewerDays: true, lessTime: false, minGaps: false, moreChoices: false });
+  setRanking("days");
   const byDays = await topOrder();
-  await setSwitches({ fewerDays: false, lessTime: true, minGaps: false, moreChoices: false });
+  setRanking("time");
   const byTime = await topOrder();
-  await setSwitches({ fewerDays: false, lessTime: false, minGaps: true, moreChoices: false });
+  setRanking("shorter");
   const byGaps = await topOrder();
   ok([byDays, byTime, byGaps].every((x) => x.length > 0), "each ranking still produces routines");
-  ok(byDays !== byTime || byDays !== byGaps, "and each switch reorders the list its own way",
+  ok(byDays !== byTime || byDays !== byGaps, "and each ranking preset reorders the list its own way",
     [byDays, byTime, byGaps].map((x) => x.slice(0, 22)).join("   vs   "));
   ok(/lab shares its course/.test(RK.q(".routine .r-secs").dataset.tip), "the header explains the section chips", RK.q(".routine .r-secs").dataset.tip.slice(0, 50));
+  const rkSaved = JSON.parse(RK.W.localStorage.getItem("prohor-cache:results"));
+  for (const [sort, field, sign] of [["late", "earliest", -1], ["early", "latest", 1]]) {
+    RK.set("#sortSel", sort, "change");
+    const ids = RK.qa(".routine").map(el => +el.dataset.gi);
+    const expected = rkSaved.items.map((it, gi) => Object.assign({ gi }, it)).sort((a, b) => sign * (a[field] - b[field]) || a.score - b.score).slice(0, ids.length).map(it => it.gi);
+    ok(JSON.stringify(ids) === JSON.stringify(expected), sort + " sort follows class clock times, not the preference score");
+  }
   try { RK.dom.window.close(); } catch (e) { }
 
   /* ---------------- exam-clash semantics ---------------- */
@@ -635,6 +655,49 @@ async function forceStalePoll(I, ms) {
   await C2.gen();
   ok(C2.cards().length > 0, "generator works offline", C2.cards().length);
 
+  const damaged = boot({ seedCache: true, cacheFeed: [null], seedState: {
+    prefs: { avoidTime: null, avoidDay: "bad", avoidFac: {}, dayMax: -9, examClash: "false" },
+    courses: [null, { code: 123 }, { code: "CSE221", locked: {}, faculty: 123, secs: null }, { code: "CSE221" }],
+    pins: [null, { code: {}, sec: [] }], pageSize: -2, sort: "toString"
+  } });
+  await damaged.ready(); await damaged.wait(80);
+  ok(damaged.calls.live > 0 && /Live/.test(damaged.txt("#livePill")), "unusable cache recovers through the live feed");
+  ok(damaged.qa("#courses .course").length === 1 && damaged.q("#dayMax").value === "1", "malformed and duplicate saved selections are repaired");
+  ok(damaged.q('[data-pref="examClash"]').getAttribute("aria-checked") === "true", "non-boolean saved flags cannot disable safety defaults");
+  damaged.set("#dayMax", "6"); await damaged.gen();
+  ok(damaged.cards().length > 0, "repaired saved state still generates routines");
+
+  const hangOpts = { hangLive: true, fastDeadline: 100 };
+  const HANG = boot(hangOpts);
+  await HANG.ready(); await HANG.wait(200);
+  ok(/Offline copy/.test(HANG.txt("#livePill")), "a stalled catalogue request times out into snapshot recovery");
+  ok(!HANG.q("#seatNow").disabled && /timed out/.test(HANG.txt("#seatAgo")), "a stalled seat request releases Refresh and reports a timeout");
+  hangOpts.hangLive = false;
+  HANG.click("#seatNow"); await HANG.wait(100);
+  ok(!HANG.q("#seatNow").disabled && HANG.q("#railLive").getAttribute("data-state") === "idle", "manual retry succeeds after a stalled request");
+
+  let stalledReply;
+  const SILENT = boot({ fastDeadline: 80, workerFactory: W => class {
+    postMessage(m) {
+      if (m.type === "fetch-seats") {
+        const handler = this.onmessage;
+        stalledReply = () => handler({ data: { type: "seats-error", requestId: m.requestId, message: "late obsolete reply" } });
+      }
+    }
+    terminate() {}
+  } });
+  await SILENT.ready(); await SILENT.wait(130);
+  ok(!SILENT.q("#seatNow").disabled && /timed out/.test(SILENT.txt("#seatAgo")), "silent worker is bounded by the page watchdog");
+  SILENT.click("#seatNow"); await SILENT.wait(60);
+  stalledReply(); await SILENT.wait(20);
+  ok(SILENT.q("#railLive").getAttribute("data-state") === "idle", "late worker replies cannot overwrite a successful fallback retry");
+  await SILENT.add("CSE221"); await SILENT.add("MAT216"); await SILENT.gen();
+  ok(SILENT.cards().length === 50, "silent search-worker startup also falls back instead of hanging Generate");
+
+  const RACE = boot({ slowLive: 1550, slowSnapshot: 900 });
+  await RACE.ready(); await RACE.wait(1200);
+  ok(RACE.calls.snapshot > 0 && /Live/.test(RACE.txt("#livePill")) && !/Offline/.test(RACE.txt("#livePill")), "slow snapshot never overwrites the live response that overtook it", RACE.txt("#livePill"));
+
   const C3 = boot({ seedCache: true, cacheAge: 8 * 3600 * 1000, liveFails: true, snapshotFails: true });
   await C3.waitFor(() => /Stale copy/.test(C3.txt("#livePill")), 8000, "stale-cache recovery");
   ok(/Stale copy/.test(C3.txt("#livePill")), "expired cache → tried network → served the last copy", C3.txt("#livePill"));
@@ -658,6 +721,7 @@ async function forceStalePoll(I, ms) {
   await C5.ready(12000);
   await C5.waitFor(() => C5.cards().length > 0, 25000, "queued search to run");
   ok(C5.cards().length > 0, "the queued search ran on its own once the feed landed", C5.cards().length);
+  ok(!/settings changed/.test(C5.txt("#resultsDesc")), "a queued search is not immediately marked stale by initial data adoption");
   ok(C5.qa("#courses .course").length === 2, "the queued state kept both courses");
   ok(/Generate routines/.test(C5.txt("#genBtn")), "button restored after the queued run", C5.txt("#genBtn"));
   ok(!/undefined|NaN/.test(C5.txt("#courses")), "no placeholder cruft in the cards", (C5.txt("#courses") || "").slice(0, 60));
@@ -700,15 +764,20 @@ async function forceStalePoll(I, ms) {
   ok(L.qa(".routine").every((r) => [...r.querySelectorAll(".blk")].every((b) => b.style.gridColumn !== "5")), "nothing is placed on Tuesday (column 5)");
   ok(L.qa(".routine").every((r) => !!r.querySelector(".rgrid") && r.querySelectorAll(".rh").length === 7), "the template keeps all six day columns, Tuesday marked free");
   ok(L.qa(".routine").every((r) => [...r.querySelectorAll(".rh")][4].classList.contains("free")), "the avoided day column shows as free");
+  L.set("#rankingPreference", "time", "change");
+  L.set("#seatPreference", "require", "change");
+  L.click('[data-pref="examClash"]');
   L.W.__copied = null;
   L.click("#copyLink"); await wait(80);
   ok(/t=4/.test(L.W.__copied || "") && /y=3/.test(L.W.__copied || ""), "the copied link replays the filters", (L.W.__copied || "").slice(0, 120));
-  const L2 = boot({ url: "https://routine.test/" + L.W.location.search });
+  const L2 = boot({ url: "https://routine.test/" + L.W.location.search, seedState: { prefs: { dayMax: 1, avoidFac: ["ANK"] } } });
   await L2.ready();
   await L2.wait(200);
   ok(L2.qa("#timeChips .chip[aria-pressed=true]").length === 1 && L2.qa("#dayChips .chip[aria-pressed=true]").length === 1,
     "opening that link restores both avoid filters", L2.qa("#timeChips .chip[aria-pressed=true]").length + "/" + L2.qa("#dayChips .chip[aria-pressed=true]").length);
   ok(L2.qa("#courses .course").length === 2, "and the two courses");
+  ok(L2.q("#rankingPreference").value === "time" && L2.q("#seatPreference").value === "require" && L2.q('[data-pref="examClash"]').getAttribute("aria-checked") === "false", "shared links restore ranking, seats and exam settings");
+  ok(L2.q("#dayMax").value === "6" && !L2.q("#facChips").children.length, "complete links do not inherit unshared recipient constraints");
 
   console.log("\n--- sections control pass ---");
   const X = boot({});
@@ -939,6 +1008,11 @@ async function forceStalePoll(I, ms) {
   P.click('[data-pg="next"]'); await P.wait(250);
   const secondCard = P.q("#resultsBody .routine .rank").textContent + "|" + P.q("#resultsBody .routine").textContent.replace(/\s+/g, " ").slice(0, 120);
 
+  P.set("#rankingPreference", "time", "change");
+  P.click('[data-pg="prev"]'); await P.wait(120);
+  const afterStalePage = JSON.parse(P.W.localStorage.getItem("prohor-cache:results"));
+  ok(afterStalePage.sig === saved2.sig && afterStalePage.prefs.fewerDays === saved2.prefs.fewerDays, "paging stale results does not save old scores under new preferences");
+
   // a brand new page load restores every page collected so far
   const savedUrl = "https://routine.test/";
   const R2 = boot({ deviceMemory: 4, cores: 4, seedResults: saved2, seedCourses: saved2.sig ? undefined : undefined });
@@ -953,6 +1027,62 @@ async function forceStalePoll(I, ms) {
   ok(/＋ 50 more/.test(R2.txt("#pager")), "the restored view can continue where it stopped", R2.txt("#pager"));
   const all = R2.q('[data-pg="all"]');
   ok(!!all, "the explicit 'find them all' escape hatch is offered", all && all.textContent);
+
+  const restoredPrefix = saved2.items.map(it => it.ci.join(','));
+  for (const total of [150, 200]) {
+    R2.click('[data-pg="more"]');
+    await R2.waitFor(() => new RegExp("of " + total).test(R2.txt("#pager")), 10000, "restored batch " + total);
+    const accumulated = JSON.parse(R2.W.localStorage.getItem("prohor-cache:results"));
+    ok(accumulated.items.length === total && new Set(accumulated.items.map(it => it.ci.join(','))).size === total, "restored pagination retains " + total + " unique results");
+    ok(JSON.stringify(accumulated.items.slice(0, 100).map(it => it.ci.join(','))) === JSON.stringify(restoredPrefix), "restored pagination preserves its saved prefix at " + total);
+  }
+  const changedFeed = JSON.parse(JSON.stringify(snapshotRaw));
+  changedFeed.sections.find(x => x.c === "CSE221").r = "review-test-room";
+  const SAMECOUNT = boot({ seedResults: saved2, liveFeed: changedFeed });
+  await SAMECOUNT.ready(); await SAMECOUNT.wait(200);
+  ok(!SAMECOUNT.cards().length, "saved descriptors are rejected after a same-count feed edit");
+
+  const corruptResults = JSON.parse(JSON.stringify(saved2));
+  corruptResults.items[0].ci[0] = 999999;
+  const BADRESULTS = boot({ seedResults: corruptResults });
+  await BADRESULTS.ready(); await BADRESULTS.wait(150);
+  ok(!BADRESULTS.cards().length, "out-of-range saved descriptor indices are rejected before rendering");
+
+  const workerStats = { terminated: 0 };
+  const WF = boot({ workerFactory: W => class {
+    postMessage(m) {
+      if (m.type === "fetch-seats") {
+        W.setTimeout(() => this.onmessage && this.onmessage({ data: { type: "seats", requestId: m.requestId, at: Date.now(), rows: W.RGCore.seatRows(snapshotRaw) } }), 0); return;
+      }
+      if (m.type === "init") {
+        this.en = W.RGCore.createEnumerator(m.rows, m.prefs); this.batches = 0;
+        W.setTimeout(() => this.onmessage && this.onmessage({ data: { type: "ready", space: this.en.space, stats: this.en.stats } }), 0); return;
+      }
+      if (m.type === "more") {
+        if (++this.batches === 2) {
+          const lateHandler = this.onmessage, first = this.first;
+          W.setTimeout(() => {
+            if (this.onerror) this.onerror(new Error("simulated worker crash"));
+            W.setTimeout(() => lateHandler({ data: Object.assign({ type: "batch" }, first) }), 5);
+          }, 0); return;
+        }
+        this.first = this.en.next({ want: m.want, sort: m.sort !== false });
+        W.setTimeout(() => this.onmessage && this.onmessage({ data: Object.assign({ type: "batch" }, this.first) }), 0);
+      }
+    }
+    terminate() { workerStats.terminated++; }
+  } });
+  await WF.ready(); await WF.add("CSE221"); await WF.add("MAT216"); await WF.gen();
+  const firstWorker = JSON.parse(WF.W.localStorage.getItem("prohor-cache:results"));
+  WF.click('[data-pg="more"]');
+  await WF.waitFor(() => /of 100/.test(WF.txt("#pager")), 10000, "worker fallback replay");
+  await WF.wait(100);
+  const recovered = JSON.parse(WF.W.localStorage.getItem("prohor-cache:results"));
+  ok(workerStats.terminated > 0 && recovered.items.length === 100 && new Set(recovered.items.map(it => it.ci.join(','))).size === 100, "worker failure terminates the worker and replays without duplicates or late batches");
+  ok(JSON.stringify(recovered.items.slice(0, 50).map(it => it.ci)) === JSON.stringify(firstWorker.items.map(it => it.ci)), "worker fallback preserves descriptor indices for existing section swaps");
+  WF.click('[data-pg="more"]');
+  await WF.waitFor(() => /of 150/.test(WF.txt("#pager")), 10000, "next fallback batch");
+  ok(/of 150/.test(WF.txt("#pager")), "main-thread search continues normally after worker failure");
 
   /* ---------------------------- seats rail ---------------------------- */
   console.log("\n--- split view, pins, cadence, exam colours ---");
@@ -1223,11 +1353,32 @@ async function forceStalePoll(I, ms) {
   R.click("#seatPause"); await R.wait(60);
   ok(R.q("#seatPause").textContent === "Pause", "resume restores it");
 
-  // manual refresh is gone; the once-a-second rail clock must not disturb the routine page
+  // Manual refresh and the once-a-second rail clock must not disturb the routine page
   const listHtml = R.q("#resultsBody").innerHTML;
   const descHtml = R.q("#resultsDesc").textContent;
   const genDisabledBefore = R.q("#genBtn").disabled;
-  ok(R.q("#seatNow") === null && R.q("#refreshBtn") === null, "no manual refresh buttons anywhere");
+  ok(!!R.q("#seatNow") && R.q("#refreshBtn") === null, "the seats rail has a manual refresh button");
+  const refreshCalls = R.calls.live;
+  R.click("#seatNow");
+  ok(R.q("#seatNow").disabled, "refresh disables immediately during a request");
+  R.click("#seatNow"); // synthetic clicks must also respect the in-flight guard
+  ok(R.calls.live === refreshCalls + 1, "repeated refresh does not duplicate an in-flight request");
+  await R.wait(100);
+  ok(!R.q("#seatNow").disabled, "refresh re-enables after success");
+  R.click("#seatPause");
+  const beforeFocus = R.calls.live;
+  const savedNow = R.W.Date.now;
+  R.W.Date.now = () => savedNow() + 20000;
+  R.W.document.dispatchEvent(new R.W.Event("visibilitychange"));
+  await R.wait(60);
+  R.W.Date.now = savedNow;
+  ok(R.calls.live === beforeFocus, "returning to a stale tab respects paused seat polling");
+  const pausedCalls = R.calls.live;
+  R.click("#seatNow");
+  await R.wait(100);
+  ok(R.calls.live === pausedCalls + 1, "manual refresh works while automatic polling is paused");
+  ok(R.q("#seatPause").getAttribute("aria-pressed") === "true", "manual refresh preserves the paused preference");
+  R.click("#seatPause");
   const ago1 = R.q("#seatAgo").textContent;
   await R.wait(2300);
   ok(R.q("#resultsBody").innerHTML === listHtml, "results markup is byte-identical across rail clock repaints");
@@ -1236,6 +1387,17 @@ async function forceStalePoll(I, ms) {
   ok(/updated \d+ s ago/.test(R.q("#seatAgo").textContent), "the rail reports its own clock", R.q("#seatAgo").textContent);
   ok(R.q("#seatAgo").textContent !== ago1, "the freshness line ticks every second", ago1 + " -> " + R.q("#seatAgo").textContent);
   ok(pageRows().length > 0 && pageRows().every((r) => r.querySelector(".seat")), "every seat row keeps a seat pill");
+
+  const originalFetch = R.W.fetch;
+  R.W.fetch = async () => { throw new Error("test seat outage"); };
+  R.click("#seatNow");
+  await R.wait(100);
+  ok(!R.q("#seatNow").disabled && R.q("#railLive").getAttribute("data-state") === "error", "failed manual refresh releases the button and reports the error");
+  R.W.fetch = originalFetch;
+  const retryCalls = R.calls.live;
+  R.click("#seatNow");
+  await R.wait(100);
+  ok(R.calls.live === retryCalls + 1 && R.q("#railLive").getAttribute("data-state") === "idle", "manual retry bypasses backoff and recovers after an error");
 
   console.log("\n--- a half-delivered feed is refused, not adopted ---");
   const T9 = boot({ tinyLive: true });
@@ -1488,6 +1650,8 @@ async function forceStalePoll(I, ms) {
   ok(SEM.q("#seatPause") !== null && SEM.q("#seatPause").hidden === false, "pause keeps working while browsing the past");
   ok(await SEM.waitFor(() => /updated|first seat/.test(SEM.txt("#seatAgo") || ""), 6000, "live clock while past"),
     "and the seat clock keeps ticking there", SEM.txt("#seatAgo"));
+  ok(SEM.q('#railBody [data-course="CSE221"]').getAttribute("aria-expanded") === "false", "saved catalogue defaults collapsed");
+  SEM.click('#railBody [data-course="CSE221"]'); await SEM.wait(100);
   const boxes = SEM.qa("#railBody .seatbox");
   const byTitle = (t) => boxes.find((b) => { const h = b.querySelector("h3,h4"); return h && h.textContent.replace(/\s+/g, " ").trim().indexOf(t) === 0; });
   const catBox = byTitle("All courses"), mineBox = byTitle("Your courses");
@@ -1511,56 +1675,31 @@ async function forceStalePoll(I, ms) {
   ok(SEM.q("#seatPause") !== null && SEM.q("#seatPause").hidden === false, "the live controls come back too");
   try { SEM.dom.close(); } catch (e) { }
 
-  // a semester that is filed is never filed twice, and the panel keeps its own copy
+  // A fresh browser reads the same repository collection, without owning its storage.
   const SEM2 = boot({ width: 1440, seedSemesters: PAST });
   await SEM2.ready(); await SEM2.wait(200);
-  const onFile = Object.keys(JSON.parse(SEM2.W.localStorage.getItem("prohor.semesters") || "{}").list || {}).length;
-  ok(onFile === 1, "the archive loads from storage", onFile);
+  SEM2.click("#seatsBtn"); await SEM2.wait(100); SEM2.click("#semBtn");
+  ok(SEM2.qa("#semPop [data-sem]").length === 2, "fresh browser loads repository semester");
+  ok(SEM2.W.localStorage.getItem("prohor.semesters") === null && SEM2.W.localStorage.getItem("prohor.facmem") === null, "collection is not written to browser storage");
   try { SEM2.dom.close(); } catch (e) { }
-
-  // when the two stores disagree (localStorage write failed silently, IndexedDB carried the new
-  // semester), booting must surface the union — never let a stale small store hide a semester
-  const PAST_SPRING = { "20261": Object.assign({}, PAST["20262"], { session: "20261", label: "Spring 2026" }) };
-  const SEM3 = boot({ width: 1440, seedSemesters: PAST_SPRING, seedSemestersStore: Object.assign({}, PAST_SPRING, PAST) });
-  await SEM3.ready(); await SEM3.wait(400);
-  SEM3.click("#seatsBtn"); await SEM3.wait(220);
-  SEM3.click("#semBtn"); await SEM3.wait(150);
-  const sem3Rows = SEM3.qa("#semPop [data-sem]").map((b) => b.textContent.replace(/\s+/g, " ").trim());
-  ok(sem3Rows.length === 3 && sem3Rows.some((r) => /Spring 2026/.test(r)) && sem3Rows.some((r) => /Summer 2026/.test(r)),
-    "both stores are merged at boot, no semester hidden by the stale one", sem3Rows.join(" | "));
-  const springRow = SEM3.qa("#semPop [data-sem]")[1];
-  if (springRow) SEM3.click(springRow);
-  await SEM3.wait(200);
-  ok(SEM3.qa("#railBody .srow").length === 2, "and the merged-in semester is browsable with its rows", SEM3.qa("#railBody .srow").length);
-  try { SEM3.dom.close(); } catch (e) { }
 
   /* ---------------- semester rollover: the feed moves to a new session ----------------
      Yesterday the device cached Summer 2026 (session 20262); today the feed serves Fall 2026.
-     The old semester must be filed with its seats frozen, the pill must name the new term,
+     The repository supplies old semesters; the pill must name the new term,
      and the planner and the seat rail must carry on without a reload. */
   console.log("\n--- rollover / drift / hostile-feed pass ---");
   const oldTerm = snapshotRaw.sections.map((r) => Object.assign({}, r, { sid: 20262 }));
   const newTerm = snapshotRaw.sections.map((r) => Object.assign({}, r, { sid: 20263 }));
   const ROLL = boot({
-    width: 1280, seedCache: true, cacheFeed: oldTerm, liveFeed: newTerm,
+    width: 1280, seedCache: true, cacheFeed: oldTerm, liveFeed: newTerm, seedSemesters: PAST,
     seedState: {
       courses: [{ code: "CSE221", locked: [], faculty: [] }],
       pins: [{ code: "ZZZ999", sec: "01" }, { code: "CSE221", sec: "01" }],
       prefs: { dayMin: 1, dayMax: 6, examClash: true, minGaps: true, moreChoices: false, avoidFac: [], avoidTime: [], avoidDay: [] }
     }
   });
-  ok(await ROLL.waitFor(() => {
-    const l = (JSON.parse(ROLL.W.localStorage.getItem("prohor.semesters") || "{}").list || {});
-    return !!l["20262"];
-  }, 8000, "old semester filed on rollover"), "a new session in the feed files the one the device was reading");
-  const filedList = (JSON.parse(ROLL.W.localStorage.getItem("prohor.semesters") || "{}").list || {});
-  const filed = filedList["20262"];
-  ok(filed && filed.label === "Summer 2026", "filed under the term name, not the session id", filed && filed.label);
-  const filedRows = filed ? Object.keys(filed.rows) : [];
-  ok(filedRows.length === F.sections, "every section of the old semester is kept", filedRows.length + " of " + F.sections);
-  const keptSeats = filedRows.map((k) => filed.rows[k]).filter((r) => r[4] != null && r[5] != null);
-  ok(keptSeats.length > 0 && keptSeats.every((r) => typeof r[4] === "number" && typeof r[5] === "number"),
-    "and its seat counts exactly as they stood", keptSeats.length + " rows with seats");
+  await ROLL.ready(); await ROLL.wait(400);
+  ok(ROLL.W.localStorage.getItem("prohor.semesters") === null, "rollover never creates a user-owned archive");
   ok(/Live/.test(ROLL.txt("#livePill")), "the pill is live again after the swap", ROLL.txt("#livePill"));
   ok(/Fall 2026/.test(ROLL.txt("#semLabel")), "the panel names the semester that just arrived", ROLL.txt("#semLabel"));
   // a pinned section the new feed no longer carries must not hold its slot
@@ -1571,10 +1710,11 @@ async function forceStalePoll(I, ms) {
   ROLL.click("#semBtn"); await ROLL.wait(150);
   const rollOpts = ROLL.qa("#semPop [data-sem]");
   const summerBtn = rollOpts.find((b) => /Summer 2026/.test(b.textContent));
-  ok(!!summerBtn, "the just-archived semester appears in the switch", rollOpts.map((b) => b.textContent.replace(/\s+/g, " ").trim()).join(" | "));
+  ok(!!summerBtn, "the repository semester appears in the switch", rollOpts.map((b) => b.textContent.replace(/\s+/g, " ").trim()).join(" | "));
   if (summerBtn) ROLL.click(summerBtn);
   await ROLL.wait(250);
   ok(/catalogue: Summer 2026/.test(ROLL.txt("#railSub")), "browsing it clearly says the catalogue is showing the saved copy", ROLL.txt("#railSub"));
+  ROLL.click('#railBody [data-course="CSE221"]'); await ROLL.wait(100);
   const rollRow = ROLL.q("#railBody .srow");
   ok(!!rollRow && !!rollRow.querySelector(".seat"), "its rows keep their seat pills", rollRow ? rollRow.textContent.replace(/\s+/g, " ").trim().slice(0, 50) : "none");
   // planning and seat polling run on the new semester without a reload
@@ -1637,41 +1777,19 @@ async function forceStalePoll(I, ms) {
      BRACU sometimes flips a published teacher back to TBA mid-semester. Live views must show
      whatever the feed says — TBA included — but the archive must remember the last real
      initial. A section that was TBA for the whole semester is the only one filed as TBA. */
-  console.log("\n--- faculty memory pass ---");
-  const aSec = String(c221[0].sec), bSec = String(c221[1].sec);
-  const flipFeed = (aF, sid) => Object.assign({}, snapshotRaw, {
-    sections: snapshotRaw.sections.map((r) => {
-      if (r.c !== "CSE221") return Object.assign({}, r, { sid: sid });
-      if (String(r.sec) === aSec) return Object.assign({}, r, { f: aF, sid: sid });
-      if (String(r.sec) === bSec) return Object.assign({}, r, { f: null, sid: sid });   // B is TBA all semester
-      return Object.assign({}, r, { sid: sid });
-    }),
-    meta: Object.assign({}, snapshotRaw.meta, { semesterSessionIds: [sid] })
-  });
-  let facFeed = flipFeed(null, 20263);                        // A starts TBA
-  const FAC = boot({ width: 1280, liveFn: () => facFeed, seedState: { courses: [{ code: "CSE221", locked: [], faculty: [] }] } });
-  await FAC.ready(); await FAC.wait(200);
-  const facMemLS = () => JSON.parse(FAC.W.localStorage.getItem("prohor.facmem") || "{}");
-  const semLS = () => (JSON.parse(FAC.W.localStorage.getItem("prohor.semesters") || "{}").list || {});
-  const railRow = (sec) => FAC.qa("#railBody .srow").filter((r) => r.textContent.includes("[" + sec + "]"));
-  const refresh = async () => { await forceStalePoll(FAC, 11 * 60 * 1000); await FAC.ready(); await FAC.wait(150); };
-  FAC.click("#seatsBtn"); await FAC.wait(220);
-  facFeed = flipFeed("IBA", 20263);                           // A gets a teacher
-  await refresh();
-  ok(railRow(aSec).some((r) => /IBA/.test(r.textContent)), "the live feed names IBA for the section", railRow(aSec).map((r) => r.textContent.replace(/\s+/g, " ").trim()).join(" | ").slice(0, 90));
-  ok(facMemLS().map && facMemLS().map["CSE221|" + aSec] === "IBA", "and the memory keeps it", JSON.stringify(facMemLS().map || {}).slice(0, 60));
-  facFeed = flipFeed(null, 20263);                            // BRACU flips it back to TBA
-  await refresh();
-  ok(railRow(aSec).length > 0 && railRow(aSec).every((r) => !/IBA/.test(r.textContent) && /TBA/.test(r.textContent)),
-    "live views show the TBA flip, exactly as the feed says", railRow(aSec).map((r) => r.textContent.replace(/\s+/g, " ").trim()).join(" | ").slice(0, 90));
-  ok(facMemLS().map && facMemLS().map["CSE221|" + aSec] === "IBA", "but the memory is not overwritten by TBA", JSON.stringify((facMemLS().map || {})["CSE221|" + aSec]));
-  ok(!semLS()["20263"], "nothing archived yet — the semester is still the one being served", Object.keys(semLS()).join("|"));
-  facFeed = flipFeed("XYZ", 20271);                           // the feed rolls to a new semester
-  await refresh();
-  ok(semLS()["20263"] && semLS()["20263"].rows["CSE221|" + aSec][0] === "IBA", "the archive keeps the last real name, not the TBA", semLS()["20263"] && semLS()["20263"].rows["CSE221|" + aSec][0]);
-  ok(semLS()["20263"] && semLS()["20263"].rows["CSE221|" + bSec][0] === "TBA", "a section that stayed TBA all semester is filed as TBA", semLS()["20263"] && semLS()["20263"].rows["CSE221|" + bSec][0]);
-  ok(facMemLS().sid === "20271" && facMemLS().map && facMemLS().map["CSE221|" + aSec] === "XYZ",
-    "and the memory resets with the new semester and starts collecting again", facMemLS().sid + " / " + JSON.stringify((facMemLS().map || {})["CSE221|" + aSec]));
+  console.log("\n--- repository faculty collection pass ---");
+  const archive = { "20263": Object.assign({}, PAST["20262"], { session: "20263", label: "Fall 2026" }) };
+  const facFeed = Object.assign({}, snapshotRaw, { sections: snapshotRaw.sections.map(r => Object.assign({}, r, { f: "TBA" })) });
+  const FAC = boot({ width: 1280, liveFeed: facFeed, seedSemesters: archive });
+  await FAC.ready(); await FAC.wait(250);
+  FAC.click("#seatsBtn"); await FAC.wait(150); FAC.click("#semBtn"); await FAC.wait(100);
+  const collected = FAC.q('#semPop [data-sem="20263"]');
+  ok(!!collected && /collected/.test(collected.textContent), "current semester collected names have a separate, honest view");
+  FAC.click(collected); await FAC.wait(180);
+  FAC.click('#railBody [data-course="CSE221"]'); await FAC.wait(100);
+  ok(/ANK/.test(FAC.txt("#railBody")), "repository initials survive a live CDN TBA value");
+  ok(FAC.W.localStorage.getItem("prohor.facmem") === null && FAC.W.localStorage.getItem("prohor.semesters") === null,
+    "no browser faculty memory or semester archive is written");
   try { FAC.dom.close(); } catch (e) { }
 
   /* ---------------- same-count drift: a republish that hides edits behind the count ----------------
@@ -1718,12 +1836,16 @@ async function forceStalePoll(I, ms) {
   /* ---------------------------- seat-aware ranking + only-open ---------------------------- */
   console.log("\n--- seat-aware ranking, only-open, calendar mix ---");
   const flip = async (I, pref) => {
+    if (pref === "onlyOpen") {
+      I.set("#seatPreference", I.q("#seatPreference").value === "require" ? "prefer" : "require", "change");
+      await I.wait(60); return;
+    }
     const sw = I.qa(".switch").find((x) => x.dataset.pref === pref);
     if (!sw) throw new Error("no switch " + pref);
     I.click(sw.closest(".pref-row")); await I.wait(60);
   };
-  ok(A.qa(".switch").some((x) => x.dataset.pref === "openSeats" && x.getAttribute("aria-checked") === "true"), "“prefer free seats” exists and defaults on");
-  ok(A.qa(".switch").some((x) => x.dataset.pref === "onlyOpen" && x.getAttribute("aria-checked") === "false"), "“only sections with seats” exists and defaults off");
+  ok(A.q("#seatPreference").value === "ignore", "seat availability defaults to ignore");
+  ok(A.q("#seatPreference").options.length === 3, "one seat selector replaces both switches");
 
   const SO = boot({});
   await SO.ready();

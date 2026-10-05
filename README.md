@@ -1,320 +1,189 @@
 # Prohor — BRACU Routine Planner
 
-**Prohor** (প্রহর — a Bengali unit of time, one eighth of a day) builds conflict-free weekly class
-routines for BRAC University students. Pick your courses, set your constraints, and Prohor
-enumerates every valid combination — class meetings *and* mid/final exam slots checked — ranked by
-how comfortable each week would be.
+**Prohor** (প্রহর) builds weekly class routines for BRAC University students. Choose up to six
+courses, set constraints, and compare routines without class or lab clashes. Midterm and final
+exam checks are enabled by default.
 
-- **Live app:** <https://prohor-rg.vercel.app/>
-- **Data:** the Connect-CDN feed used by Connect Unlocked — `https://usis-cdn.eniamza.com/connect.json`
-- **Stack:** no build step, no framework, no backend. `index.html` + `core.js` + `worker.js` + JSON.
-- **Status:** unofficial student project; not affiliated with BRAC University. Always confirm in
-  BRACU Connect before relying on a routine.
+- **Website:** <https://prohor-rg.vercel.app/>
+- **Feed:** <https://usis-cdn.eniamza.com/connect.json>
+- **Stack:** static HTML, CSS and JavaScript; no application server or build step.
+- **Unofficial:** confirm sections, faculty, exams and seats in BRACU Connect before registration.
 
----
+## Run locally
 
-## Table of contents
-
-1. [What it does](#what-it-does)
-2. [Feature overview](#feature-overview)
-3. [How it works](#how-it-works)
-4. [Architecture and project structure](#architecture-and-project-structure)
-5. [Data loading and caching](#data-loading-and-caching)
-6. [Live seat tracking](#live-seat-tracking)
-7. [Running locally](#running-locally)
-8. [Deployment](#deployment)
-9. [Testing](#testing)
-10. [Notes on the data](#notes-on-the-data)
-11. [Feedback](#feedback)
-
----
-
-## What it does
-
-BRAC University publishes sections, schedules, rooms, faculty and exam slots through its student
-portal's public feed. Choosing a combination of sections with no class or exam overlap is a
-tedious puzzle to solve by hand. Prohor solves it:
-
-1. You add up to **six courses** from a searchable combobox (code *or* title, `/` to focus,
-   ↑↓ + Enter).
-2. You narrow each course with three symmetric filters — **time slots**, **sections** and
-   **faculty** — and global preferences (days on campus, avoid faculty/time slots/days, exam
-   clash checking, gap minimisation).
-3. Prohor enumerates **every conflict-free routine**, scores them (fewer days, shorter days,
-   fewer gaps first) and presents them 50 at a time as printable timetable cards.
-4. A **seats panel** tracks live free-seat counts for the sections you care about, and a
-   one-click **PNG export** gives you a clean image of any routine.
-
-Everything runs client-side: after the first load the app works fully offline, on a phone,
-installable as a PWA.
-
-## Feature overview
-
-### Course selection and constraints
-
-- Up to six course cards, each with its own colour and three multi-select pickers:
-  **Time slots** (meeting patterns grouped by day pair), **Sections**
-  (`[01] IBA · 09C-16T · Sun+Tue 11:00–12:20`) and **Faculty** ("only these faculty").
-- **The three pickers constrain one another symmetrically.** Locking `[01]` greys out the
-  patterns and faculty that section never meets; locking a pattern greys out sections the same
-  way. Every option stays visible — impossible ones are dimmed with the reason on the right
-  ("another time slot is locked", "taught by another faculty", "avoided time or day") — the
-  footer shows an honest `12 of 17 available`, and tapping a dimmed row is refused with a toast
-  instead of being half-applied. A pick stranded by a later change stays ticked but is flagged
-  (`1 of your current picks no longer fits — untick it to free the rest`), so no popover can
-  trap you. A contradiction arriving from an old share link is explained in plain words.
-- **Sections with identical days/times collapse into one pattern**, so a routine is never
-  duplicated 18 ways; cards state how many sections each pattern stands for.
-
-### Search and results
-
-- Resumable depth-first enumeration in a **Web Worker** (main-thread time-slicing as fallback).
-- Class conflicts and mid/final exam overlaps are both checked; exam clashes can be allowed with
-  a switch (the offending blocks get a red ring and a `CLASH` tag in the exam table, and blocked
-  pairings are counted).
-- **50 routines per page, on demand** — `Next ▶`, `＋ 50 more`, or an explicit `Find them all`
-  full sweep. Page position and per-card section swaps persist on the device (IndexedDB with
-  localStorage fallback) and are restored after a reload, labelled *kept on this device*.
-- Batch size scales with `hardwareConcurrency`; the full-sweep cap scales with `deviceMemory`.
-- Every card shows a real timetable grid (Saturday–Thursday, plus Friday when the feed has
-  Friday classes), colour-coded course blocks, hatched lab blocks, muted `free` cells, and a
-  `Course · Mid · Final · Section · Faculty` table ordered chronologically.
-
-### Export and sharing
-
-- **Download as PNG** — the timetable and exam table rendered on canvas in a print-ready light
-  theme with the Prohor header (wordmark, the semester term such as *Fall 2026*, and the section
-  list), a QR code back to the site and a data-source line. 12-hour clock throughout, at 2× scale.
-- **Copy** grabs the section list as text; **Print all** uses a dedicated print stylesheet.
-- **Copy link** encodes the entire search — courses, locked patterns, faculty picks, day window,
-  avoids — in the URL, and pressing **Generate** before data has loaded queues the search and runs
-  it automatically once the feed lands.
-
-### Seats panel
-
-- A resizable split view (beside the page on wide screens, below it on phones/tablets; drag the
-  handle or use arrow keys) that can also become its own page at `?view=seats`. Two windows stay
-  in sync through `storage` events.
-- Three boxes — **On this routine page**, **Your courses**, **All courses** (collapsed per
-  course) — plus a **Pinned** box (up to 50 sections) for watching specific seat counts.
-- Free seats = `capacity − consumedSeat`, refreshed from the live feed every 30 s while seats
-  are on and every 60 s when the tab is in the background, in a dedicated worker so polling can
-  never disturb a running search. Failures back off up to 8 minutes. Over-subscribed sections
-  read `full · +5 over`, never a negative number.
-- **Whenever a section's seat number changes, every row showing that section — in every box —
-  pulses a soft translucent green wash exactly once**, in light and dark themes alike. The tint
-  sits behind the labels so every detail stays readable, folding or re-filtering never replays
-  the pulse, and the animation is disabled under `prefers-reduced-motion`. A refresh repaints
-  only the numbers that moved, in place — the list never rebuilds around the reader, never
-  scrolls back up, and headers, folds and hover state survive untouched; structural rebuilds
-  (folding, filtering, pinning, a new feed) restore every scroll offset where it was.
-- Each row shows the section, faculty short form, meeting pattern, mid/final dates and a seat
-  pill. Folding the panel leaves a 96 px status strip with one line of pinned chips.
-
-### Saved semesters
-
-When the feed rolls over to a new session, the previous one is filed on the device (up to 8
-semesters). A semester switch in the panel header lets you browse an old semester exactly as it
-was — but only the **All courses** box follows it. The pinned, on-this-page and your-courses
-boxes keep showing live seats, and polling keeps running while you browse the past.
-
-The archive also keeps the teacher as they last were: BRACU sometimes flips a published
-instructor back to TBA mid-semester, so the app remembers the last real initial per section
-(the live view still shows whatever the feed says, TBA included). When the semester is filed,
-each section stores its last real name — only a section that stayed TBA from the first usable
-snapshot to the last is archived as TBA.
-
-### Platform and accessibility
-
-- Light and dark themes ("Merul Indigo" tokens, BRAC blue `#253494` with a marigold accent), no
-  flash of the wrong theme on load.
-- One layout from 360 px phones to wide desktops; all controls ≥ 40 px; safe-area aware; the
-  timetable scrolls inside its own frame so the page never scrolls sideways.
-- Combobox/listbox semantics, `aria-pressed` chips, `role="switch"`, `aria-live` result
-  announcements, one visible focus ring, `prefers-reduced-motion` and `prefers-color-scheme`
-  honoured.
-- PWA manifest and icons for Add to Home Screen.
-
-## How it works
-
-The engine pipeline (all in `core.js`):
-
-1. **Normalise** — each feed item becomes class-meeting events (including the paired lab's
-   meetings) plus mid/final exam records.
-2. **Group** — within a course, sections sharing the sorted `day + start + end` signature become
-   one pattern; the pattern remembers every section inside it.
-3. **Filter** — locked patterns, section/faculty picks and avoided faculty/times/days narrow each
-   course row; the three pickers are judged against one another so availability counts stay honest.
-4. **Search** — resumable depth-first enumeration over rows ordered by fewest candidates first.
-   Pairwise incompatibility (class overlap *or* exam overlap) is precomputed into bitmaps, so a
-   branch dies at the first clash; partials exceeding the day window are cut early. Scores prefer
-   fewer days, shorter days, fewer gaps, and optionally patterns with more section choices.
-5. **Render** — results stay as tiny `{ci, score}` descriptors and are materialised only for the
-   page being viewed. One `buildView()` model drives the HTML grid, the exam table *and* the PNG
-   painter, so the export can never drift from the screen.
-
-Measured on the real feed: 3 courses (`CSE221 + MAT216 + CSE320`) → 2,400 combinations →
-1,623 routines; 5 courses → 192,000 combinations → 12,776 routines in ~50 ms.
-
-## Architecture and project structure
-
-There is no build step: the repository root *is* the deployable site.
-
-```
-prohor/
-├── index.html            markup, all CSS ("Merul Indigo" tokens, light + dark) and the UI layer
-├── core.js               engine: UMD module — window.RGCore in browsers, require()able in Node
-├── worker.js             Web Worker: search enumeration + isolated seat polling
-├── snapshot.json         compact offline copy of the feed (exam fields included)
-├── faculty-names.json    optional faculty-initial → full-name map (feed carries initials only)
-├── manifest.webmanifest  PWA metadata
-├── favicon.svg, icon*.svg/png, apple-touch-icon.png
-├── test.js               engine test suite (Node, no dependencies)
-└── tools/
-    ├── worker-test.js    worker protocol + exam blocking + seat-polling isolation tests
-    ├── browser-test.js   full UI suite driving the real page in jsdom
-    ├── sweep.js          seeded random-action sweep over both views, asserting invariants
-    ├── layout-audit.js   real-Chromium geometry/hit-test audit (Playwright)
-    └── build-snapshot.py rebuilds snapshot.json from a raw connect.json dump
+```sh
+python3 -m http.server 8000 --bind 0.0.0.0
+# Open http://localhost:8000
 ```
 
-### Module responsibilities
+The website needs no npm installation. Serve it over HTTP rather than opening `index.html`
+with `file://`, which can prevent workers and JSON requests from loading.
 
-| File | Responsibility |
-| --- | --- |
-| `index.html` | App state, comboboxes and pickers, results rendering, seats panel + seats page, semester archive, preferences, share links, persistence (`prohor.state`, IndexedDB), theme, toasts, keyboard shortcuts |
-| `core.js` | Feed normalisation (`fromApi`/`buildIndex`), pattern grouping, candidate filtering, `createEnumerator` (the DFS search), `scoreRoutine`, `buildView` (shared view model), `paintRoutine` (canvas PNG), QR encoder, `seatRows` (slim seat projection) |
-| `worker.js` | Message protocol (`init` / `more` / `ping` / `fetch-seats`); receives slim candidates, returns compact transferable `{ci, score}` descriptors; a second instance polls seats so polling never queues behind a search |
+## Features
 
-### Runtime data flow
+### Course selection and preferences
 
+- Search by course code or title. `/` focuses search; arrow keys and Enter select a result.
+- Filter each course by time pattern, section and faculty. Incompatible choices are explained;
+  existing selections remain removable. Identical meeting patterns are grouped together.
+- Set maximum campus days and unavailable days/times.
+- Seat modes: **Ignore** (fresh/reset default), **Prefer available**, or **Require available**.
+  Require excludes known-full sections; unknown counts remain eligible. Explicit saved choices
+  survive reloads.
+- One ranking selector: Balanced, Fewer campus days, Less total campus time, or Shorter days &
+  fewer gaps. Legacy custom combinations remain visible as Custom until replaced.
+- Advanced contains faculty exclusions and exam checking. Minimum-day constraints and duplicate
+  ranking switches are removed, including their legacy saved/link settings.
+
+### Results and sharing
+
+- Search runs in a worker with main-thread fallback. Find more continues enumeration; Find them
+  all requests a larger sweep within device-dependent limits. Rankings apply to results found
+  so far, not unseen combinations.
+- Sort by Best overall, Fewest days, Fewest gaps, Latest start, Earliest finish, or Most section
+  choices. Latest start compares the earliest class of each routine; Earliest finish compares
+  its latest class end across the week.
+- Grid/day-list views show meetings and exams. Alternative sections update the routine and show
+  exam-conflict warnings where applicable.
+- Copy section lists, print results, or download a 2× PNG. The PNG QR links to the app homepage,
+  not the specific routine.
+- Share links include course selections and constraints. Versioned links reset unspecified
+  constraints rather than inheriting the recipient's settings; older links remain readable.
+- Preferences, pins, theme and eligible result pages persist locally. Feed/scoring changes
+  invalidate incompatible saved results. Reset clears device state, not repository history.
+
+### Seats and collected semesters
+
+- Resizable seats panel and standalone `?view=seats` page, with same-origin tab synchronization.
+- Lists: Pinned (up to 50 sections), On this routine page, Your courses, and All courses.
+- Seat changes update rows without rebuilding results or moving the list's scroll position.
+- Only **All courses** follows the semester selector. Saved courses start collapsed, including
+  filtered results; explicit open/closed choices are separate per semester during the visit.
+- Current live and collected views remain distinct: a preserved faculty initial does not replace
+  a published TBA in live planning.
+
+## Repository collection
+
+`tools/collect-semesters.py` writes `data/semesters/`; visitors' browsers only read these files.
+
+- Retain the **latest eight semesters total**, including the current collected semester.
+  Collecting a ninth removes the oldest semester file and its index entry. Git history is not rewritten.
+- Keep the last known non-TBA faculty/lab initials and observed reassignment history.
+- Refresh capacity and enrolled seats on each successful collection. Remaining seats are
+  `max(0, capacity - enrolled)`; unknown counts stay unknown.
+- Retain disappeared sections within the eight-semester window, with their last observation dates.
+  Saved and live totals can therefore differ. The panel's tracked count covers known seat counts,
+  not necessarily every section in the collection.
+- Invalid or failed collection attempts leave the existing data unchanged.
+
+The workflow is configured for **every six hours** (`17 */6 * * *`) and manual dispatch.
+**It is not activated merely by these local files.** Its explicit target is currently
+`arena/01a10a61-prohor`; publication, GitHub permissions and deployment must be reviewed before use.
+See [collection format, provenance and activation instructions](data/semesters/README.md).
+
+The current seed comes from the **September 26, 2026** snapshot: Fall 2026 (`20263`), 2,092 sections.
+It is not a successful recent live capture. Collection cannot reconstruct observations it never received.
+
+## Loading, polling and offline behavior
+
+| Operation | Policy |
+|---|---|
+| Catalogue | Ten-minute cache age with background revalidation; checks also occur on return to a stale tab |
+| Slow initial feed | Try bundled snapshot after 1.4 seconds; a delayed snapshot cannot overwrite a live result |
+| Network JSON deadline | 15 seconds, including response body; native-fetch fallback supports older cached core scripts |
+| IndexedDB open/read | 1.5-second deadline before fallback, so a stalled cache does not block loading |
+| Seats | 30-second polling, requested 60 seconds in a hidden tab; failure backoff up to eight minutes |
+| Seat worker | 20-second watchdog; cancelled/obsolete replies are ignored |
+| Repository collection | Six-hour GitHub schedule, once activated; independent of browser polling |
+
+Pause stops automatic seat checks; Refresh performs a manual check. Catalogue revalidation is
+independent. Seat polling updates displayed counts, not already-generated routines or catalogue
+candidates: seat-based generation may use older data than the panel's latest poll.
+
+The badge distinguishes live, cached, stale and bundled data. The snapshot displays its source
+date. There is **no service worker**: offline planning requires app files to remain available, and
+a cold offline reload is not guaranteed. Browser storage can be denied, evicted or cleared.
+
+## Project layout
+
+| Path | Purpose |
+|---|---|
+| `index.html` | UI, styles, state, persistence and network coordination |
+| `core.js` | Shared feed normalization, filtering, enumeration, view model and PNG rendering |
+| `worker.js` | Search and seat-polling protocols, using separate worker instances |
+| `snapshot.json` | Dated offline feed |
+| `faculty-names.json` | Optional initials-to-name lookup |
+| `data/semesters/` | Repository collection and format/activation documentation |
+| `.github/workflows/collect-semesters.yml` | Scheduled/manual collection and JSON commits |
+| `tools/collect-semesters.py` | Validate, merge and retain semester observations |
+| `tools/build-snapshot.py` | Convert raw Connect data into the compact snapshot |
+| `test.js`, `tools/*test*.js`, `tools/*audit*.js`, `tools/sweep.js` | Functional, browser and rendering checks |
+| `docs/TESTING.md` | Test scope, regression coverage and release checks |
+
+The engine searches courses in fewest-candidates-first order and precomputes incompatibilities.
+Workers return deterministic compact descriptors; the page materializes routines from the same
+candidate order. `buildView()` supplies the HTML and PNG representations.
+
+## Tests
+
+Use Node.js supported by the locked dependencies (Node 22.22+ works), Python 3, and Chromium:
+
+```sh
+npm ci
+npx playwright install --with-deps chromium
+# Keep the local HTTP server running in another terminal.
+npm run test:acceptance
+npm audit
 ```
-connect.json (live) ──► core.fromApi ──► buildIndex ──► courses / patterns / exams
-        │                                                   │
-        ├──► core.seatRows ──► seats panel (its own worker) │
-        ▼                                                   ▼
- IndexedDB/localStorage cache                      worker.js (DFS search)
-        │                                                   │ {ci, score}
-        ▼                                                   ▼
- snapshot.json (bundled fallback) ────────────────► buildView ──► HTML grid / exam table / PNG
-```
 
-## Data loading and caching
+`URL` overrides the browser-test target (default `http://localhost:8000/index.html`).
+`CHROMIUM_PATH` selects an existing compatible browser. A missing browser is not a passing test.
 
-1. On open, the live feed is fetched and stored in IndexedDB (localStorage fallback).
-2. For the next 10 minutes the page paints instantly from cache while a quiet background
-   revalidation runs; after 10 minutes the next load, a 60-second tick in a long-open tab, or the
-   tab becoming visible again triggers a refetch.
-3. If the live feed cannot be reached, the app falls back to the bundled `snapshot.json`, then
-   to the last cached copy of any age. The header pill always states which source is on screen
-   (*Live*, *Cached*, *Offline copy*, *Stale copy*). There is no manual refresh — the
-   10-minute poll keeps the feed current on its own.
-4. When the saved feed is old, the page races the live endpoint against `snapshot.json` and
-   paints from whichever answers first, then quietly upgrades to live data — pattern keys are
-   content-based, so locked slots survive the swap. A pending **Generate** press is queued and
-   runs once data lands.
-5. Revalidation compares a **content fingerprint**, not a section count: a refresh that returns
-   the same sections rolls the clock without rebuilding (a poll is effectively free), and a
-   republish that edits rooms or exams at the *same* section count is noticed and rebuilt
-   instead of being served stale while claiming to be live. When the feed moves to a new
-   session, the previous semester is filed on the device automatically, pins on dropped sections
-   are pruned, and the planner keeps running on the new data without a reload.
+| Command | Coverage |
+|---|---|
+| `npm test` | Core, network deadlines, worker, picker, PNG and jsdom integration |
+| `npm run test:collector` | Repository persistence, seats/faculty updates, validation and eight-semester eviction |
+| `npm run test:layout` | Chromium layouts, preferences, search recovery and mixed-version fetching |
+| `npm run test:exports` | Native clipboard/PNG/PDF and export failures |
+| `npm run test:boundaries` | Pin cap, repository ownership and unavailable storage/archive |
+| `npm run test:extremes` | Stalled storage, quota errors, malformed links, throttled search and narrow layouts |
+| `npm run test:ux` | Dialog naming, reset messaging, keyboard focus and warning fit |
+| `npm run test:archive-fold` | Collapsed saved-course defaults, toggling, filtering and semester isolation |
+| `npm run test:sweep` | Seeded interaction sequence |
+| `npm run test:acceptance` | All of the above |
 
-## Live seat tracking
+Engine/UI harnesses may use a local raw `connect.json`; otherwise they use the snapshot.
+`SNAPSHOT_ONLY=1` pins the jsdom suite to the snapshot. Fixture tests do not establish live-feed
+availability, successful GitHub automation or registration accuracy.
 
-- A dedicated `Worker` instance handles only `fetch-seats`, so a poll can never queue behind or
-  interleave with an enumeration; results never re-render the routine list (a test asserts
-  `#resultsBody` is byte-identical across a seat refresh), and rail repaints are coalesced to
-  idle time.
-- Cadence: 30 s while seats are on, 60 s while the tab is hidden, exponential backoff on
-  failure (30 s → … → 8 min). **Pause** sits in the panel header; there is no manual refresh —
-  the polling keeps the numbers current on its own.
-- 30 s is a deliberate floor: each poll pulls the ~3.3 MB feed (the CDN itself regenerates on a
-  ~60 s clock), so faster polling would cost a phone's data plan and the CDN's bandwidth for
-  little gain.
+See [testing and release checks](docs/TESTING.md) for coverage and remaining
+browser, device, accessibility and deployment limitations.
 
-## Running locally
+## Refresh the offline snapshot
 
-```bash
-cd prohor                 # the folder holding these files
-python3 -m http.server 8000     # or: npx serve .
-# open http://localhost:8000
-```
-
-Double-clicking `index.html` also works (the live feed is fetched; `file://` may block the
-worker, in which case the search runs on the main thread).
-
-## Deployment
-
-### GitHub Pages
-
-1. Upload these files to the **repository root**: `index.html`, `core.js`, `worker.js`,
-   `snapshot.json`, `faculty-names.json`, `manifest.webmanifest`, `favicon.svg`, `icon.svg`,
-   `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png`, plus an empty
-   `.nojekyll` file (stops Jekyll from mangling the JSON).
-2. **Settings → Pages → Source: Deploy from a branch → `main` / (root) → Save**.
-3. Open `https://<user>.github.io/<repo>/`.
-
-Every path is relative, so the site works from a project page or a user page.
-
-### Vercel
-
-Import the repository as an *Other* (no-framework) project and serve the repository root; the app
-itself needs no configuration.
-
-### Scaling and hosting cost
-
-There is no backend, so "many users" never touches your quota the way a dynamic site would:
-
-- **What a visitor costs you:** the static shell (≈ 1.1 MB uncompressed; far less over the wire
-  with Brotli) served as files. On the free Hobby tier (100 GB/month) that is on the order of a
-  hundred thousand first visits a month; repeat visitors mostly revalidate.
-- **What a visitor costs themselves:** live feed + seat polling (`≈ 3.3 MB` per poll of
-  `connect.json`, every 30 s with seats on and 60 s in the background) — this traffic goes
-  to the Connect-CDN, not to your hosting bandwidth, and it is why the cadence is capped and
-  failures back off exponentially instead of hammering the upstream.
-- **No runtime to scale:** the search runs in a worker on the user's own device; there are no
-  serverless functions, no cold starts, and nothing per-user on the server at all.
-
-## Testing
-
-```bash
-node test.js                    # engine checks: grouping, day window, filters, exams, view model,
-                                # PNG painter (incl. the header/semester geometry)
-node tools/worker-test.js       # worker protocol, exam blocking, seat-polling isolation,
-                                # success + failure contracts of the seat worker
-npm i jsdom                     # once
-node tools/browser-test.js      # full UI suite in jsdom: split view, seats page, paging, pickers,
-                                # semester rollover, same-count drift, hostile-feed escaping
-node tools/sweep.js 20260928    # seeded random-action sweep over both views + invariants
-npm i -D playwright             # once, for the layout audit
-node tools/layout-audit.js      # real Chromium at 360/390/768/1440 px: hit-tests every control
-SNAPSHOT_ONLY=1 node tools/browser-test.js    # the same suite pinned to the bundled snapshot
-
-# refresh the offline copy (also picks up a new semester)
-curl -o connect.json https://usis-cdn.eniamza.com/connect.json
+```sh
+curl --fail --location -o connect.json https://usis-cdn.eniamza.com/connect.json
 python3 tools/build-snapshot.py --in connect.json --out snapshot.json
+npm test
 ```
 
-The sweep is seeded, so a failure reproduces exactly: after every action it asserts the URL and
-body class agree on the view, dimmed picker rows never accept a tick, pins stay ≤ 50, courses ≤ 6,
-ids unique, and no `undefined` / `NaN` / `[object Object]` reaches visible text.
+The builder expects raw Connect API data, not a compact snapshot. Review the metadata and diff;
+keep raw downloads out of Git. Snapshot refresh and repository collection are separate operations.
 
-## Notes on the data
+## Deployment and maintenance
 
-- Sections in the current feed belong to session `20263` (Fall 2026), classes
-  `2026-10-03 → 2027-01-04`; 1,864 of 2,092 sections across 534 courses publish exam slots, and
-  **every** paired lab lists `TBA` as faculty — that is the source data, not a bug.
-- Session ids map to terms by their fifth digit (`20263` → *Fall 2026*): `1` Spring, `2` Summer,
-  `3` Fall. The app and the PNG export always name the term, never the raw id.
-- `capacity`, `consumedSeat` and `prerequisiteCourses` are in the feed; the first two power the
-  seats panel, prerequisites are not surfaced yet.
-- `faculty-names.json` is optional: map initials to full names and they render as
-  `SWK · Saharia Islam` in class blocks, chips and the faculty picker. Unknown initials display
-  as-is.
+Serve the repository root as a static site (for example, GitHub Pages or Vercel without a build
+command). Include `index.html`, `core.js`, `worker.js`, `snapshot.json`, `faculty-names.json`,
+**`data/semesters/*.json`**, the manifest and icons. Test dependencies are not production assets.
+Relative paths support subdirectory hosting.
 
-## Feedback
+- Deploy HTML/core/worker together. Update their versioned script URLs together when changing APIs.
+- Preserve candidate ordering and worker descriptor contracts. Bump the saved scoring version
+  when ranking semantics change.
+- Preference changes need defaults, persistence, share-link, reset and stale-result coverage.
+- Retain comments explaining invariants and failure handling, not a running change history.
+- Verify collection commits actually trigger your host's deployment; `GITHUB_TOKEN` commits may
+  not trigger downstream GitHub workflows. Activation details are in the collection documentation.
 
-Found a bug, a stale mapping, or a routine that should not be possible?
-[Send feedback on Gmail](https://mail.google.com/mail/?view=cm&fs=1&to=nishadislamutso@gmail.com&su=Prohor%20routine%20planner%20feedback)
-· [Source code](https://github.com/NishadIslamUtso/prohor)
+[Feedback](mailto:nishadislamutso@gmail.com?subject=Prohor%20routine%20planner%20feedback)
+· [Source](https://github.com/NishadIslamUtso/prohor)

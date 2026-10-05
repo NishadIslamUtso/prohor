@@ -13,7 +13,7 @@
 
   var DATA_URL = "https://usis-cdn.eniamza.com/connect.json";
   var SNAPSHOT_URL = "./snapshot.json";
-  var REFRESH_MS = 6 * 60 * 60 * 1000;          // data auto-refresh window
+  var REFRESH_MS = 6 * 60 * 60 * 1000;          // Legacy exported constant; page and collector schedules are configured separately.
 
   var DAYS = ["SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
   var DAY_SHORT = { SATURDAY: "SAT", SUNDAY: "SUN", MONDAY: "MON", TUESDAY: "TUE", WEDNESDAY: "WED", THURSDAY: "THU", FRIDAY: "FRI" };
@@ -105,6 +105,7 @@
   function fromApi(raw) {
     var items = Array.isArray(raw) ? raw : (raw && (raw.sections || raw.data || raw.content || raw.items)) || [];
     var out = [];
+    if (!Array.isArray(items)) return out;
     for (var i = 0; i < items.length; i++) {
       var it = items[i] || {};
       if (!it) continue;
@@ -137,16 +138,22 @@
 
   // [[courseCode, sectionName, capacity, consumedSeat, free, faculty], …] — the only fields
   // the seat rail needs, so a refresh never rebuilds the full index.
+  function seatCount(value) {
+    if ((typeof value !== "number" && typeof value !== "string") || String(value).trim() === "") return null;
+    var n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }
   function seatRows(raw) {
     var items = Array.isArray(raw) ? raw : (raw && (raw.sections || raw.data || raw.content || raw.items)) || [];
     var out = [];
+    if (!Array.isArray(items)) return out;
     for (var i = 0; i < items.length; i++) {
       var it = items[i] || {};
       var code, sec, cap, used, fac;
       if (it.c && !it.courseCode) { code = it.c; sec = it.sec; cap = it.cap; used = it.used; fac = it.f; }
       else { code = it.courseCode; sec = it.sectionName; cap = it.capacity; used = it.consumedSeat; fac = it.faculties; }
       if (!code) continue;
-      cap = cap == null ? null : +cap; used = used == null ? null : +used;
+      cap = seatCount(cap); used = seatCount(used);
       out.push([code, String(sec == null ? "?" : sec), cap, used,
         cap == null || used == null ? null : Math.max(0, cap - used), String(fac || "TBA")]);
     }
@@ -192,7 +199,7 @@
       room: rec.r || null, labRoom: rec.lr || null,
       labCourse: rec.lc || null, labFaculties: labFac, labFaculty: labFac.join(", ") || "TBA",
       exams: exams, examText: rec.fin || null, midText: rec.mid || null,
-      cap: rec.cap, used: rec.used, start: rec.start, end: rec.end,
+      cap: seatCount(rec.cap), used: seatCount(rec.used), start: rec.start, end: rec.end,
       events: events, labs: labs
     };
     o.label = o.code + "-[" + o.sec + "]";
@@ -382,7 +389,7 @@
       var cand = R[z].candidates[ci[z]];
       // pickSec is keyed by the caller's row index; ci is keyed by search order.
       var secIdx = 0, want = pickSec && pickSec[ord.order[z]];
-      if (typeof want === "number" && want >= 0 && want < cand.sections.length) secIdx = want;
+      if (Number.isInteger(want) && want >= 0 && want < cand.sections.length) secIdx = want;
       var sec = cand.sections[secIdx];
       var evs = (cand.events || cand.group.events).map(function (e) {
         var copy = {};
@@ -436,7 +443,7 @@
 
   // One search candidate = one slot group (already narrowed by faculty + avoid filters).
   function makeCandidate(g, code, sections) {
-    var evA = sections.length ? [] : [];
+    var evA = [];
     // events are shared by every section of the group; rooms/exams are per section
     g.events.forEach(function (e) { evA.push([e.day, e.start, e.end]); });
     var exA = (g.exams || []).map(function (x) { return [x.date, x.start, x.end]; });
@@ -495,10 +502,8 @@
     return out;
   }
 
-  // Every section of the course, each tagged with the pattern it belongs to and whether the
-  // other three controls (locked patterns, picked faculty, picked section numbers) still let it
-  // through. All four are consulted so each picker can grey out exactly what the *other*
-  // two picks make impossible — the constraint has to run in both directions.
+  // Annotate each section against pattern/faculty/section selections and global filters.
+  // Pickers use these reasons to show incompatible options without silently removing selections.
   function sectionChoices(C, row, filters) {
     if (!C || !C.groups) return [];
     row = row || {};
@@ -593,15 +598,15 @@
       var sc = scoreOf(ci);
       if (sc.days < minDays || sc.days > maxDays) return null;
       st.valid++;
-      return { ci: ci, days: sc.days, gaps: sc.gaps, span: sc.span, longest: sc.longest, early: sc.early, alt: sc.alt, score: sc.score };
+      return { ci: ci, days: sc.days, gaps: sc.gaps, span: sc.span, longest: sc.longest, early: sc.early, earliest: sc.earliest, latest: sc.latest, alt: sc.alt, score: sc.score };
     }
 
     function scoreOf(ci) {
-      var perDay = {}, events = [], days = 0, alt = 1, full = 0, earliest = 1440, latest = 0;
+      var perDay = {}, alt = 1, full = 0, earliest = 1440, latest = 0;
       for (var z = 0; z < N; z++) {
         var cand = R[z].candidates[ci[z]];
         alt *= cand.count;
-        full += cand.full || 0;
+        full += cand.full > 0 && cand.open === 0 ? 1 : 0;
         for (var k = 0; k < cand.events.length; k++) {
           var ev = cand.events[k];
           (perDay[ev.day] = perDay[ev.day] || []).push(ev);
@@ -619,18 +624,15 @@
         if (l[0].start <= 480) early++;
         for (var t = 1; t < l.length; t++) { var gp = l[t].start - l[t - 1].end; if (gp > 0) gaps += gp; }
       });
-      void events;
-      // Each ranking switch owns one term, so turning one off really removes it from the order.
+      // Presets enable independent scoring terms; keep disabled terms out of the score.
       var v = 0;
       if (prefs.preferFewerDays !== false) v += dayNos.length * 100000;
       if (prefs.preferLessTime !== false) v += span * 10;
       if (prefs.preferGaps !== false) v += gaps + longest * 10;
       if (prefs.preferAlt && alt > 1) v -= Math.min(90000, 30000 * (Math.log(alt) / Math.LN2));
-      // a completely-full section is a plan that can still fail at registration: rank the
-      // seat-aware patterns above the ones that depend on someone dropping first (worth
-      // less than an extra day on campus, worth more than a few saved minutes of gaps)
+      // Penalise a course only when all eligible sections are full, not for each full alternative.
       if (prefs.preferOpenSeats !== false && full) v += full * 25000;
-      return { days: dayNos.length, dayNos: dayNos, gaps: gaps, span: span, longest: longest, early: early, alt: alt, score: v };
+      return { days: dayNos.length, dayNos: dayNos, gaps: gaps, span: span, longest: longest, early: early, earliest: earliest, latest: latest, alt: alt, score: v };
     }
 
     function next(opts) {
@@ -1391,7 +1393,31 @@
     ctx.fillRect(cx - r - w * .9, cy - size * 0.06, w * 1.1, size * 0.46);
   }
 
+  // Bound both response headers and body parsing, even if a transport ignores abort.
+  function fetchJson(url, options, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      var controller = typeof AbortController === "function" ? new AbortController() : null;
+      var opts = Object.assign({}, options || {}), settled = false;
+      if (controller) opts.signal = controller.signal;
+      function finish(error, value) {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        if (error) reject(error); else resolve(value);
+      }
+      var timer = setTimeout(function () {
+        finish(new Error("Request timed out"));
+        if (controller) controller.abort();
+      }, timeoutMs == null ? 15000 : timeoutMs);
+      try { var request = fetch(url, opts); } catch (error) { finish(error); return; }
+      Promise.resolve(request).then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.json();
+      }).then(function (value) { finish(null, value); }, function (error) { finish(error); });
+    });
+  }
+
   return {
+    fetchJson: fetchJson,
     DATA_URL: DATA_URL, SNAPSHOT_URL: SNAPSHOT_URL, REFRESH_MS: REFRESH_MS,
     DAYS: DAYS, DAY_SHORT: DAY_SHORT, DAY_LABEL: DAY_LABEL, TIME_SLOTS: TIME_SLOTS, LIGHT: L,
     fromApi: fromApi, buildIndex: buildIndex,

@@ -22,7 +22,7 @@
  *   node tools/layout-audit.js                                   # against http://localhost:8000
  *   URL=https://your-site.example node tools/layout-audit.js
  *
- * Exits 1 on a failure, 3 when no browser is available (so CI without one stays green).
+ * Exit codes: 1 for failed assertions, 2 for runtime/launch errors, 3 for missing Playwright.
  */
 
 const BASE = (process.env.URL || "http://localhost:8000/index.html").replace(/\/index\.html$/, "");
@@ -125,6 +125,7 @@ function pickerState() {
 
 // ── the checks ──────────────────────────────────────────────────────────────────────
 const PLANNER_TARGETS = [
+  ["#seatNow", "manual seat refresh", "band"],
   ["#courseSearch", "course search", "pane"],
   ['#courses .course [data-act="open-ts"]', "time-slot picker trigger", "pane"],
   ['#courses .course [data-act="open-sec"]', "section picker trigger", "pane"],
@@ -137,6 +138,7 @@ const PLANNER_TARGETS = [
   ['[data-pg="next"]', "next page", "pane"],
 ];
 const PAGE_TARGETS = [
+  ["#seatNow", "manual seat refresh", "any"],
   ["#seatsBtn", "seats toggle (goes back)", "any"],
   ["#railBack", "back to the planner", "any"],
   ["#railFoot", "the footnote", "any"],
@@ -146,7 +148,7 @@ const PAGE_TARGETS = [
 ];
 
 (async () => {
-  const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
   for (const vp of CASES) {
     const seatsPage = vp.view === "seats";
     console.log("\n--- " + vp.name + " " + vp.width + "x" + vp.height + (seatsPage ? " · seats page" : " · planner") + " ---");
@@ -155,7 +157,7 @@ const PAGE_TARGETS = [
     const errs = [];
     page.on("pageerror", (e) => errs.push(String(e.message)));
     await page.goto(BASE + (seatsPage ? "/index.html?view=seats" : "/index.html"), { waitUntil: "load" });
-    await page.waitForFunction(() => /[0-9][0-9,]* sections?/.test((document.querySelector("#livePill") || {}).textContent || ""), { timeout: 25000 }).catch(() => { });
+    await page.waitForFunction(() => { const input = document.querySelector("#courseSearch"); return input && !input.disabled; }, { timeout: 25000 });
 
     if (!seatsPage) {
       for (const code of ["CSE221", "MAT216"]) {
@@ -227,12 +229,14 @@ const PAGE_TARGETS = [
         slim: document.querySelector("#seatsLayer").classList.contains("slim"),
         h: parseInt(getComputedStyle(document.body).getPropertyValue("--rail-h"), 10),
         paneH: Math.round(document.querySelector("main").getBoundingClientRect().height),
+        chromeH: document.querySelector(".app-header").getBoundingClientRect().height +
+          document.querySelector(".action-bar").getBoundingClientRect().height,
         peek: ((document.querySelector("#railPeek") || {}).textContent || "").replace(/\s+/g, " ").trim(),
         stacked: innerWidth < 1024,
       }));
       if (f.stacked) {
         ok(f.slim && f.h <= 140, "tapping the handle folds the band to a strip", JSON.stringify(f).slice(0, 90));
-        ok(f.paneH >= vp.height - 260, "folding returns the screen to the page", f.paneH + " of " + vp.height);
+        ok(f.paneH >= vp.height - f.h - f.chromeH - 2, "folding returns all space outside the header, action bar and strip to the page", JSON.stringify(f));
         ok(/CSE221/.test(f.peek), "the pinned seats stay readable while folded", f.peek.slice(0, 70));
         await page.click("#railGrip"); await page.waitForTimeout(400);
         ok(await page.evaluate(() => !document.querySelector("#seatsLayer").classList.contains("slim")), "tapping again unfolds it");
