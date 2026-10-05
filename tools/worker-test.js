@@ -45,6 +45,7 @@ self.onmessage({ data: { type: "more", want: 50, budgetMs: 1000 } });
 const b1 = posted[posted.length - 1];
 ok(b1.type === "batch" && b1.items.length === 50, "first batch has 50 items", b1.items.length);
 ok(b1.done === false, "first batch is not the end");
+ok(b1.items.every(it => Number.isFinite(it.earliest) && Number.isFinite(it.latest) && it.earliest < it.latest), "worker preserves clock bounds used for sorting");
 ok(b1.items.every((it) => it.ci && typeof it.score === "number" && typeof it.alt === "number"), "items are compact descriptors");
 ok(typeof b1.tried === "number" && b1.tried > 0, "batch reports combinations tried", b1.tried);
 
@@ -98,11 +99,12 @@ ok(posted[posted.length - 1].type === "batch" || posted[posted.length - 1].type 
   const big = feedPath ? JSON.parse(fs.readFileSync(feedPath, "utf8")) : snap.sections;
   globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => big });
   posted.length = 0;
-  await self.onmessage({ data: { type: "fetch-seats" } });
+  await self.onmessage({ data: { type: "fetch-seats", requestId: 7 } });
   await new Promise((r) => setTimeout(r, 300));
   const msg = posted.find((p) => p.type === "seats");
   ok(!!msg, "the worker answers fetch-seats with a seats payload");
   if (msg) {
+    ok(msg.requestId === 7, "seat replies identify the request they belong to");
     ok(msg.rows.length === (Array.isArray(big) ? big.length : big.length), "one row per section", msg.rows.length);
     const full = msg.rows.find((r) => r[2] != null && r[3] != null && r[3] === r[2]);
     const over = msg.rows.find((r) => r[2] != null && r[3] != null && r[3] > r[2]);
@@ -114,13 +116,13 @@ ok(posted[posted.length - 1].type === "batch" || posted[posted.length - 1].type 
   // protocol's plain "error" (which the seat instance's handler would silently drop)
   globalThis.fetch = async () => { throw new TypeError("Failed to fetch (offline)"); };
   posted.length = 0;
-  await self.onmessage({ data: { type: "fetch-seats" } });
+  await self.onmessage({ data: { type: "fetch-seats", requestId: 7 } });
   await new Promise((r) => setTimeout(r, 200));
   const netDown = posted.find((p) => p.type === "seats-error");
-  ok(!!netDown && !posted.some((p) => p.type === "error"), "a network failure posts seats-error, not the ignored \"error\"", JSON.stringify(posted.map((p) => p.type)));
+  ok(!!netDown && netDown.requestId === 7 && !posted.some((p) => p.type === "error"), "a network failure posts seats-error, not the ignored \"error\"", JSON.stringify(posted.map((p) => p.type)));
   globalThis.fetch = async () => ({ ok: false, status: 503, json: async () => ({}) });
   posted.length = 0;
-  await self.onmessage({ data: { type: "fetch-seats" } });
+  await self.onmessage({ data: { type: "fetch-seats", requestId: 7 } });
   await new Promise((r) => setTimeout(r, 200));
   const badHttp = posted.find((p) => p.type === "seats-error");
   ok(!!badHttp && /503/.test(badHttp.message || ""), "an HTTP failure posts seats-error with the status", badHttp && badHttp.message);

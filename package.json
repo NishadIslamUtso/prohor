@@ -4,5 +4,18 @@
   },
   "devDependencies": {
     "playwright": "^1.63.0"
+  },
+  "scripts": {
+    "test": "node test.js && node tools/network-test.js && node tools/worker-test.js && node tools/picker-test.js && node tools/png-hatch-audit.js && node tools/browser-test.js",
+    "test:sweep": "node tools/sweep.js 20261005",
+    "test:layout": "node tools/layout-audit.js && node tools/preferences-layout-test.js && node tools/search-browser-test.js && node tools/fetch-compat-test.js",
+    "test:fetch": "node tools/fetch-compat-test.js",
+    "test:exports": "node tools/export-acceptance-test.js",
+    "test:boundaries": "node tools/boundary-acceptance-test.js",
+    "test:acceptance": "npm run test:collector && npm test && npm run test:layout && npm run test:exports && npm run test:boundaries && npm run test:extremes && npm run test:ux && npm run test:archive-fold && npm run test:sweep",
+    "test:collector": "python3 tools/test-collect-semesters.py",
+    "test:extremes": "node tools/extreme-acceptance-test.js",
+    "test:ux": "node tools/ux-acceptance-test.js",
+    "test:archive-fold": "node tools/archive-fold-test.js"
   }
 }

@@ -1,7 +1,7 @@
 /*
  * Geometric audit of the PNG painter's lab hatching.
  *
- * No real browser exists in this sandbox, so the canvas is modelled faithfully instead:
+ * This browser-independent audit models canvas clipping:
  * save/restore keep a clip-rectangle stack, rect()+clip() intersect the clip, and every
  * stroked segment is intersected with the active clip (Liang-Barsky — the same exact
  * geometry a browser applies to strokes under an axis-aligned clip).

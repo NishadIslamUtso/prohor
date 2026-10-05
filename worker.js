@@ -1,12 +1,9 @@
-/*
- * Search worker: runs the routine enumeration off the main thread so the page
- * stays interactive. It only ever handles slim candidates (numbers + strings),
- * and answers with compact {ci, score} descriptors — the main thread renders.
- */
+/* Search instances enumerate compact candidates; seat instances fetch counts independently.
+ * Rendering and request scheduling belong to the page. */
 (function () {
   "use strict";
   // In a real worker core.js is loaded relatively; the Node harness pre-loads it on self.
-  if (typeof importScripts === "function") importScripts("./core.js");
+  if (typeof importScripts === "function") importScripts("./core.js?v=20261005-fetch-compat");
   var C = self.RGCore || (typeof require === "function" ? require("./core.js") : null);
   var en = null;
 
@@ -28,11 +25,11 @@
         var r = en.next({ want: m.want || 50, budgetMs: m.budgetMs || 0, sort: m.sort !== false });
         var transfer = [];
         var items = r.items.map(function (it) {
-          // ci is transferable-ish: copy into a fresh Int32Array per item
+          // Transfer a copy; the enumerator retains ownership of its descriptor indices.
           var ci = new Int32Array(it.ci);
           transfer.push(ci.buffer);
           return {
-            ci: ci, days: it.days, gaps: it.gaps, span: it.span, early: it.early,
+            ci: ci, days: it.days, gaps: it.gaps, span: it.span, early: it.early, earliest: it.earliest, latest: it.latest,
             alt: it.alt, score: it.score
           };
         });
@@ -43,19 +40,20 @@
         return;
       }
       if (m.type === "ping") { post({ type: "pong" }); return; }
-      // Seat rail: this worker instance only fetches + trims, so seat polling can never
-      // queue behind (or interleave with) an enumeration running in the search worker.
       if (m.type === "fetch-seats") {
         try {
-          var res = await fetch(m.url || C.DATA_URL, { cache: "no-cache" });
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          var raw = await res.json();
-          post({ type: "seats", at: Date.now(), rows: C.seatRows(raw) });
+          var raw;
+          if (typeof C.fetchJson === "function") raw = await C.fetchJson(m.url || C.DATA_URL, { cache: "no-cache" });
+          else {
+            // Match the page's native-fetch fallback during a mixed-version deployment.
+            var response = await fetch(m.url || C.DATA_URL, { cache: "no-cache" });
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            raw = await response.json();
+          }
+          post({ type: "seats", requestId: m.requestId, at: Date.now(), rows: C.seatRows(raw) });
         } catch (seatErr) {
-          // the page's seat worker instance listens for "seats-error": a plain "error" is a
-          // search-protocol message its handler ignores, so without this a dead CDN would
-          // never surface, never back off, and the panel would keep claiming stale is fresh
-          post({ type: "seats-error", message: String((seatErr && seatErr.message) || seatErr) });
+          // Seat handlers require seats-error; error is reserved for the search protocol.
+          post({ type: "seats-error", requestId: m.requestId, message: String((seatErr && seatErr.message) || seatErr) });
         }
         return;
       }

@@ -38,7 +38,7 @@ let fail = 0;
 function ok(c, l, x) { if (c) console.log("pass  " + l + (x !== undefined ? "  -> " + x : "")); else { fail++; console.log("FAIL  " + l + (x !== undefined ? "  -> " + x : "")); } }
 
 (async () => {
-  const dom = new JSDOM(html.replace('<script src="./core.js"></script>', "<script>" + core + "</scr" + "ipt>"), {
+  const dom = new JSDOM(html.replace(/<script src="\.\/core\.js(?:\?[^"]*)?"><\/script>/, "<script>" + core + "</scr" + "ipt>"), {
     url: "https://routine.test/", runScripts: "dangerously", pretendToBeVisual: true, virtualConsole: vc,
     beforeParse(w) {
       w.matchMedia = (q) => ({ matches: false, media: q, addListener() { }, removeListener() { }, addEventListener() { }, removeEventListener() { } });

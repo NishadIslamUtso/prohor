@@ -165,10 +165,11 @@ a{color:var(--primary-text)}
 .kv dt{color:var(--text-3)}.kv dd{margin:0}
 .pop-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text-3)}
 .pill .short{display:none}
-@media (max-width:640px){.unofficial,.text-btn.howto,.pill .full{display:none}.pill .short{display:inline}.app-header .wrap{gap:10px}}
+@media (max-width:640px){.unofficial,.text-btn.howto,.pill .full{display:none}.pill .short{display:inline}.app-header .wrap{gap:10px;padding-left:12px;padding-right:12px}.hdr-right{min-width:0;flex-wrap:wrap;justify-content:flex-end;row-gap:4px}}
 @media (max-width:1023px){.prefs-body>.step-head{display:none}.prefs-body>.step-desc{margin-top:10px}}
 
 /* =============================== LAYOUT =============================== */
+html:not(:has(body.view-seats)){scroll-padding-top:64px;scroll-padding-bottom:140px} /* keep focused/scrolled controls clear of fixed bars */
 main.wrap{padding-top:28px;padding-bottom:140px}
 .columns{display:grid;grid-template-columns:7fr 5fr;gap:24px;align-items:start}.columns>*{min-width:0}
 @media (max-width:1023px){.columns{grid-template-columns:1fr}}
@@ -255,12 +256,17 @@ main.wrap{padding-top:28px;padding-bottom:140px}
 .pref-section{padding:14px 0;border-top:1px solid var(--border)}
 .pref-section:first-child{border-top:0;padding-top:0}
 .pref-title{font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.pref-select{width:100%;min-height:42px;padding:8px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:inherit}
+.pref-help{font-size:12px;line-height:1.5;color:var(--text-2);margin:6px 0 10px}
+.pref-advanced{border-top:1px solid var(--border);padding:14px 0}
+.pref-advanced summary{cursor:pointer;font-size:14px;font-weight:600}
+.pref-advanced[open]>summary{margin-bottom:14px}
 .pref-title .val{color:var(--primary-text);font-variant-numeric:tabular-nums;font-weight:600}
 .pref-help{font-size:12.5px;color:var(--text-2)}
 .range-dual{position:relative;height:36px;margin:6px 4px 0}
 .range-dual .track{position:absolute;left:0;right:0;top:16px;height:4px;border-radius:2px;background:var(--border-strong)}
 .range-dual .fill{position:absolute;top:16px;height:4px;border-radius:2px;background:var(--primary)}
-.range-dual input{position:absolute;left:-9px;right:-9px;width:calc(100% + 18px);top:6px;margin:0;-webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;height:24px}
+.range-dual input{position:absolute;left:-9px;right:-9px;width:calc(100% + 18px);top:6px;margin:0;-webkit-appearance:none;appearance:none;background:transparent;pointer-events:auto;height:24px}
 .range-dual input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:18px;height:18px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--border-strong),var(--shadow-sm);cursor:grab}
 .range-dual input::-moz-range-thumb{pointer-events:auto;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--border-strong);cursor:grab}
 .range-dual input:focus-visible{box-shadow:none}
@@ -378,8 +384,8 @@ dialog h3{font-size:18px;font-weight:600;margin-bottom:8px}
 dialog ol{padding-left:20px;color:var(--text-2);margin:10px 0}
 dialog li{margin:6px 0}dialog li b{color:var(--text)}
 dialog .kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--border);border-radius:4px;padding:1px 6px;background:var(--surface-2)}
-#toasts{position:fixed;left:24px;bottom:104px;z-index:76;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{pointer-events:none}
+#toasts{position:fixed;left:24px;max-width:calc(100vw - 48px);bottom:104px;z-index:76;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{pointer-events:none;min-width:0;overflow-wrap:anywhere}
 .toast{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-md);border-radius:10px;padding:10px 14px;font-size:13px;animation:up 200ms var(--ease-out)}
 @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -773,30 +779,51 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <aside id="step2" class="panel prefs" aria-labelledby="h2">
       <button class="prefs-toggle" id="prefsToggle" aria-expanded="true"><span>Set your preferences <span class="faint" id="prefsActive"></span></span><svg width="16" height="16"><use href="#i-chev"/></svg></button>
       <div class="prefs-body">
-        <div class="step-head" style="margin-bottom:2px"><h2 id="h2" data-tip="Anything on this panel narrows the routines that come out. Constraints (avoid faculty, time and days) rule a routine out; the switches only change the order they are ranked in.">Set your preferences</h2></div>
+        <div class="step-head" style="margin-bottom:2px"><h2 id="h2" data-tip="Requirements rule routines out; ranking preferences change their order. Exam checking and requiring seats are requirements, not ranking options.">Set your preferences</h2></div>
 
         <div class="pref-section">
-          <div class="pref-title"><span data-tip="How many different days you are willing to be on campus for.">Days on campus</span><span class="val" id="daysVal">1 – 6 days</span></div>
+          <div class="pref-title"><label for="dayMax">Maximum campus days</label><span class="val" id="daysVal">Up to 6 days</span></div>
           <div class="range-dual" id="daysRange">
             <div class="track"></div><div class="fill" id="daysFill"></div>
-            <input type="range" min="1" max="6" value="1" id="dayMin" aria-label="At least this many days">
-            <input type="range" min="1" max="6" value="6" id="dayMax" aria-label="At most this many days">
+            <input type="range" min="1" max="6" value="6" id="dayMax" aria-label="Maximum campus days">
           </div>
           <div class="ticks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
         </div>
-
-        <div class="pref-section" id="switches">
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="examClash" aria-labelledby="sw1"></button><div class="txt" data-for="examClash" data-tip="Routines whose mid or final exams overlap are thrown out. Not every course really has a final — the feed still lists a date for some of them — so confirm in BRACU Connect before you drop a routine you liked."><div class="t" id="sw1">Check exam clashes</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="fewerDays" aria-labelledby="sw2"></button><div class="txt" data-for="fewerDays" data-tip="Puts the routines that need you on campus on fewer different days at the top. Turn it off and the number of days stops mattering."><div class="t" id="sw2">Fewer days on campus</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="lessTime" aria-labelledby="sw3"></button><div class="txt" data-for="lessTime" data-tip="Puts the routines that keep you on campus for fewer hours in total at the top — a few long days instead of many short ones."><div class="t" id="sw3">Less time on campus</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="minGaps" aria-labelledby="sw4"></button><div class="txt" data-for="minGaps" data-tip="Puts the routines with the fewest empty hours between classes, and the shortest longest day, at the top."><div class="t" id="sw4">Minimise gaps and long days</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="moreChoices" aria-labelledby="sw5"></button><div class="txt" data-for="moreChoices" data-tip="Pushes routines whose time slot has more sections to the top, so you have better odds of still getting a seat."><div class="t" id="sw5">Prefer patterns with more section choices</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="openSeats" aria-labelledby="sw6"></button><div class="txt" data-for="openSeats" data-tip="Ranks the routines that do not depend on a completely-full section freeing up above the ones that do. Turn it off to rank purely by shape."><div class="t" id="sw6">Prefer sections with free seats</div></div></div>
-          <div class="pref-row"><button class="switch" role="switch" aria-checked="false" data-pref="onlyOpen" aria-labelledby="sw7"></button><div class="txt" data-for="onlyOpen" data-tip="Treats completely-full sections as if they did not exist: routines are built only from sections with at least one free seat. A course that is entirely full is reported instead of silently planned."><div class="t" id="sw7">Only sections with seats</div></div></div>
+        <div class="pref-section">
+          <div class="subhead"><span class="label" data-tip="Any routine that meets during these hours is left out, whatever the day.">Unavailable times</span><button class="link-btn" id="clearTime" hidden>Clear</button></div>
+          <div class="chipgrid" id="timeChips"></div>
         </div>
 
         <div class="pref-section">
-          <div class="subhead"><span class="label" data-tip="Anyone you never want to be taught by. Suggestions come from the faculty teaching the courses you picked.">Avoid faculty</span><button class="link-btn" id="clearFac" hidden>Clear</button></div>
+          <div class="subhead"><span class="label" data-tip="Any routine that has a class on these days is left out entirely.">Unavailable days</span><button class="link-btn" id="clearDay" hidden>Clear</button></div>
+          <div class="chipgrid days" id="dayChips"></div>
+        </div>
+
+
+        <div class="pref-section">
+          <label class="pref-title" for="seatPreference">Seat availability</label>
+          <select class="pref-select" id="seatPreference" aria-describedby="seatPrefHelp">
+            <option value="ignore" selected>Ignore seat availability</option>
+            <option value="prefer">Prefer available seats</option>
+            <option value="require">Require available seats</option>
+          </select>
+          <p class="pref-help" id="seatPrefHelp"></p>
+        </div>
+        <div class="pref-section">
+          <label class="pref-title" for="rankingPreference">Rank routines by</label>
+          <select class="pref-select" id="rankingPreference" aria-describedby="rankingHelp">
+            <option value="balanced">Balanced</option>
+            <option value="days">Fewer campus days</option>
+            <option value="time">Less total campus time</option>
+            <option value="shorter">Shorter days &amp; fewer gaps</option>
+            <option value="custom" disabled hidden>Custom ranking</option>
+          </select>
+          <p class="pref-help" id="rankingHelp"></p>
+        </div>
+        <details class="pref-advanced" id="advancedPrefs">
+          <summary>Advanced <span class="faint" id="advancedActive"></span></summary>
+        <div class="pref-section">
+          <div class="subhead"><span class="label" data-tip="Anyone you never want to be taught by. Suggestions come from the faculty teaching the courses you picked.">Faculty exclusions</span><button class="link-btn" id="clearFac" hidden>Clear</button></div>
           <div class="fac-input">
             <input id="facSearch" type="text" placeholder="Type initials or a name…" autocomplete="off" aria-label="Avoid faculty">
             <div class="listbox" id="facList" hidden></div>
@@ -804,15 +831,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
           <div class="chips" id="facChips"></div>
         </div>
 
-        <div class="pref-section">
-          <div class="subhead"><span class="label" data-tip="Any routine that meets during these hours is left out, whatever the day.">Avoid time</span><button class="link-btn" id="clearTime" hidden>Clear</button></div>
-          <div class="chipgrid" id="timeChips"></div>
-        </div>
-
-        <div class="pref-section">
-          <div class="subhead"><span class="label" data-tip="Any routine that has a class on these days is left out entirely.">Avoid day</span><button class="link-btn" id="clearDay" hidden>Clear</button></div>
-          <div class="chipgrid days" id="dayChips"></div>
-        </div>
+          <div id="switches" class="pref-section">
+          <div class="pref-row"><button class="switch" role="switch" aria-checked="true" data-pref="examClash" aria-labelledby="sw1"></button><div class="txt" data-for="examClash" data-tip="Routines whose mid or final exams overlap are thrown out. Not every course really has a final — the feed still lists a date for some of them — so confirm in BRACU Connect before you drop a routine you liked."><div class="t" id="sw1">Check exam clashes</div></div></div>
+          </div>
+        </details>
 
         <div class="pref-section" style="padding-bottom:0"><button class="btn btn-ghost btn-sm" id="resetPrefs" data-tip="Puts every preference on this panel back to its default. Your courses and locked slots stay.">Reset preferences</button></div>
       </div>
@@ -862,6 +884,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     <span class="dot"></span><span id="seatAgo">not polled yet</span>
     <span class="peek" id="railPeek" hidden></span>
     <button class="link-btn" id="seatPause" aria-pressed="false">Pause</button>
+    <button class="link-btn" id="seatNow">Refresh</button>
     </div>
     <div class="rail-search">
     <svg><use href="#i-search"/></svg>
@@ -875,13 +898,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   </div>
 
 
-<dialog id="howDlg">
-  <h3>How Prohor works</h3>
+<dialog id="howDlg" aria-labelledby="howTitle">
+  <h3 id="howTitle">How Prohor works</h3>
   <p class="muted">A <em>prohor</em> (প্রহর) is one-eighth of a day. Pick yours in three steps:</p>
   <ol>
     <li><b>Pick your courses.</b> Add up to six — lock slots, sections or faculty per course if you care.</li>
     <li><b>Set your preferences.</b> Days on campus, exam-clash checks, times and days to avoid.</li>
-    <li><b>Compare routines.</b> Every conflict-free combination, ranked. Download any as a PNG.</li>
+    <li><b>Compare routines.</b> Generate clash-free routines and find more as needed. Sort the routines found so far or download a PNG.</li>
   </ol>
   <p class="muted" style="font-size:13px">Open <i>Seats</i> for a panel that splits the screen — drag its edge to size
   it, tap it to fold to a strip, pin sections to keep their seat counts on top. It also stands alone as a page
@@ -893,9 +916,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 <dialog id="resetDlg" aria-labelledby="resetTitle">
   <h3 id="resetTitle">Reset Prohor?</h3>
   <p class="muted">This clears <b>everything saved on this device</b> — your picked courses, locked sections
-  and faculty, preferences, pinned seats, saved semesters, the cached section feed and the theme — and puts
+  and faculty, preferences, pinned seats, saved results, the cached section feed and the theme — and puts
   Prohor back to its defaults.</p>
-  <p class="muted" style="font-size:13px">None of it is stored anywhere else, so <b>it cannot be undone</b>.
+  <p class="muted" style="font-size:13px">The <b>repository semester and faculty collection is not changed</b>.
+  Your local selections and preferences cannot be recovered by this reset.
   Reloading the page will <b>not</b> reset anything — this only happens when you ask for it here.</p>
   <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
     <button class="btn btn-secondary" id="resetCancel">Cancel</button>
@@ -905,11 +929,20 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 
 <div id="toasts"></div>
 
-<script src="./core.js"></script>
+<script src="./core.js?v=20261005-fetch-compat"></script>
 <script>
 (function () {
   "use strict";
   var C = window.RGCore;
+  // Keep data loading available if a stale/partially deployed core lacks the newer helper.
+  function fetchJson(url, options) {
+    if (typeof C.fetchJson === "function") return C.fetchJson(url, options);
+    return Promise.resolve().then(function () { return fetch(url, options); }).then(function (response) {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      return response.json();
+    });
+  }
+
   var MAX_COURSES = 6;
   var CACHE_DB = "prohor-cache", CACHE_KEY = "feed";
   var DATA_MS = 10 * 60 * 1000;              // planner feed refreshed on a 10-minute clock
@@ -922,13 +955,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   var state = {
     index: null, meta: null, names: {}, ready: false, pending: false,
     courses: [],
-    prefs: { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, openSeats: true, onlyOpen: false, avoidFac: [], avoidTime: [], avoidDay: [] },
+    prefs: { dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, openSeats: false, onlyOpen: false, avoidFac: [], avoidTime: [], avoidDay: [] },
     view: "grid", sort: "best", pageSize: 50, page: 1,
     results: null, picks: {}, search: null, blockedNote: "", droppedUrl: "",
-    semesters: {}, sem: "live",
-    // per-section "last known teacher": BRACU sometimes flips a scheduled name back to TBA
-    // mid-semester; this keeps the last real initial so the archive never forgets who taught it
-    facMem: { sid: null, map: {} }
+    semesters: {}, sem: "live" // downloaded repository records; never locally collected
   };
 
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -962,9 +992,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function say(msg) { var l = $("#live"); if (l) l.textContent = msg; }
 
-  /* ------------------------------ hover / focus tips ------------------------------
-     The page keeps only what a person needs at a glance; everything that explains *why*
-     lives one hover (or one Tab) away, so nothing is lost by not printing it.          */
+  /* ------------------------------ hover / focus tips ------------------------------ */
   var tipEl = null, tipFor = null, tipTimer = null;
   function tipPlace(target) {
     var text = target.getAttribute("data-tip");
@@ -1014,12 +1042,17 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 
   function copy(text, msg) {
     function fallback() {
+      var focused = document.activeElement;
       var ta = document.createElement("textarea");
       ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
       document.body.appendChild(ta); ta.select();
-      try { document.execCommand("copy"); } catch (e) { }
+      var copied = false;
+      try { copied = document.execCommand("copy") === true; } catch (e) { }
       ta.remove();
-      toast(msg);
+      if (focused && focused.isConnected && focused.focus) {
+        try { focused.focus({ preventScroll: true }); } catch (e) { focused.focus(); }
+      }
+      toast(copied ? msg : "Could not copy. Your browser blocked clipboard access.");
     }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { toast(msg); }, fallback);
     else fallback();
@@ -1042,8 +1075,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var h = Math.round(m / 60);
     return h < 48 ? h + " h ago" : Math.round(h / 24) + " d ago";
   }
-  // the bundled snapshot is a photograph of an older feed: stamp its age wherever the numbers
-  // it carries are shown, so nobody plans advising off seat counts that predate the live feed
+  // Snapshot seat counts must show their source date, not the time this page loaded.
   function snapStamp(M) {
     if (!M || !M.at || !/snapshot/i.test(String(M.origin || ""))) return "";
     var iso = new Date(M.at).toISOString().slice(0, 10);
@@ -1075,7 +1107,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       ? "6 of 6 — remove one to add another" : state.courses.length + " of " + MAX_COURSES + " courses";
   }
   function parseFeed(raw) {
-    var sections = Array.isArray(raw) ? C.fromApi(raw) : ((raw && raw.sections) || []);
+    var sections = C.fromApi(raw);
     if (!sections.length) throw new Error("response contained no usable sections");
     if (sections.length < 50) throw new Error("only " + sections.length + " sections came through — that is not the real feed");
     var f = sections[0] || {};
@@ -1084,9 +1116,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       session: (raw.meta && raw.meta.semesterSessionIds && raw.meta.semesterSessionIds[0]) || f.sid || null
     };
   }
-  // Content fingerprint of a section list. Counts alone cannot say "nothing changed": a room
-  // swap, an exam-date edit or a drop+add netting zero all keep the same count. Comparing
-  // fingerprints is what lets a refetch skip the rebuild honestly — never while hiding an edit.
+  // Counts miss same-size edits; fingerprint record contents before deciding to skip a rebuild.
   function feedFp(sections) {
     var s = JSON.stringify(sections), h = 5381;
     for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
@@ -1094,22 +1124,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function adopt(sections, meta) {
     var first = !state.ready;
-    var leaving = state.index, leavingMeta = state.meta;
     state.index = C.buildIndex(sections);
     state.meta = meta;
     state.feedFp = feedFp(sections);
     state.ready = true;
-    if (leaving && leavingMeta && String(leavingMeta.session || "") !== String(meta.session || "")) semFile(leaving, leavingMeta);
-    // the memory above was the leaving semester's job — reset it for whoever just arrived,
-    // then fold every real name the fresh feed carries into it (TBA never overwrites)
-    var newSid = String(meta.session || ""), dirty = false;
-    if (newSid !== String(state.facMem.sid || "")) { state.facMem = { sid: newSid, map: {} }; dirty = true; }
-    state.index.codes.forEach(function (code) {
-      state.index.courses[code].sections.forEach(function (s) {
-        if (!facUnknown(s.faculty) && state.facMem.map[code + "|" + s.sec] !== s.faculty) { state.facMem.map[code + "|" + s.sec] = s.faculty; dirty = true; }
-      });
-    });
-    if (dirty) facSave();                     // one storage write per feed adoption, not one per section
     if (state.pins && state.pins.length) {          // a section the feed dropped must not hold a pin slot
       var lived = state.pins.length;
       state.pins = state.pins.filter(function (x) { return !!findSec(x.code, x.sec); });
@@ -1121,15 +1139,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     renderRail();                   // fill the seats rail straight away, not one frame later
     semRender();                    // and name the semester that just arrived
     if (first && state.pending) { state.pending = false; setGen(false); generate(); }
-    if (state.search) { state.search.stale = true; renderStatus(); }
   }
 
   var inflight = null;
-  async function loadSnapshotInto(label) {
-    var r = await fetch(C.SNAPSHOT_URL, { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    var snap = await r.json();
+  async function loadSnapshotInto(label, stillNeeded) {
+    var snap = await fetchJson(C.SNAPSHOT_URL, { cache: "no-store" });
     var p = parseFeed(snap);
+    if (stillNeeded && !stillNeeded()) return 0; // A slow fallback must not replace a newer live response.
     adopt(p.sections, {
       origin: "bundled snapshot.json", at: Date.parse((snap.meta && snap.meta.generatedAt) || "") || null,
       start: p.start, end: p.end, session: p.session, warn: true, label: label
@@ -1137,37 +1153,38 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     return p.sections.length;
   }
   function loadData(force) {
-    if (inflight && !force) return inflight;
+    if (inflight) return inflight;
     inflight = (async function () {
       setPill("busy", "Loading data…");
       var cached = null;
-      try { cached = await store.get(CACHE_KEY); } catch (e) { }
+      var cachedFeed = null;
+      try {
+        cached = await store.get(CACHE_KEY);
+        if (cached) { cachedFeed = parseFeed({ sections: cached.sections }); C.buildIndex(cachedFeed.sections); }
+      } catch (e) { cached = null; } // Invalid cached data must not prevent a network/snapshot recovery.
       if (cached && cached.at && (Date.now() - cached.at) < DATA_MS && !force) {
-        var p0 = parseFeed({ sections: cached.sections });
+        var p0 = cachedFeed;
         adopt(p0.sections, { origin: "device cache", at: cached.at, start: p0.start, end: p0.end, session: p0.session, label: "cached" });
         revalidate();
         return;
       }
       // 1) cached copy of any age → the page is usable right now
       if (cached && cached.sections && cached.sections.length) {
-        var p1 = parseFeed({ sections: cached.sections });
+        var p1 = cachedFeed;
         adopt(p1.sections, { origin: "device cache (stale)", at: cached.at, start: p1.start, end: p1.end, session: p1.session, warn: true, label: "cached, checking for updates" });
       }
       // 2) the bundled snapshot while the network is still thinking, so the pickers never sit empty
       var upgraded = false;
       var early = setTimeout(function () {
         if (state.ready && cached) return;                     // stale cache already painted
-        loadSnapshotInto("offline copy (live feed is slow)").catch(function () { });
+        loadSnapshotInto("offline copy (live feed is slow)", function () { return !upgraded; }).catch(function () { });
       }, 1400);
       try {
-        var res = await fetch(C.DATA_URL, { cache: "no-cache" });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        var p = parseFeed(await res.json());
+        var p = parseFeed(await fetchJson(C.DATA_URL, { cache: "no-cache" }));
         var at = Date.now();
         store.set(CACHE_KEY, { at: at, sections: p.sections });
         if (state.ready && feedFp(p.sections) === state.feedFp) {
-          // same sections we already built (Refresh, or a stale copy that is still current):
-          // roll the clock forward and leave the screen, the search and the pickers alone
+          // Identical data: update freshness without invalidating results or open pickers.
           state.meta.at = at; state.meta.label = "live"; state.meta.origin = "usis-cdn.eniamza.com/connect.json"; state.meta.warn = false;
           renderData();
         } else {
@@ -1175,6 +1192,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         }
         upgraded = true;
       } catch (e1) {
+        if (state.ready) renderData();
         if (!state.ready) {
           try { await loadSnapshotInto("offline copy · live feed failed (" + String((e1 && e1.message) || e1).slice(0, 26) + ")"); upgraded = true; }
           catch (e2) {
@@ -1186,14 +1204,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         }
       } finally { clearTimeout(early); }
       if (!upgraded && !state.ready) { try { await loadSnapshotInto("offline copy"); } catch (e) { } }
-    })().catch(function () { });
+    })().catch(function () { }).finally(function () { inflight = null; });
     return inflight;
   }
   async function revalidate() {
     try {
-      var res = await fetch(C.DATA_URL, { cache: "no-cache" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      var p = parseFeed(await res.json());
+      var p = parseFeed(await fetchJson(C.DATA_URL, { cache: "no-cache" }));
       var at = Date.now();
       store.set(CACHE_KEY, { at: at, sections: p.sections });
       if (state.index && feedFp(p.sections) === state.feedFp) {
@@ -1220,16 +1236,22 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   });
 
   var store = (function () {
-    var dbp = null;
+    var dbp = null, STORAGE_MS = 1500; // A cache must never indefinitely gate live/snapshot loading.
     function db() {
       if (dbp) return dbp;
       dbp = new Promise(function (res) {
+        var settled = false;
+        var timer = setTimeout(function () { finish(null); }, STORAGE_MS);
+        function finish(d) {
+          if (settled) { if (d) { try { d.close(); } catch (e) { } } return; }
+          settled = true; clearTimeout(timer); res(d);
+        }
         try {
           var rq = indexedDB.open(CACHE_DB, 1);
           rq.onupgradeneeded = function () { try { rq.result.createObjectStore("kv"); } catch (e) { } };
-          rq.onsuccess = function () { res(rq.result); };
-          rq.onerror = function () { res(null); };
-        } catch (e) { res(null); }
+          rq.onsuccess = function () { finish(rq.result); };
+          rq.onerror = rq.onblocked = function () { finish(null); };
+        } catch (e) { finish(null); }
       });
       return dbp;
     }
@@ -1246,11 +1268,17 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         return db().then(function (d) {
           return new Promise(function (res) {
             if (!d) return res(lg(k));
+            var settled = false;
+            var timer = setTimeout(function () { finish(lg(k)); }, STORAGE_MS);
+            function finish(value) {
+              if (settled) return;
+              settled = true; clearTimeout(timer); res(value);
+            }
             try {
               var t = d.transaction("kv").objectStore("kv").get(k);
-              t.onsuccess = function () { res(t.result || lg(k)); };
-              t.onerror = function () { res(lg(k)); };
-            } catch (e) { res(lg(k)); }
+              t.onsuccess = function () { finish(t.result || lg(k)); };
+              t.onerror = function () { finish(lg(k)); };
+            } catch (e) { finish(lg(k)); }
           });
         });
       },
@@ -1265,12 +1293,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
           return null;
         });
       },
-      // Everything this device remembers, gone. The open connection is closed first so
-      // deleteDatabase actually completes instead of blocking on it.
+      // Close the connection before deletion to avoid blocking our own reset.
       wipe: function () {
-        // Returns a promise that settles only once the delete has actually landed: a
-        // fire-and-forget deleteDatabase can otherwise complete *after* the caller has
-        // already refilled the store, throwing the fresh copy away.
+        // Await deletion before refilling the store, or the reset can erase the fresh write.
         var pending = dbp;
         dbp = null;
         var closed = new Promise(function (res) {
@@ -1420,17 +1445,22 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function cardEl(code) {
     return document.querySelector('#courses .course[data-code="' + String(code).replace(/[^A-Za-z0-9]/g, "") + '"]');
   }
-  // "silent" = just dismiss, touch nothing else. The default path refreshes only that one card,
-  // so the popover anchor is never replaced underneath itself (that was the "won't open" bug).
+  // Silent close preserves the anchor; normal close refreshes only the owning course card.
   function closeMs(mode) {
     if (!openMs) return;
     var code = openMs.code, node = openMs.el, btn = openMs.btn;
+    var focusAct = mode === "focus" && btn ? btn.dataset.act : null;
     openMs = null;
     if (node && node.parentNode) node.parentNode.removeChild(node);
     try { if (btn && btn.isConnected) btn.setAttribute("aria-expanded", "false"); } catch (e) { }
     if (mode === "silent") return;
     if (mode === "all") { renderCourses(); updateSummary(); save(); return; }
     refreshCard(code); updateSummary(); save();
+    if (focusAct) {
+      var card = cardEl(code);
+      var trigger = card && $$("[data-act]", card).find(function (el) { return el.dataset.act === focusAct; });
+      if (trigger) { try { trigger.focus({ preventScroll: true }); } catch (e) { trigger.focus(); } }
+    }
   }
   function refreshCard(code) {
     var idx = -1;
@@ -1471,9 +1501,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     });
     el.addEventListener("click", function (e) {
       var b = e.target.closest("[data-ms]"); if (!b) return;
-      if (b.dataset.ms === "done") closeMs(); else onAct(el, b.dataset.ms);
+      if (b.dataset.ms === "done") closeMs("focus"); else onAct(el, b.dataset.ms);
     });
-    setTimeout(function () { try { $(".ms-head input", el).focus(); } catch (e) { } }, 20);
+    setTimeout(function () { if (!openMs || openMs.el !== el || !el.isConnected) return; try { $(".ms-head input", el).focus(); } catch (e) { } }, 20);
   }
   function syncBoxes(el, checked) {
     $$("input[type=checkbox]", el).forEach(function (i) {
@@ -1484,21 +1514,17 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   
   
   
-  // which of a course's options survive the *other two* controls plus the avoid filters.
-  // Every dimension is judged against the other two — picking sections narrows the time
-  // slots and the faculty list just as much as they narrow the sections.
+  // Each picker is constrained by the other two dimensions plus global filters.
   function vetoInfo(code) {
     var Cc = K(code), c = courseOf(code) || { locked: [], faculty: [], secs: [] };
     var secs = (c.secs || []).map(String);
     var info = { groups: {}, facs: {}, secs: {} };
     if (!Cc) return info;
-    // time slots: ruled by the picked faculty and the picked sections
     C.sectionChoices(Cc, { sections: [], faculties: c.faculty, onlySections: secs }, avoidSpec()).forEach(function (x) {
       var t = info.groups[x.groupKey] || (info.groups[x.groupKey] = { n: 0, total: 0, why: "" });
       t.total++;
       if (x.viable) t.n++; else if (!t.why) t.why = x.reason;
     });
-    // faculty: ruled by the locked time slots and the picked sections
     C.sectionChoices(Cc, { sections: c.locked, faculties: [], onlySections: secs }, avoidSpec()).forEach(function (x) {
       x.faculties.forEach(function (f) {
         var t = info.facs[f] || (info.facs[f] = { n: 0, total: 0, why: "" });
@@ -1506,7 +1532,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         if (x.viable) t.n++; else if (!t.why) t.why = x.reason;
       });
     });
-    // sections: ruled by the locked time slots and the picked faculty
     C.sectionChoices(Cc, { sections: c.locked, faculties: c.faculty }, avoidSpec()).forEach(function (x) {
       info.secs[String(x.sec)] = { v: x.viable, why: x.reason };
     });
@@ -1630,9 +1655,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     } else if (act === "unlock") {
       courseOf(code).locked = courseOf(code).locked.filter(function (k) { return k !== b.dataset.id; });
       closeMs("silent"); afterChange();
-    } else if (act === "open-ts") { if (openMs && openMs.btn === b) { closeMs(); return; } openTimeSlots(b, code); }
-    else if (act === "open-fac") { if (openMs && openMs.btn === b) { closeMs(); return; } openFaculty(b, code); }
-    else if (act === "open-sec") { if (openMs && openMs.btn === b) { closeMs(); return; } openSections(b, code); }
+    } else if (act === "open-ts") { if (openMs && openMs.btn === b) { closeMs("focus"); return; } openTimeSlots(b, code); }
+    else if (act === "open-fac") { if (openMs && openMs.btn === b) { closeMs("focus"); return; } openFaculty(b, code); }
+    else if (act === "open-sec") { if (openMs && openMs.btn === b) { closeMs("focus"); return; } openSections(b, code); }
     else if (act === "unsec") {
       var cc = courseOf(code); cc.secs = cc.secs.filter(function (x) { return x !== b.dataset.id; });
       closeMs("silent"); afterChange();
@@ -1716,11 +1741,52 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 
   /* ================================== step 2 ================================== */
 
+  function rankingPresets() {
+    return { balanced: [true, false, true], days: [true, false, false], time: [false, true, false], shorter: [false, false, true] };
+  }
+  function rankingKey() {
+    var presets = rankingPresets(), p = state.prefs;
+    return Object.keys(presets).filter(function (key) {
+      var v = presets[key]; return p.fewerDays === v[0] && p.lessTime === v[1] && p.minGaps === v[2];
+    })[0] || "custom";
+  }
+  function renderPreferenceSelectors() {
+    var key = rankingKey(), custom = $('#rankingPreference option[value="custom"]');
+    custom.hidden = key !== "custom";
+    $("#rankingPreference").value = key;
+    $("#rankingHelp").textContent = {
+      balanced: "Prioritise fewer campus days, then reduce gaps and long days.",
+      days: "Prioritise fewer days travelling to campus.",
+      time: "Prioritise fewer total hours between the first and last class each day.",
+      shorter: "Reduce the longest campus day and empty time between classes.",
+      custom: "Saved custom ranking. Choose a preset to replace it."
+    }[key];
+    var seats = state.prefs.onlyOpen ? "require" : (state.prefs.openSeats ? "prefer" : "ignore");
+    $("#seatPreference").value = seats;
+    $("#seatPrefHelp").textContent = {
+      prefer: "Rank available sections higher without excluding full ones. Counts can change.",
+      require: "Exclude sections known to be full. Unknown counts remain eligible; confirm before registration.",
+      ignore: "Seat counts do not affect filtering or ranking."
+    }[seats];
+  }
+  function preferencesChanged() {
+    renderRange(); renderChips(); updateSummary(); renderCourses(); save(); noteStale();
+  }
+  $("#rankingPreference").addEventListener("change", function () {
+    var v = rankingPresets()[this.value]; if (!v) return;
+    state.prefs.fewerDays = v[0]; state.prefs.lessTime = v[1]; state.prefs.minGaps = v[2];
+    preferencesChanged();
+  });
+  $("#seatPreference").addEventListener("change", function () {
+    state.prefs.onlyOpen = this.value === "require";
+    state.prefs.openSeats = this.value !== "ignore";
+    preferencesChanged();
+  });
   function renderRange() {
-    var lo = state.prefs.dayMin, hi = state.prefs.dayMax;
-    $("#dayMin").value = lo; $("#dayMax").value = hi;
-    $("#daysVal").textContent = lo === hi ? lo + " day" + (lo > 1 ? "s" : "") : lo + " – " + hi + " days";
-    $("#daysFill").style.left = ((lo - 1) / 5 * 100) + "%";
+    var hi = state.prefs.dayMax;
+    $("#dayMax").value = hi;
+    $("#daysVal").textContent = "Up to " + hi + " day" + (hi > 1 ? "s" : "");
+    $("#daysFill").style.left = "0%";
     $("#daysFill").style.right = (100 - (hi - 1) / 5 * 100) + "%";
   }
   function renderChips() {
@@ -1746,6 +1812,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     Object.keys(d).forEach(function (k) {
       if (Array.isArray(d[k])) { if (state.prefs[k].length) n++; } else if (state.prefs[k] !== d[k]) n++;
     });
+    renderPreferenceSelectors();
+    var advanced = (!state.prefs.examClash ? 1 : 0) + (state.prefs.avoidFac.length ? 1 : 0);
+    $("#advancedActive").textContent = advanced ? "· " + advanced + " active" : "";
     $("#prefsActive").textContent = n ? "· " + n + " changed" : "";
     $("#resetPrefs").hidden = !n;
   }
@@ -1769,16 +1838,15 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function noteStale() {
     if (!state.results) return;
-    if (state.search) state.search.stale = true;
+    if (state.search) state.search.stale = state.search.sig !== currentSig();
     renderStatus();
   }
-  $("#dayMin").addEventListener("input", function () { state.prefs.dayMin = Math.min(+this.value, state.prefs.dayMax); renderRange(); save(); });
-  $("#dayMax").addEventListener("input", function () { state.prefs.dayMax = Math.max(+this.value, state.prefs.dayMin); renderRange(); save(); });
+  $("#dayMax").addEventListener("input", function () { state.prefs.dayMax = Math.max(1, Math.min(6, +this.value)); preferencesChanged(); });
   $("#switches").addEventListener("click", function (e) {
     var row = e.target.closest(".pref-row"); if (!row) return;
     var sw = $(".switch", row);
     state.prefs[sw.dataset.pref] = !state.prefs[sw.dataset.pref];
-    renderChips(); save(); noteStale();
+    preferencesChanged();
   });
   $("#timeChips").addEventListener("click", function (e) {
     var b = e.target.closest("[data-avoid]"); if (!b) return;
@@ -1818,7 +1886,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   });
   $("#resetPrefs").onclick = function () {
     state.prefs = defaultPrefs();
-    renderRange(); renderChips(); renderFacSuggestions(); updateSummary(); renderCourses(); save(); toast("Preferences reset");
+    renderRange(); renderChips(); renderFacSuggestions(); updateSummary(); renderCourses(); save(); noteStale(); toast("Preferences reset");
   };
   $("#prefsToggle").onclick = function () { setPrefsOpen($("#step2").classList.contains("collapsed")); };
   function setPrefsOpen(open) {
@@ -1837,9 +1905,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     });
     return ok ? n : -1;
   }
-  // The feed carries several academic calendars at once (44 Law sections start Sep 12, the
-  // main undergraduate intake Oct 3, a couple of ENG101 sections Nov 3). A routine mixing
-  // intakes can look valid here and still not exist — say so loudly while picks are mixed.
+  // Non-overlapping meetings can still belong to incompatible academic calendars.
   function calMixHtml() {
     if (!state.index || state.courses.length < 2) return "";
     var groups = {}, picked = 0;
@@ -1911,7 +1977,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     if (avoidSpec().onlyOpen) {                     // distinguish "filters killed it" from "it is all full"
       var off = C.candidatesFor(Cc, { sections: [], faculties: [] }, (function () { var f = avoidSpec(); f.onlyOpen = false; return f; })());
       if (off.length && !C.candidatesFor(Cc, { sections: [], faculties: [] }, avoidSpec()).length)
-        return "every section is full right now — turn off “Only sections with seats” to plan with full sections anyway";
+        return "every section is full right now — choose “Ignore seat availability” in Preferences to plan with full sections anyway";
     }
     var noLock = C.candidatesFor(Cc, { sections: [], faculties: [] }, avoidSpec());
     if (!noLock.length) return "has no pattern left once the avoided times, days and faculty are removed";
@@ -1949,6 +2015,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       return;
     }
     if (!state.courses.length) { toast("Add at least one course"); return; }
+    if (state.search) clearTimeout(state.search.workerDeadline);
     if (state.search && state.search.worker) { try { state.search.worker.terminate(); } catch (e) { } }
     var built = buildRows();
     try { writeUrl(); } catch (e) { }
@@ -1961,9 +2028,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     }
     state.blockedNote = "";
     var prefs = {
-      minDays: state.prefs.dayMin, maxDays: state.prefs.dayMax,
+      minDays: 1, maxDays: state.prefs.dayMax,
       preferFewerDays: state.prefs.fewerDays, preferLessTime: state.prefs.lessTime,
-      preferGaps: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
+      preferGaps: state.prefs.minGaps, preferAlt: false,
       preferOpenSeats: state.prefs.openSeats,
       ignoreExams: !state.prefs.examClash
     };
@@ -1985,7 +2052,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       var run = function () {
         queued = false;
         if (state.search !== sp) return;
-        var need = sp.renderedCount !== sp.items.length && (sp.renderedCount < sp.page * state.pageSize + state.pageSize);
+        var need = sp.renderedCount !== sp.items.length && (sp.renderedCount < state.page * state.pageSize);
         sp.renderedCount = sp.items.length;
         if (need) renderResults(); else renderStatus();
       };
@@ -2025,6 +2092,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     // one batch per user action — unless they explicitly asked for everything
     function decideNext(delay) {
       if (!sp.running || state.search !== sp) return;
+      if (sp.replayUntil && sp.items.length < sp.replayUntil) {
+        sp.wantMore = sp.replayUntil - sp.items.length;
+        setTimeout(sp.resume, 16); return;
+      }
+      sp.replayUntil = 0;
       if (!sp.all) { sp.once = false; sp.wantMore = 0; stop("page"); return; }
       if (sp.items.length >= MAX_COLLECT) { sp.all = false; stop("cap"); return; }
       sp.wantMore = 1e9;
@@ -2049,21 +2121,29 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
 
     if (typeof Worker === "function") {
       try {
-        var w = new Worker("./worker.js");
+        var w = new Worker("./worker.js?v=20261005-fetch-compat");
         sp.mode = "worker"; sp.worker = w;
-        w.onerror = function () { sp.worker = null; sp.mode = null; startMain(); };
+        function workerSend(message) {
+          clearTimeout(sp.workerDeadline);
+          sp.workerDeadline = setTimeout(function () { if (sp.worker === w) startMain(); }, 15000);
+          try { w.postMessage(message); } catch (e) { startMain(); }
+        }
+        w.onerror = function () { if (sp.worker === w) startMain(); };
         w.onmessage = function (ev) {
           var m = ev.data || {};
-          if (state.search !== sp) return;
+          if (state.search !== sp || sp.worker !== w) return;
+          clearTimeout(sp.workerDeadline);
           if (m.type === "ready") {
             sp.space = m.space; sp.stats = m.stats || sp.stats;
-            sp.resume = function () { try { w.postMessage({ type: "more", want: sp.wantMore || (sp.once ? state.pageSize : CHUNK), budgetMs: sp.once ? 1500 : (window.innerWidth < 720 ? 120 : 240) }); } catch (e) { startMain(); } };
             sp.resume();
           } else if (m.type === "batch") { if (onBatch(m)) decideNext(30); }
           else if (m.type === "error") { toast("Search worker: " + m.message); startMain(); }
         };
-        w.postMessage({ type: "init", rows: slimRows(built.rows), prefs: prefs });
-        sp.resume = function () { try { w.postMessage({ type: "more", want: sp.wantMore || (sp.once ? state.pageSize : CHUNK), budgetMs: sp.wantMore ? 0 : 240 }); } catch (e) { startMain(); } };
+        sp.resume = function () {
+          if (state.search !== sp || !sp.running || sp.worker !== w) return;
+          workerSend({ type: "more", sort: false, want: sp.wantMore || (sp.once ? state.pageSize : CHUNK), budgetMs: sp.once ? 1500 : (window.innerWidth < 720 ? 120 : 240) });
+        };
+        workerSend({ type: "init", rows: slimRows(built.rows), prefs: prefs });
         try { writeUrl(); } catch (e) { }
         return;
       } catch (e) { sp.worker = null; sp.mode = null; }
@@ -2071,7 +2151,16 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     startMain();
 
     function startMain() {
-      if (state.search !== sp) return;
+      if (state.search !== sp || (sp.mode === "main" && sp.en)) return;
+      clearTimeout(sp.workerDeadline);
+      if (sp.worker) {
+        try { sp.worker.terminate(); } catch (e) { }
+        sp.worker.onmessage = sp.worker.onerror = null; sp.worker = null;
+      }
+      // Replay the deterministic prefix rather than append duplicates after a worker failure.
+      sp.replayUntil = sp.all ? 0 : sp.items.length + (sp.wantMore || state.pageSize);
+      if (!sp.all) sp.wantMore = sp.replayUntil;
+      sp.items = []; state.results = sp.items; sp.renderedCount = -1;
       sp.mode = "main";
       sp.en = C.createEnumerator(built.rows, prefs);
       sp.space = sp.en.space; sp.stats = sp.en.stats || sp.stats;
@@ -2095,8 +2184,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     best: function (a, b) { return a.score - b.score; },
     days: function (a, b) { return a.days - b.days || a.gaps - b.gaps; },
     gaps: function (a, b) { return a.gaps - b.gaps || a.days - b.days; },
-    late: function (a, b) { return b.score - a.score; },
-    early: function (a, b) { return a.score - b.score; },
+    late: function (a, b) { return b.earliest - a.earliest || a.score - b.score; },
+    early: function (a, b) { return a.latest - b.latest || a.score - b.score; },
     choices: function (a, b) { return b.alt - a.alt || a.score - b.score; }
   };
   function materialise(item) {
@@ -2112,6 +2201,13 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function sortedItems() {
     if (!state.results || !state.results.length) return [];
+    // Old saved descriptors predate clock-based sorting; derive missing bounds once.
+    state.results.forEach(function (it) {
+      if (Number.isFinite(it.earliest) && Number.isFinite(it.latest)) return;
+      var events = materialise(it).events;
+      it.earliest = Math.min.apply(null, events.map(function (e) { return e.start; }));
+      it.latest = Math.max.apply(null, events.map(function (e) { return e.end; }));
+    });
     return state.results.slice().sort(SORTS[state.sort] || SORTS.best);
   }
   function renderStatus() {
@@ -2215,7 +2311,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       $("#resultsDesc").textContent = "Generate to see every conflict-free routine that fits your preferences.";
       return;
     }
-    if (!state.results.length) { $("#resultsDesc").innerHTML = state.blockedNote || "0 routines found"; body.innerHTML = zeroHtml(); return; }
+    if (!state.results.length) { $("#resultsDesc").innerHTML = state.blockedNote || "0 routines found"; body.innerHTML = zeroHtml(); renderStatus(); return; }
     var list = sortedItems(), total = list.length;
     var start = (state.page - 1) * state.pageSize;
     var page = list.slice(start, start + state.pageSize);
@@ -2227,7 +2323,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       '<button data-view="list" aria-pressed="' + (state.view === "list") + '">Day list</button></div></div>' +
       '<div class="ctl"><button class="btn btn-secondary btn-sm" id="copyLink"><svg width="14" height="14"><use href="#i-link"/></svg>Copy link</button>' +
       '<button class="btn btn-secondary btn-sm" id="printAll">Print all</button></div></div>';
-    // collect which sections this page shows so the seats rail can follow the paging
     var acc = state.courses.map(function (c) { return { code: c.code, seen: {} }; });
     var html = page.map(function (it, i) {
       var r = materialise(it);
@@ -2396,8 +2491,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       }).join("") + "</tbody></table></div>";
   }
   function altHtml(v, gi) {
-    // Only the courses that really offer a choice. A course with a single section in its group has
-    // nothing to pick, and listing it just pads the panel out.
+    // Single-section patterns need no alternative-section control.
     var choices = [];
     v.exams.forEach(function (e, ci) { if (e.sections.length > 1) choices.push([e, ci]); });
     if (!choices.length) return "";
@@ -2430,7 +2524,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         var scale = 2;                                   // 2x keeps the file small and the text crisp
         var info = C.paintRoutine(canvas.getContext("2d"), r, {
           scale: scale, title: "Prohor", hueOf: hueOf,
-          // the term, never the session id: "20263" means nothing to anyone reading the image
           subtitle: (function () {
             var rec = semActive(), id = rec ? rec.session : semNow();
             return id ? semLabel(id) : "";
@@ -2452,14 +2545,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
 
 
-  /* ============================== seats rail (inside the drawer) ==============================
-     Tracks free seats. Its own worker, its own timer, and it only ever writes to #railBody —
-     a seat refresh can never delay or disturb a running search. */
-
-  /* ------------------------ seats panel: one adjustable split view ------------------------
-     The panel always shares the screen with the page: beside it on wide screens, below it on
-     narrow ones. The handle between the two is draggable (and keyboard-resizable), and the size
-     you leave it at is remembered. No dock / float / pin-bar modes to choose between. */
+  /* ------------------------ seats panel and polling ------------------------
+     A separate worker keeps polling independent of search; seat paints must not rebuild results.
+     The panel splits horizontally on desktop and vertically on narrow screens. */
   var LS_DRAWER = "prohor.seatsMode", LS_RAIL = "prohor.railSize";
   // the sticky chrome sits above the page's scroll port, so scrollIntoView needs its real height
   function stickInset() {
@@ -2468,7 +2556,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var px = top ? Math.round(top.getBoundingClientRect().bottom + 10) : 0;
     if (px > 40) document.documentElement.style.setProperty("--stick", px + "px");
   }
-  // a full-height header is fine at rest and a nuisance once the rows are scrolling under it
   function railCompact() {
     var top = document.querySelector(".rail-top");
     if (!top) return;
@@ -2590,23 +2677,50 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var r = btn.getBoundingClientRect();
     if (!r.bottom) return;                                        // no layout (jsdom, print): leave it alone
     var box = pageBox();
-    var below = box.bottom - r.bottom - 14, above = r.top - box.top - 10;
+    var boxH = box.bottom - box.top;
+    // The panel is anchored to its offset parent, which can be taller than the button.
+    var host = el.offsetParent || btn.parentElement || btn;
+    var hr = host.getBoundingClientRect ? host.getBoundingClientRect() : r;
+    var below = box.bottom - (hr.bottom + 6), above = (hr.top - 6) - box.top;
     var up = below < 230 && above > below;
-    var room = Math.round(Math.max(180, Math.min(430, up ? above : below)));
-    el.classList.toggle("up", up);
-    el.style.maxHeight = room + "px";
-    if (up) el.style.top = "auto"; else el.style.removeProperty("top");
-    // the list is what matters: the head and the footer (which carries the note) must never
-    // squeeze it below two rows, so a tight popover drops its note first
+    var room = Math.round(Math.max(120, Math.min(430, up ? above : below)));
+    // Drop the note before reducing the list to an unusable slit.
     var head = el.querySelector(".ms-head"), foot = el.querySelector(".ms-foot"), list = el.querySelector(".ms-body");
+    var note = el.querySelector(".ms-note"), dropped = false;
+    if (note) note.style.display = ""; // Re-measure the full footer after a resize.
     var chrome = (head ? head.offsetHeight : 40) + (foot ? foot.offsetHeight : 46) + 6;
-    var want = room - chrome;
-    if (list && want < 150) {
-      var note = el.querySelector(".ms-note");
-      if (note) { note.style.display = "none"; foot = el.querySelector(".ms-foot"); chrome = (head ? head.offsetHeight : 40) + (foot ? foot.offsetHeight : 26) + 6; want = room - chrome; }
+    var MINLIST = 100;
+    if (note && room - chrome < MINLIST) {
+      note.style.display = "none";
+      foot = el.querySelector(".ms-foot");
+      chrome = (head ? head.offsetHeight : 40) + (foot ? foot.offsetHeight : 26) + 6;
+      dropped = true;
     }
-    if (list) list.style.maxHeight = Math.max(132, want) + "px";
-    el.style.maxHeight = Math.max(chrome + 132, Math.min(room, chrome + Math.max(132, want))) + "px";
+    el.style.removeProperty("bottom");
+    if (room - chrome >= MINLIST) {
+      el.classList.toggle("up", up);
+      if (up) el.style.top = "auto"; else el.style.removeProperty("top");
+      var want = Math.max(0, room - chrome);
+      if (list) list.style.maxHeight = want + "px";
+      el.style.maxHeight = Math.min(room, chrome + want) + "px";
+    } else {
+      // Neither side can host a usable list: centre the panel in the available pane.
+      if (dropped && note) { note.style.display = ""; foot = el.querySelector(".ms-foot"); }
+      var cB = (head ? head.offsetHeight : 40) + (foot ? foot.offsetHeight : 46) + 6;
+      el.classList.remove("up");
+      var fillH = Math.round(Math.min(430, boxH - 8));
+      el.style.top = "0px";
+      if (list) list.style.maxHeight = Math.max(0, fillH - cB) + "px";
+      el.style.maxHeight = fillH + "px";
+      var b = el.getBoundingClientRect(), ph = b.height;
+      var spill = Math.max(0, ph - (boxH - 8));
+      if (spill > 0) {
+        ph = Math.max(0, Math.round(ph - spill));
+        if (list) list.style.maxHeight = Math.max(0, ph - cB) + "px";
+        el.style.maxHeight = ph + "px";
+      }
+      el.style.top = Math.round(box.top + Math.max(4, (boxH - ph) / 2) - hr.top) + "px";
+    }
     try { el.scrollIntoView({ block: "nearest" }); } catch (e) { }
   }
   function setSeatsMode(mode, persist) {
@@ -2616,9 +2730,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     if (SEATS_VIEW) mode = "open";        // the panel IS the page here: closing it would blank the tab
     var wasOpen = state.seats.mode === "open";
     var mainEl = document.querySelector("main");
-    // Turning the split on moves scrolling from the document into the page pane (and back out
-    // again), so carry the reader's place across both ways — otherwise opening the seats throws
-    // them to the top of the page, and closing it loses wherever they had scrolled.
+    // Preserve position when scrolling moves between the document and split pane.
     var paneTop = mainEl ? Math.round(mainEl.getBoundingClientRect().top + (window.scrollY || 0)) : 0;
     var docY = Math.round(window.scrollY || 0);
     var paneY = mainEl ? mainEl.scrollTop : 0;
@@ -2663,10 +2775,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var url = seatsPageUrl(), w = null, threw = false;
     try { w = window.open(url, "_blank", "noopener"); } catch (e) { threw = true; }
     if (w) { toast("Seats opened in a new window — it follows this tab as you plan"); return; }
-    // A missing reference is ambiguous: some browsers hand one back even when the window did
-    // open, and a blocker hands one back when it did not. Navigating this tab on that guess is
-    // what made a single click both open a window and flip the planner into the seats page, so
-    // this tab is left exactly where it is and the user is told what to press instead.
+    // A null window reference does not reliably indicate a blocked popup; leave this tab unchanged.
     if (threw) { toast("This browser would not open a second window — press Open as page instead."); return; }
     toast("If no second window opened, your browser blocked the pop-up — allow pop-ups here, or press Open as page.");
   }
@@ -2707,11 +2816,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var o = null;
     try { o = JSON.parse(e.newValue); } catch (err) { return; }
     if (!o) return;
-    if (Array.isArray(o.pins)) state.pins = o.pins.filter(function (x) { return x && x.code && x.sec != null; }).slice(0, 50);
+    if (Array.isArray(o.pins)) state.pins = cleanPins(o.pins);
     if (SEATS_VIEW && Array.isArray(o.courses)) {
-      state.courses = o.courses.slice(0, MAX_COURSES).map(function (c) {
-        return { code: (c.code || "").toUpperCase(), locked: c.locked || [], faculty: c.faculty || [], secs: c.secs || [] };
-      });
+      state.courses = cleanCourses(o.courses);
       renderCourses(); updateSummary();
     }
     renderRail();
@@ -2751,7 +2858,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     function move(ev) {
       if (!drag) return;
       var p = point(ev);
-      // pulling the handle away from the panel's edge makes the panel bigger
       var delta = drag.horiz ? (drag.x - p.x) : (drag.y - p.y);
       if (delta) drag.moved = true;
       setRailSize(drag.size + delta, true);
@@ -2808,11 +2914,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     save(); renderRail();
     return true;
   }
-  // Seat cadence: a flat 30 s while seats are on, a lazy 60 s when the tab is in the
-  // background (the feed itself only regenerates on a ~60 s clock, so this is plenty).
+  // Requested polling intervals; browsers may throttle hidden tabs further.
   var SEAT_MS = 30000, SEAT_MS_OPEN = 30000, SEAT_MS_HIDDEN = 60000, SEAT_MAX_BACKOFF = 480000;
   var SEAT_FLASH_MS = 6000;                 // how long a seat movement still counts as "just happened"
-  var seatWorker = null, seatBusy = false, seatTimer = null, rowCache = {};
+  var seatWorker = null, seatBusy = false, seatTimer = null, seatDeadline = null, seatRequest = 0, rowCache = {};
   state.seats = { map: {}, changed: {}, flashed: {}, at: null, error: null, paused: false, backoff: SEAT_MS, lastTry: 0, query: "", open: {}, fold: {}, showAll: false, mode: "closed" };
   state.pins = [];
   state.railPage = [];
@@ -2907,14 +3012,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function seatRow(r, inUse, showCode, liveNow) {
     var pinned = state.pins.some(function (x) { return x.code === r.code && x.sec === r.sec; });
-    // the same section can sit in several boxes at once — every copy of it flashes together,
-    // and a change flashes exactly once: a poll marks seats.flashed the moment it paints the
-    // pulse, so a rebuild caused by folding, pinning or filtering can never replay it
+    // Flash each change once across duplicate rows; rebuilding the panel must not replay it.
     var chAt = state.seats.changed ? state.seats.changed[r.code + "|" + r.sec] : 0;
     var moved = !!chAt && (state.seats.flashed || {})[r.code + "|" + r.sec] !== chAt && Date.now() - chAt < SEAT_FLASH_MS;
-    // liveNow rows (every box except All courses) always show the live pill, even while the
-    // catalogue is browsing an archived semester; data-live marks them so a poll's in-place
-    // paint never touches a frozen archived pill
+    // Only data-live rows receive seat polls; collected catalogue rows keep their saved counts.
     var pill = liveNow ? seatPill(r.code, r.sec, seatOf(r.code, r.sec)) : seatPill(r.code, r.sec);
     return '<div class="srow' + (inUse ? " inuse" : "") + (moved ? " seat-changed" : "") +
       '" data-k="' + esc(r.code + "|" + r.sec) + '"' + (liveNow ? ' data-live="1"' : "") +
@@ -2931,7 +3032,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   function qMatch(row) { return !state.seats.query || row.hay.indexOf(state.seats.query) >= 0; }
   function bySec(rows) { return rows.slice().sort(function (a, b) { return String(a.sec).localeCompare(String(b.sec)); }); }
-  // every group header is a fold button: one tap compresses a whole course out of the way
   function groupHtml(title, sub, rows, hue, foldKey) {
     if (!rows.length) return "";
     var folded = !!(foldKey && state.seats.fold[foldKey]);
@@ -2944,29 +3044,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       '<span class="n">' + rows.length + " section" + (rows.length === 1 ? "" : "s") + "</span></button></h4>" +
       rows.map(function (x) { return seatRow(x.r, x.inUse, false, true); }).join("") + "</div>";
   }
-  /* ------------------------------ saved semesters ------------------------------
-     The moment a *different* session turns up in the feed, the semester we were reading is
-     filed away on this device, so the seats panel can still show it months later: faculty,
-     rooms, meeting times, exam slots and the seat counts exactly as they stood.            */
-  var LS_SEM = "prohor.semesters", LS_FAC = "prohor.facmem", SEM_KEEP = 8;
-  // a faculty string counts as unknown when every word in it is TBA / empty
-  function facUnknown(f) {
-    if (!f) return true;
-    return !String(f).toUpperCase().split(/[^A-Z]+/).some(function (w) { return w && w !== "TBA"; });
-  }
-  function facSave() {
-    try { localStorage.setItem(LS_FAC, JSON.stringify(state.facMem)); } catch (e) { }
-    store.set(LS_FAC, state.facMem);
-  }
-  function facLoad() {
-    try { var v = JSON.parse(localStorage.getItem(LS_FAC) || "null"); if (v && v.map) state.facMem = v; } catch (e) { }
-    store.get(LS_FAC).then(function (v) {
-      if (!v || !v.map) return;
-      // IndexedDB may carry a copy localStorage lost; union keeps the newest memory per section
-      Object.keys(v.map).forEach(function (k) { if (v.sid === state.facMem.sid) state.facMem.map[k] = state.facMem.map[k] || v.map[k]; });
-      if (!state.facMem.sid && v.sid) state.facMem.sid = v.sid;
-    }).catch(function () { });
-  }
+  /* Repository-owned collection: read-only static files, never browser-owned history. */
+  var archiveError = false;
   function semLabel(session) {
     var s = String(session == null ? "" : session);
     if (!/^\d{5}$/.test(s)) return "Session " + (s || "?");
@@ -2982,40 +3061,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     return { cap: cap, used: used, free: Math.max(0, cap - used), over: used > cap ? used - cap : 0 };
   }
   function seatState(code, sec) { return semActive() ? semSeat(code, sec) : seatOf(code, sec); }
-  function semWrite() {
-    var keys = Object.keys(state.semesters).sort();
-    while (keys.length > SEM_KEEP) delete state.semesters[keys.shift()];
-    var payload = { list: state.semesters };
-    try { localStorage.setItem(LS_SEM, JSON.stringify(payload)); } catch (e) { }
-    store.set(LS_SEM, payload);                       // IndexedDB carries what localStorage will not
-  }
-  // file the semester we are leaving, the moment a new one arrives
-  function semFile(index, meta) {
-    if (!index || !meta || !meta.session) return;
-    var key = String(meta.session);
-    if (state.semesters[key] || !index.codes) return;             // already on file
-    var rec = { session: key, label: semLabel(key), at: meta.at || Date.now(), start: meta.start || null,
-      end: meta.end || null, count: 0, courses: {}, rows: {} };
-    index.codes.forEach(function (code) {
-      var Cc = index.courses[code];
-      rec.courses[code] = Cc.name || code;
-      var prior = state.facMem && state.facMem.map ? state.facMem.map : {};
-      Cc.sections.forEach(function (s) {
-        var ev = [], i;
-        for (i = 0; i < s.all.length; i++) ev.push(s.all[i].day, s.all[i].start, s.all[i].end, s.all[i].kind === "LAB" ? 1 : 0);
-        var ex = [];
-        (s.exams || []).forEach(function (x) { ex.push(x.kind === "MID" ? 0 : 1, x.date, x.start, x.end); });
-        // archive the last real name, never a mid-semester flip back to TBA; a section that
-        // stayed TBA from the first usable snapshot to the last is the only one filed as TBA
-        var fac = facUnknown(s.faculty) && prior[code + "|" + s.sec] ? prior[code + "|" + s.sec] : s.faculty;
-        rec.rows[code + "|" + s.sec] = [fac, s.room || "", s.labRoom || "", s.labCourse || "",
-          s.cap == null ? null : +s.cap, s.used == null ? null : +s.used, ev, ex];
-      });
-    });
-    rec.count = Object.keys(rec.rows).length;
-    state.semesters[key] = rec;
-    semWrite();
-  }
   function semByCode() {
     var rec = semActive();
     if (!rec) return {};
@@ -3044,7 +3089,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       .map(function (f) { return state.names[f] || ""; }).filter(Boolean).join(" ");
     return (rowCache[key] = rowBuild(code, sec, d, d.events, d.exams, facNames, rec.courses[code]));
   }
-  // one resolver per question, so the renderers never have to branch on the source
   function rowFor(code, sec) { return semActive() ? semRow(code, sec) : sectionRow(code, sec); }
   function courseName(code) {
     var rec = semActive();
@@ -3096,9 +3140,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function semOptions() {
     var now = semNow(), out = [{ key: "live", label: (now ? semLabel(now) : "This semester") + " · live", live: true, count: state.index ? state.index.count : 0 }];
     Object.keys(state.semesters).sort().forEach(function (k) {
-      if (k === now) return;                          // the live row already speaks for it
       var r = state.semesters[k];
-      out.push({ key: k, label: r.label, at: r.at, count: r.count });
+      out.push({ key: k, label: r.label + (k === now ? " · collected" : ""), at: r.at, count: r.count });
     });
     return out;
   }
@@ -3116,7 +3159,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         "<span>" + esc(o.label) + (o.count ? ' <span class="faint">· ' + num(o.count) + " sections</span>" : "") + "</span>" +
         '<svg class="tick"><use href="#i-check"/></svg></button>';
     }).join("");
-    pop.innerHTML = "<h4>Semester</h4>" + rows;
+    pop.innerHTML = "<h4>Semester</h4>" + rows + (archiveError ? '<div class="note">Repository collection unavailable or incomplete. Live planning still works; reload to retry.</div>' : "");
   }
   function semSet(key) {
     state.sem = (key && key !== "live" && state.semesters[key]) ? key : "live";
@@ -3132,24 +3175,21 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     if (state.sem !== "live") toast("\u201cAll courses\u201d now shows the saved copy of " + state.semesters[state.sem].label + " — the other boxes stay live.");
   }
   function semBoot() {
-    var raw = null;
-    try { raw = JSON.parse(localStorage.getItem(LS_SEM) || "null"); } catch (e) { }
-    if (raw && raw.list && typeof raw.list === "object") state.semesters = raw.list;
-    // localStorage holds only what fits; a failed write there leaves a valid-but-old list that
-    // would otherwise shadow the fresh copy IndexedDB carries. Take the union of both stores —
-    // a semester already present in the fast copy never gets re-paint, one it lacks appears.
-    store.get(LS_SEM).then(function (v) {
-      if (!v || !v.list || typeof v.list !== "object") return;
-      var missing = Object.keys(v.list).filter(function (k) { return !state.semesters[k]; });
-      if (!missing.length) return;
-      missing.forEach(function (k) { state.semesters[k] = v.list[k]; });
-      var keys = Object.keys(state.semesters).sort();
-      while (keys.length > SEM_KEEP) delete state.semesters[keys.shift()];
+    // User preferences/pins may persist locally; collection records must not.
+    return fetchJson("./data/semesters/index.json", { cache: "no-cache" }).then(function (manifest) {
+      if (!manifest || manifest.schemaVersion !== 1 || !Array.isArray(manifest.semesters) ||
+          !manifest.semesters.every(function (sid) { return typeof sid === "string" && /^\d{4}[123]$/.test(sid); })) throw new Error("Invalid archive index");
+      return Promise.all(manifest.semesters.map(function (sid) {
+        return fetchJson("./data/semesters/" + sid + ".json", { cache: "no-cache" }).then(function (rec) {
+          if (!rec || rec.session !== sid || !rec.rows || !rec.courses || typeof rec.label !== "string" ||
+              !Object.keys(rec.rows).every(function (key) { var row = rec.rows[key]; return Array.isArray(row) && row.length === 8 && Array.isArray(row[6]) && Array.isArray(row[7]); })) throw new Error("Invalid semester archive");
+          state.semesters[sid] = rec;
+        }).catch(function () { archiveError = true; });
+      }));
+    }).catch(function () { archiveError = true; }).then(function () {
       if (state.sem !== "live" && !state.semesters[state.sem]) state.sem = "live";
-      renderRail(); semRender();
-    }).catch(function () { });
-    if (state.sem !== "live" && !state.semesters[state.sem]) state.sem = "live";
-    semRender();
+      rowCache = {}; renderRail(); semRender();
+    });
   }
 
   function renderRail() {
@@ -3158,7 +3198,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     if (!state.index) { body.innerHTML = '<div class="rail-empty">Waiting for section data…</div>'; $("#railSub").textContent = "—"; return; }
     var out = [], i, pinnedBox = "";
     var past = semActive();
-    // pinned sections — any course, any number up to PIN_MAX, always the first box
     if (state.pins.length) {
       var pr = state.pins.map(function (x) { return sectionRow(x.code, x.sec); }).filter(Boolean)
         .sort(function (a, b) {
@@ -3198,8 +3237,10 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var cap = state.seats.showAll ? list.length : Math.min(list.length, state.seats.query ? 60 : 120);
     var expanded = 0, rowsTotal = 0;
     var rows3 = list.slice(0, cap).map(function (m) {
-      var open = state.seats.open[m.code] || (past ? (expanded < 12 && rowsTotal < 300)
-        : (state.seats.query && m.rows && expanded < 12 && rowsTotal < 300));
+      var openKey = courseOpenKey(m.code);
+      var open = Object.prototype.hasOwnProperty.call(state.seats.open, openKey)
+        ? state.seats.open[openKey]
+        : !!(!past && state.seats.query && m.rows && expanded < 12 && rowsTotal < 300);
       var inner = "";
       if (open) {
         expanded++;
@@ -3209,7 +3250,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
         inner = secs.length ? '<div class="sgroup">' + secs.map(function (x) { return seatRow(x.r, false); }).join("") + "</div>" : '<div class="rail-empty">no section matches the filter</div>';
       }
       return '<div class="coursebtn" role="button" tabindex="0" data-course="' + esc(m.code) + '" aria-expanded="' + (!!open) +
-        '" data-tip="Open ' + esc(m.code) + ' to see its sections and seats">' +
+        '" data-tip="' + (open ? "Hide " : "Open ") + esc(m.code) + ' sections and seats">' +
         '<svg><use href="#i-chev"/></svg><span class="code">' + esc(m.code) + '</span><span class="nm">' + esc(m.name) + "</span>" +
         '<span class="n">' + m.count + " sec</span></div>" + inner;
     }).join("");
@@ -3218,8 +3259,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       list.length + (state.seats.query ? " match" : "") + "</span></h3>" +
       (rows3 || '<div class="rail-empty">Nothing matches “' + esc(state.seats.query) + '”.</div>') +
       (state.seats.query && list.length > cap ? '<div class="rail-empty">' + (list.length - cap) + ' more matching course' + (list.length - cap === 1 ? "" : "s") + ' — open one from the list or refine the search.</div>' : "") + more + "</div>");
-    // a rebuild (fold, filter, pin, adopt) swaps the markup but must never move the reader:
-    // remember every scrollable offset and put it back once the new rows are in place
+    // Restore each scroll container after replacing the panel markup.
     var preY = body.scrollTop, preCols = $$(".rail-col", body).map(function (cj) { return cj.scrollTop; });
     body.innerHTML = pinnedBox + wrapCols(out);
     // best-effort: a frozen scroll position must never cost the render itself
@@ -3250,7 +3290,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     if (!a.length) return '<div class="rail-cols"><div class="rail-col one">' + b.join("") + "</div></div>";
     return '<div class="rail-cols"><div class="rail-col">' + a.join("") + '</div><div class="rail-col">' + b.join("") + "</div></div>";
   }
-  // the one-line pinned summary the folded band shows instead of the rows
   function renderPeek() {
     var el2 = $("#railPeek");
     if (!el2) return;
@@ -3271,8 +3310,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var past = semActive();
     if (past) {
       var savedAt = new Date(+past.at || NaN);
-      return "\u201cAll courses\u201d shows the saved copy of " + past.label + " (" + num(past.count) + " sections as they were on " +
-        (isNaN(savedAt) ? "an unknown date" : C.fmtDate(savedAt.toISOString().slice(0, 10))) + ") — the other boxes stay live.";
+      return "\u201cAll courses\u201d shows the saved copy of " + past.label + " (" + num(past.count) + " collected sections; collection updated " +
+        (isNaN(savedAt) ? "an unknown date" : C.fmtDate(savedAt.toISOString().slice(0, 10))) + "). Removed sections are retained, so this count may differ from the latest feed — the other boxes stay live.";
     }
     return "Free seats = capacity − enrolled, kept up to date automatically.";
   }
@@ -3280,8 +3319,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var el2 = $("#seatAgo"); if (!el2) return;
     var live = $("#railLive");
     var foot = $("#railFoot"); if (foot) foot.textContent = railFootText();
-    var pause2 = $("#seatPause");
+    var pause2 = $("#seatPause"), now2 = $("#seatNow");
     if (pause2) pause2.hidden = false;      // the rail stays live even while the catalogue browses a saved semester
+    if (now2) { now2.hidden = false; now2.disabled = !!seatBusy; }
     if (state.seats.paused) { live.setAttribute("data-state", "paused"); el2.textContent = "paused"; return; }
     if (state.seats.error) { live.setAttribute("data-state", "error"); el2.textContent = "retry in " + Math.round(state.seats.backoff / 1000) + " s (" + state.seats.error + ")"; return; }
     live.setAttribute("data-state", seatBusy ? "busy" : "idle");
@@ -3304,9 +3344,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     state.seats.backoff = Math.min(SEAT_MAX_BACKOFF, (state.seats.backoff || SEAT_MS) * 2);
     railClock();
   }
-  // a poll changes numbers, never shape: repaint the affected live pills in place, flash each
-  // change exactly once, refresh the header counts — and leave the list's scroll, folds,
-  // open groups, hover tips and focus exactly where they were
+  // Patch live counts in place to preserve scroll, folds and keyboard focus.
   function paintSeats(changed, now) {
     var body = $("#railBody");
     if (!body) return;
@@ -3345,19 +3383,38 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     state.seats.backoff = (state.seats.every || SEAT_MS);
     railClock(); paintSeats(changed, now);
   }
+  function finishSeat(requestId) {
+    if (!seatBusy || requestId !== seatRequest) return false;
+    clearTimeout(seatDeadline); seatDeadline = null; seatBusy = false;
+    return true;
+  }
+  function cancelSeatRequest() {
+    seatRequest++; clearTimeout(seatDeadline); seatDeadline = null; seatBusy = false;
+    if (seatWorker) { seatWorker.terminate(); seatWorker = null; }
+  }
   function seatTick(force) {
     if (!state.ready) return;                         // polling continues while the catalogue browses a saved semester
     if (!force && state.seats.paused) return;         // hidden tabs still poll — just on the slow 60 s cadence
     if (seatBusy) return;
-    if (!force && Date.now() - (state.seats.lastTry || 0) < state.seats.backoff) return;
+    if (!force && Date.now() - (state.seats.lastTry || 0) < Math.max(state.seats.backoff, state.seats.every || 0)) return;
     state.seats.lastTry = Date.now();
+    var requestId = ++seatRequest;
     seatBusy = true; railClock();
-    if (seatWorker) { try { seatWorker.postMessage({ type: "fetch-seats" }); return; } catch (e) { /* fall through */ } }
-    fetch(C.DATA_URL, { cache: "no-store" }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function (raw) { seatBusy = false; applySeats(C.seatRows(raw), Date.now()); })
-      .catch(function (e) { seatBusy = false; seatFail((e && e.message) || e); });
+    // The page also bounds the worker round trip in case worker startup itself stalls.
+    seatDeadline = setTimeout(function () {
+      if (!finishSeat(requestId)) return;
+      cancelSeatRequest(); seatFail("Seat check timed out");
+    }, 20000);
+    if (seatWorker) {
+      try { seatWorker.postMessage({ type: "fetch-seats", requestId: requestId }); return; }
+      catch (e) { seatWorker.terminate(); seatWorker = null; }
+    }
+    fetchJson(C.DATA_URL, { cache: "no-store" }).then(function (raw) {
+      var rows = C.seatRows(raw);
+      if (finishSeat(requestId)) applySeats(rows, Date.now());
+    }).catch(function (e) {
+      if (finishSeat(requestId)) seatFail((e && e.message) || e);
+    });
   }
   function seatCadence() {
     var open = !!$("#seatsLayer") && !$("#seatsLayer").hidden;
@@ -3365,9 +3422,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     state.seats.every = state.seats.paused ? 0 : base;
     if (seatTimer) clearInterval(seatTimer);
     seatTimer = setInterval(function () {
-      // background tabs stay on the 60 s cadence instead of stopping outright, so the
-      // numbers are at most about a minute old whenever the user looks back
-      if (!state.seats.paused && Date.now() - (state.seats.lastTry || 0) >= state.seats.backoff) seatTick(false);
+      // Browser timer throttling can delay background checks beyond the requested cadence.
+      if (!state.seats.paused && Date.now() - (state.seats.lastTry || 0) >= Math.max(state.seats.backoff, state.seats.every || 0)) seatTick(false);
     }, Math.max(4000, Math.round(base / 4)));
     railClock();
   }
@@ -3375,14 +3431,21 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     indexSeats();
     if (typeof Worker === "function") {
       try {
-        seatWorker = new Worker("./worker.js");
+        seatWorker = new Worker("./worker.js?v=20261005-fetch-compat");
+        var activeSeatWorker = seatWorker;
         seatWorker.onmessage = function (ev) {
           var m = (ev && ev.data) || {};
-          seatBusy = false;
+          if (seatWorker !== activeSeatWorker) return;
+          if (m.type !== "seats" && m.type !== "seats-error") return;
+          // Legacy workers omit requestId. Only one request may be active on this instance.
+          if (!finishSeat(m.requestId === undefined ? seatRequest : m.requestId)) return;
           if (m.type === "seats") applySeats(m.rows, m.at);
-          else if (m.type === "seats-error") seatFail(m.message);
+          else seatFail(m.message);
         };
-        seatWorker.onerror = function () { if (seatWorker) { try { seatWorker.terminate(); } catch (e) { } } seatWorker = null; seatBusy = false; };
+        seatWorker.onerror = function () {
+          if (seatWorker !== activeSeatWorker) return;
+          cancelSeatRequest(); seatFail("Seat worker unavailable");
+        };
       } catch (e) { seatWorker = null; }
     }
     seatCadence();
@@ -3392,9 +3455,8 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   }
   document.addEventListener("visibilitychange", function () {
     seatCadence();                     // re-arm: 30 s while watched, 60 s while not
-    if (document.visibilityState === "visible" && state.seats.at && Date.now() - state.seats.at > 15000) seatTick(true);
+    if (!state.seats.paused && document.visibilityState === "visible" && state.seats.at && Date.now() - state.seats.at > 15000) seatTick(true);
   });
-  // rail interactions
   $("#railBody").addEventListener("click", function (e) {
     var pin = e.target.closest("[data-pin]");
     if (pin) {
@@ -3406,10 +3468,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var fb = e.target.closest("[data-fold]");                     // compress a whole course away
     if (fb && fb.dataset.fold) { toggleFold(fb.dataset.fold); return; }
     var cb = e.target.closest("[data-course]");
-    if (cb) { var c = cb.dataset.course; state.seats.open[c] = !state.seats.open[c]; renderRail(); return; }
+    if (cb) { toggleCatalogueCourse(cb); return; }
     if (e.target.closest("[data-showall]")) { state.seats.showAll = true; renderRail(); return; }
   });
-  // the semester switch: one popover, live first, saved semesters under it
   $("#semBtn").addEventListener("click", function (e) {
     e.stopPropagation();
     var pop = $("#semPop");
@@ -3434,6 +3495,17 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     var b = e.target.closest("[data-sem]");
     if (b) semSet(b.dataset.sem);
   });
+  function courseOpenKey(code) {
+    return (semActive() ? "archive:" + state.sem : "live:" + (semNow() || "")) + "|" + code;
+  }
+  function toggleCatalogueCourse(button) {
+    var code = button.dataset.course;
+    // Toggle what the reader actually sees, including automatically expanded groups.
+    state.seats.open[courseOpenKey(code)] = button.getAttribute("aria-expanded") !== "true";
+    renderRail();
+    var next = $$("#railBody [data-course]").find(function (el) { return el.dataset.course === code; });
+    if (next) { try { next.focus({ preventScroll: true }); } catch (e) { next.focus(); } }
+  }
   function toggleFold(key) {
     if (!key) return;
     state.seats.fold[key] = !state.seats.fold[key];
@@ -3443,7 +3515,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     if (e.key !== "Enter" && e.key !== " ") return;
     var cb = e.target.closest("[data-course]");
     if (!cb) { var fb = e.target.closest("[data-fold]"); if (fb) { e.preventDefault(); toggleFold(fb.dataset.fold); } return; }
-    e.preventDefault(); var c = cb.dataset.course; state.seats.open[c] = !state.seats.open[c]; renderRail();
+    e.preventDefault(); toggleCatalogueCourse(cb);
   });
   var seatDebounce = null;
   $("#seatSearch").addEventListener("input", function () {
@@ -3461,6 +3533,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     this.setAttribute("aria-pressed", String(state.seats.paused));
     seatCadence();
   });
+  $("#seatNow").addEventListener("click", function () { seatTick(true); });
   $("#railBody").addEventListener("animationend", function (e) {
     var row = e.target && e.target.closest ? e.target.closest(".srow.seat-changed") : null;
     if (row) row.classList.remove("seat-changed");          // the pulse is a one-shot
@@ -3471,7 +3544,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   function setPop(open) { $("#livePop").hidden = !open; $("#livePill").setAttribute("aria-expanded", String(open)); if (open) fitOverlays(); }
   $("#livePill").addEventListener("click", function (e) { e.stopPropagation(); setPop($("#livePop").hidden); });
   $("#livePop").addEventListener("click", function (e) { e.stopPropagation(); });
-  /* manual refresh removed: the conditional poll keeps the feed current on its own */
   $("#howBtn").addEventListener("click", function () { try { $("#howDlg").showModal(); } catch (e) { toast("Search, pick courses, set preferences, then generate."); } });
   $("#howClose").addEventListener("click", function () { try { $("#howDlg").close(); } catch (e) { } });
   $("#genBtn").addEventListener("click", generate);
@@ -3491,7 +3563,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     if (!e.target.closest(".combo")) hideList();
   });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") { closeMs(false); setPop(false); hideList(); }
+    if (e.key === "Escape") { closeMs("focus"); setPop(false); hideList(); }
     var tag = (document.activeElement && document.activeElement.tagName || "").toLowerCase();
     if (e.key === "/" && tag !== "input" && tag !== "select" && tag !== "textarea") { e.preventDefault(); search.focus(); showList(search.value); }
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); generate(); }
@@ -3501,35 +3573,68 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   var LS_RESULTS = "results", RESULTS_MAX = 6000;
   function prefsFor() {
     return {
-      minDays: state.prefs.dayMin, maxDays: state.prefs.dayMax,
+      minDays: 1, maxDays: state.prefs.dayMax,
       preferFewerDays: state.prefs.fewerDays, preferLessTime: state.prefs.lessTime,
-      preferGaps: state.prefs.minGaps, preferAlt: state.prefs.moreChoices,
+      preferGaps: state.prefs.minGaps, preferAlt: false,
       preferOpenSeats: state.prefs.openSeats,
       ignoreExams: !state.prefs.examClash
     };
   }
   function defaultPrefs() {
-    return { dayMin: 1, dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, moreChoices: false, openSeats: true, onlyOpen: false, avoidFac: [], avoidTime: [], avoidDay: [] };
+    return { dayMax: 6, examClash: true, fewerDays: true, lessTime: false, minGaps: true, openSeats: false, onlyOpen: false, avoidFac: [], avoidTime: [], avoidDay: [] };
   }
-  // Stable across reloads: the selection + prefs + a fingerprint of the feed itself
-  // (not the fetch time), so a saved search can be reopened on a later visit.
+  function cleanPrefs(raw) {
+    var out = defaultPrefs();
+    if (!raw || typeof raw !== "object") return out;
+    Object.keys(out).forEach(function (key) {
+      if (typeof out[key] === "boolean") {
+        if (typeof raw[key] === "boolean") out[key] = raw[key];
+      } else if (Array.isArray(out[key]) && Array.isArray(raw[key])) {
+        out[key] = uniq(raw[key].filter(function (v) {
+          return key === "avoidFac" ? typeof v === "string" && v.length > 0 && v.length <= 80 : Number.isInteger(v) && v >= 0 && v < 7;
+        }).slice(0, 100));
+      }
+    });
+    if (Number.isInteger(raw.dayMax)) out.dayMax = Math.max(1, Math.min(6, raw.dayMax));
+    return out;
+  }
+  function cleanCourses(raw) {
+    if (!Array.isArray(raw)) return [];
+    var seen = {};
+    return raw.filter(function (c) {
+      if (!c || typeof c.code !== "string" || !/^[A-Z0-9]+$/i.test(c.code)) return false;
+      var code = c.code.toUpperCase();
+      if (seen[code]) return false;
+      seen[code] = true; return true;
+    }).slice(0, MAX_COURSES).map(function (c) {
+      function list(key) { return Array.isArray(c[key]) ? uniq(c[key].filter(function (v) { return typeof v === "string"; }).slice(0, 500)) : []; }
+      return { code: c.code.toUpperCase(), locked: list("locked"), faculty: list("faculty"), secs: list("secs") };
+    });
+  }
+  function cleanPins(raw) {
+    return Array.isArray(raw) ? raw.filter(function (p) {
+      return p && typeof p.code === "string" && /^[A-Z0-9]+$/i.test(p.code) && (typeof p.sec === "string" || Number.isFinite(p.sec));
+    }).slice(0, 50).map(function (p) { return { code: p.code.toUpperCase(), sec: String(p.sec) }; }) : [];
+  }
+  // Include content and scoring version: equal counts do not make old descriptors reusable.
   function sigFor(courses, prefs) {
     return JSON.stringify([
       (courses || []).map(function (c) { return [c.code, c.locked || [], c.faculty || [], c.secs || []]; }),
-      prefs || state.prefs, state.pageSize, state.index ? [state.index.count, state.index.groupCount] : 0
+      prefs || state.prefs, state.pageSize, state.feedFp || null, "scores-v3"
     ]);
   }
   function currentSig() { return sigFor(state.courses, state.prefs); }
   function saveResults() {
     var sp = state.search;
-    if (!sp || !sp.items.length) return;
+    // Paging or swapping stale results must not label them with newly edited preferences.
+    if (!sp || !sp.items.length || sp.stale || sp.sig !== currentSig()) return;
     try {
       store.set(LS_RESULTS, {
-        sig: sp.sig = currentSig(), done: !!sp.done, page: state.page, savedAt: Date.now(),
+        sig: sp.sig, done: !!sp.done && sp.items.length <= RESULTS_MAX, page: state.page, savedAt: Date.now(),
         courses: state.courses.map(function (c) { return { code: c.code, locked: c.locked, faculty: c.faculty, secs: c.secs }; }),
         prefs: state.prefs, picks: sp.picks,
         items: sp.items.slice(0, RESULTS_MAX).map(function (it) {
-          return { ci: Array.prototype.slice.call(it.ci), days: it.days, gaps: it.gaps, span: it.span, early: it.early, alt: it.alt, score: it.score };
+          return { ci: Array.prototype.slice.call(it.ci), days: it.days, gaps: it.gaps, span: it.span, early: it.early, earliest: it.earliest, latest: it.latest, alt: it.alt, score: it.score };
         })
       });
     } catch (e) { }
@@ -3538,19 +3643,23 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     store.get(LS_RESULTS).then(function (raw) { if (cb) cb(raw); });
   }
   function applyRestored(raw) {
-    if (!raw || !raw.items || !raw.items.length) return false;
+    if (!raw || !Array.isArray(raw.items) || !raw.items.length || raw.items.length > RESULTS_MAX) return false;
     if (raw.sig !== currentSig()) {
-      // the live selection differs: only adopt the saved one when there is nothing to show yet
-      if (state.courses.length || !raw.courses) return false;
-      state.courses = raw.courses.slice(0, MAX_COURSES).map(function (c) {
-        return { code: (c.code || "").toUpperCase(), locked: c.locked || [], faculty: c.faculty || [], secs: c.secs || [] };
-      });
-      if (raw.prefs) Object.keys(state.prefs).forEach(function (k) { if (raw.prefs[k] !== undefined) state.prefs[k] = raw.prefs[k]; });
+      if (state.courses.length || !Array.isArray(raw.courses)) return false;
+      var courses = cleanCourses(raw.courses), prefs = cleanPrefs(raw.prefs);
+      if (raw.sig !== sigFor(courses, prefs)) return false;
+      state.courses = courses; state.prefs = prefs;
       renderRange(); renderChips(); renderCourses(); updateSummary();
-      if (raw.sig !== currentSig()) return false;
     }
     var built = buildRows();
     if (built.error) return false;
+    var ordered = C.orderRows(built.rows);
+    // Stored JSON is untrusted: reject malformed descriptors before materializing any row.
+    if (!raw.items.every(function (it) {
+      return it && Array.isArray(it.ci) && it.ci.length === ordered.N && it.ci.every(function (n, i) {
+        return Number.isInteger(n) && n >= 0 && n < ordered.R[i].candidates.length;
+      }) && [it.days, it.gaps, it.span, it.early, it.alt, it.score].every(Number.isFinite);
+    })) return false;
     var sp = state.search = {
       rows: built.rows, prefs: prefsFor(), ord: C.orderRows(built.rows),
       items: [], picks: raw.picks || {}, running: false, done: !!raw.done, once: false, all: false,
@@ -3559,19 +3668,21 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       renderedCount: -1, sig: raw.sig
     };
     raw.items.forEach(function (it) {
-      sp.items.push({ ci: Int32Array.from(it.ci), days: it.days, gaps: it.gaps, span: it.span, early: it.early, alt: it.alt, score: it.score, _gi: sp.items.length });
+      sp.items.push({ ci: Int32Array.from(it.ci), days: it.days, gaps: it.gaps, span: it.span, early: it.early, earliest: it.earliest, latest: it.latest, alt: it.alt, score: it.score, _gi: sp.items.length });
     });
     state.results = sp.items;
-    state.page = Math.min(Math.max(1, raw.page || 1), Math.max(1, Math.ceil(sp.items.length / state.pageSize)));
+    state.page = Math.min(Math.max(1, Number.isInteger(raw.page) ? raw.page : 1), Math.max(1, Math.ceil(sp.items.length / state.pageSize)));
     sp.resume = function () {
       if (!sp.running || state.search !== sp) return;
-      if (!sp.en) sp.en = C.createEnumerator(sp.rows, sp.prefs);
-      var r = sp.en.next({ want: sp.wantMore || (state.page + 1) * state.pageSize, budgetMs: sp.all ? 1400 : 900, sort: false });
-      var items = r.items || [];
-      for (var k = 0; k < items.length; k++) items[k]._gi = k;
-      sp.items = items; sp.tried = r.tried; sp.valid = r.valid; sp.space = r.space;
-      sp.stats = r.stats || sp.stats; sp.done = !!r.done; sp.restored = false; sp.running = false;
+      var r = sp.en.next({ want: Math.min(CHUNK, Math.max(1, sp.target - sp.items.length)), budgetMs: 90, sort: false });
+      (r.items || []).forEach(function (it) { it._gi = sp.items.length; sp.items.push(it); });
+      sp.tried = r.tried; sp.valid = r.valid; sp.space = r.space;
+      sp.stats = r.stats || sp.stats; sp.done = !!r.done; sp.restored = false;
       state.results = sp.items;
+      if (!sp.done && sp.items.length < sp.target) {
+        renderStatus(); setTimeout(sp.resume, 16); return;
+      }
+      sp.running = false;
       if (sp.pendingAdvance) {
         sp.pendingAdvance = false;
         var pg = Math.max(1, Math.ceil(sp.items.length / state.pageSize));
@@ -3582,9 +3693,12 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     };
     sp.requestMore = function (all) {
       if (sp.running) return;
-      var have = sp.items.length;                 // the list is rebuilt from the top, so `want` is a total
+      sp.target = all ? MAX_COLLECT : sp.items.length + state.pageSize;
       sp.all = !!all; sp.running = true;
-      sp.wantMore = all ? 1e9 : have + state.pageSize;
+      if (!sp.en) {
+        sp.en = C.createEnumerator(sp.rows, sp.prefs);
+        sp.items = []; state.results = sp.items;
+      }
       setGen(true, all ? "Searching everything…" : "Finding " + state.pageSize + " more…");
       $("#prog").hidden = false;
       sp.resume();
@@ -3617,7 +3731,9 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
           ((c.secs || []).length ? "~" + c.secs.join(".") : "");
       }).join(","));
     }
-    if (state.prefs.dayMin > 1 || state.prefs.dayMax < 6) q.push("d=" + state.prefs.dayMin + "-" + state.prefs.dayMax);
+    q.push("pv=2", "rank=" + [state.prefs.fewerDays, state.prefs.lessTime, state.prefs.minGaps].map(function (v) { return v ? "1" : "0"; }).join(""),
+      "seats=" + (state.prefs.onlyOpen ? "require" : state.prefs.openSeats ? "prefer" : "ignore"), "exams=" + (state.prefs.examClash ? "1" : "0"));
+    if (state.prefs.dayMax < 6) q.push("d=1-" + state.prefs.dayMax);
     if (state.prefs.avoidTime.length) q.push("t=" + state.prefs.avoidTime.join("."));
     if (state.prefs.avoidDay.length) q.push("y=" + state.prefs.avoidDay.join("."));
     if (state.prefs.avoidFac.length) q.push("f=" + state.prefs.avoidFac.join("."));
@@ -3644,14 +3760,24 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       state.droppedUrl = junk.join(" ");
       return false;
     }
-    state.courses = list;
+    state.courses = cleanCourses(list);
+    // Version 2 links are complete: omitted constraints must not inherit the recipient's cache.
+    if (p.get("pv") === "2") state.prefs = defaultPrefs();
+    var rank = p.get("rank"), seats = p.get("seats"), exams = p.get("exams");
+    if (/^[01]{3}$/.test(rank || "")) {
+      state.prefs.fewerDays = rank[0] === "1"; state.prefs.lessTime = rank[1] === "1"; state.prefs.minGaps = rank[2] === "1";
+    }
+    if (["ignore", "prefer", "require"].indexOf(seats) >= 0) {
+      state.prefs.onlyOpen = seats === "require"; state.prefs.openSeats = seats !== "ignore";
+    }
+    if (exams === "0" || exams === "1") state.prefs.examClash = exams === "1";
     if (junk.length) state.droppedUrl = junk.join(" ");
     if (p.get("d")) {
       var d = p.get("d").split("-").map(Number);
-      if (d.length === 2) { state.prefs.dayMin = Math.max(1, d[0]); state.prefs.dayMax = Math.min(6, d[1]); }
+      if (d.length === 2 && Number.isInteger(d[1])) state.prefs.dayMax = Math.max(1, Math.min(6, d[1])); // Legacy minimum is intentionally ignored.
     }
-    if (p.get("t")) state.prefs.avoidTime = p.get("t").split(".").map(Number).filter(function (n) { return n >= 0 && n < 7; });
-    if (p.get("y")) state.prefs.avoidDay = p.get("y").split(".").map(Number).filter(function (n) { return n >= 0 && n < 7; });
+    if (p.get("t")) state.prefs.avoidTime = p.get("t").split(".").map(Number).filter(function (n) { return Number.isInteger(n) && n >= 0 && n < 7; });
+    if (p.get("y")) state.prefs.avoidDay = p.get("y").split(".").map(Number).filter(function (n) { return Number.isInteger(n) && n >= 0 && n < 7; });
     if (p.get("f")) state.prefs.avoidFac = p.get("f").split(".").filter(Boolean).map(function (s) { return s.toUpperCase(); });
     return true;
   }
@@ -3663,15 +3789,15 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       return;
     }
     if (s) {
-      if (s.prefs) Object.keys(state.prefs).forEach(function (k) { if (s.prefs[k] !== undefined) state.prefs[k] = s.prefs[k]; });
-      state.view = s.view || "grid"; state.sort = s.sort || "best"; state.pageSize = s.pageSize || 50;
-      if (Array.isArray(s.pins)) state.pins = s.pins.filter(function (x) { return x && x.code && x.sec != null; }).slice(0, 50);
+      state.prefs = cleanPrefs(s.prefs);
+      state.view = s.view === "list" ? "list" : "grid";
+      state.sort = Object.prototype.hasOwnProperty.call(SORTS, s.sort) ? s.sort : "best";
+      state.pageSize = Number.isInteger(s.pageSize) && s.pageSize > 0 && s.pageSize <= 200 ? s.pageSize : 50;
+      state.pins = cleanPins(s.pins);
       if (typeof s.sem === "string") state.sem = s.sem;
     }
     if (!readUrl() && s && Array.isArray(s.courses)) {
-      state.courses = s.courses.slice(0, MAX_COURSES).map(function (c) {
-        return { code: (c.code || "").toUpperCase(), locked: c.locked || [], faculty: c.faculty || [], secs: c.secs || [] };
-      });
+      state.courses = cleanCourses(s.courses);
     }
     if (window.innerWidth < 1024 && state.courses.length) setPrefsOpen(false);
   }
@@ -3691,8 +3817,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     loadNames();
     readRailPrefs();                // the split the user left it at
     applyRailSize();
-    semBoot();                      // the semesters already filed on this device
-    facLoad();                      // and the last-known-teacher memory behind them
+    semBoot();                      // repository collection; no local archive writes
     initRail();                     // the seat rail runs on its own clock and its own worker
     if (SEATS_LOADED) { setSeatsView(true, false); }
     else {
@@ -3711,14 +3836,14 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
       seatTick(true);               // fresh seat numbers right away
     });
   }
-  /* ============================ device reset (the wordmark) ============================
-     Reloading must never reset anything — saved state is meant to survive reloads — so the
-     wipe is only ever reachable from an explicit click on the wordmark, behind a confirm. */
+  /* Device reset: explicit confirmation only; reloads must preserve saved state. */
 
   function resetAll() {
     // stop everything first, so nothing can write the old state back after the wipe
+    if (state.search) clearTimeout(state.search.workerDeadline);
     if (state.search && state.search.worker) { try { state.search.worker.terminate(); } catch (e) { } }
     state.search = null;
+    cancelSeatRequest();
     if (typeof seatTimer !== "undefined" && seatTimer) { clearInterval(seatTimer); seatTimer = null; }
 
     var wipeDone = store.wipe();
@@ -3727,8 +3852,7 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     state.prefs = defaultPrefs();
     state.view = "grid"; state.sort = "best"; state.page = 1;
     state.results = null; state.picks = {}; state.blockedNote = ""; state.droppedUrl = "";
-    state.semesters = {}; state.sem = "live";
-    state.facMem = { sid: null, map: {} };
+    state.sem = "live";             // resetting this device cannot erase the repository collection
     state.pins = []; state.railPage = [];
     state.seats = { map: {}, changed: {}, flashed: {}, at: null, error: null, paused: false,
                     backoff: SEAT_MS, lastTry: 0, query: "", open: {}, fold: {},
@@ -3737,7 +3861,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     // the URL encoded the old picks; drop back to the bare page
     try { history.replaceState(null, "", location.pathname); } catch (e) { }
 
-    // theme back to whatever the device asks for
     try {
       applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     } catch (e) { applyTheme("light"); }
