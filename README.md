@@ -77,8 +77,9 @@ with `file://`, which can prevent workers and JSON requests from loading.
 - Invalid or failed collection attempts leave the existing data unchanged.
 
 The workflow is configured for **every six hours** (`17 */6 * * *`) and manual dispatch.
-**It is not activated merely by these local files.** Its explicit target is currently
-`arena/01a10a61-prohor`; publication, GitHub permissions and deployment must be reviewed before use.
+The workflow checks out and publishes to the repository's default branch, not a temporary PR
+branch. Scheduled attempts have been observed, but successful collection and deployment still
+need verification. Review GitHub permissions, branch protection and host deployment behavior.
 See [collection format, provenance and activation instructions](data/semesters/README.md).
 
 The current seed comes from the **September 26, 2026** snapshot: Fall 2026 (`20263`), 2,092 sections.
@@ -174,7 +175,7 @@ keep raw downloads out of Git. Snapshot refresh and repository collection are se
 
 Serve the repository root as a static site (for example, GitHub Pages or Vercel without a build
 command). Include `index.html`, `core.js`, `worker.js`, `snapshot.json`, `faculty-names.json`,
-**`data/semesters/*.json`**, the manifest and icons. Test dependencies are not production assets.
+**`data/semesters/*.json`**, `about.html`, `robots.txt`, `sitemap.xml`, the manifest and icons. Test dependencies are not production assets.
 Relative paths support subdirectory hosting.
 
 - Deploy HTML/core/worker together. Update their versioned script URLs together when changing APIs.
@@ -187,3 +188,33 @@ Relative paths support subdirectory hosting.
 
 [Feedback](mailto:nishadislamutso@gmail.com?subject=Prohor%20routine%20planner%20feedback)
 · [Source](https://github.com/NishadIslamUtso/prohor)
+
+## Google Search setup
+
+The homepage has a descriptive title, separate static About page, canonical URL and sharing
+metadata. `robots.txt` allows crawling and points to a sitemap listing the homepage and About page. Shared routine
+query strings and the seats view canonicalize to the homepage; do not add them or raw collection
+JSON to the sitemap. Google may choose a different canonical; this is a signal, not a guarantee.
+
+All search URLs currently use **https://prohor-rg.vercel.app/**, the production address documented
+in this repository. If a different/custom domain is now primary, update the canonical and Open
+Graph URLs in `index.html` and `about.html`, the sitemap URL in `robots.txt`, the URL in `sitemap.xml`, and the
+expectations in `tools/seo-test.js` together. Do not point them at an Arena or deployment preview.
+
+After publishing these files to the production website:
+
+1. Confirm `/robots.txt` and `/sitemap.xml` return HTTP 200 without authentication.
+2. In the verified Search Console property, submit `sitemap.xml` under **Sitemaps**.
+3. Inspect the homepage, run **Test live URL**, and request indexing if eligible. Check that
+   hosting has not added an `X-Robots-Tag: noindex` header or blocked Googlebot.
+4. Monitor indexing status and search performance. Indexing and ranking are not guaranteed.
+
+Search Console verification, submission and indexing are separate steps. A local test cannot
+verify account ownership, submit a sitemap, or confirm that Google has indexed the site. Keep
+your existing verification file/tag or DNS record when deploying.
+
+Run `npm run test:seo` for local metadata, static content, canonical, robots and sitemap checks.
+
+For the combined SEO/workflow rollout, follow [the deployment handoff](docs/DEPLOYMENT-HANDOFF.md).
+
+The planner has no SEO introduction above its controls. Its existing footer links to `about.html`; no hidden keyword text is added. The academic-calendar yellow banner is removed; class/lab/exam clash checks remain unchanged.

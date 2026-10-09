@@ -163,6 +163,10 @@ class CollectorTests(unittest.TestCase):
         workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/collect-semesters.yml').read_text()
         self.assertIn("cron: '17 */6 * * *'", workflow)
         self.assertIn('workflow_dispatch:', workflow)
+        self.assertIn('COLLECTION_BRANCH: ${{ github.event.repository.default_branch }}', workflow)
+        self.assertIn('ref: ${{ env.COLLECTION_BRANCH }}', workflow)
+        self.assertIn('git push origin "HEAD:refs/heads/$COLLECTION_BRANCH"', workflow)
+        self.assertNotIn('arena/01a10a61-prohor', workflow)
         self.assertIn("git add -A -- 'data/semesters/*.json'", workflow)
 
     def test_network_failure_does_not_modify_collection(self):
