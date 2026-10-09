@@ -13,7 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      COLLECTION_BRANCH: ${{ github.event.repository.default_branch }}
+      # Scheduled runs execute on the default branch (GITHUB_REF), but their event payload
+      # may omit repository.default_branch, so fall back to ref_name for those runs.
+      COLLECTION_BRANCH: ${{ github.event.repository.default_branch || github.ref_name }}
     steps:
       # Collect into the durable default branch, not a temporary PR branch.
       - uses: actions/checkout@v4

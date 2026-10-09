@@ -64,8 +64,9 @@ python3 tools/collect-semesters.py --in snapshot.json --observed-at 2026-09-26T0
 also 00:17, 06:17, 12:17 and 18:17. GitHub scheduling, execution and deployment can add delay.
 This schedule is independent of browser seat polling and does not require visitors.
 
-The workflow checks out and pushes to `github.event.repository.default_branch` using the
-`COLLECTION_BRANCH` environment variable. It must not depend on a temporary PR branch.
+The workflow checks out and pushes to the repository's default branch, named by the
+`COLLECTION_BRANCH` environment variable (`github.event.repository.default_branch`, falling back to
+`github.ref_name` for scheduled runs). It must not depend on a temporary PR branch.
 The reported scheduled runs failed at checkout, before collection; the detailed checkout log
 is still needed to confirm the precise failure. A successful run and deployment must be verified.
 
