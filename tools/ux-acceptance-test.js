@@ -6,8 +6,8 @@ const base = process.env.URL || 'http://localhost:8000/index.html';
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   let failures = 0;
-  async function run(name, fn, viewport = { width: 1440, height: 900 }) {
-    const context = await browser.newContext({ viewport });
+  async function run(name, fn, viewport = { width: 1440, height: 900 }, contextOptions = {}) {
+    const context = await browser.newContext({ viewport, ...contextOptions });
     await context.route('**/connect.json', r => r.fulfill({ path: path.join(__dirname, '../snapshot.json'), contentType: 'application/json' }));
     await context.route('https://fonts.googleapis.com/**', r => r.abort());
     const page = await context.newPage(), errors = [];
@@ -68,6 +68,54 @@ const base = process.env.URL || 'http://localhost:8000/index.html';
       await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
       await page.click('#howBtn'); await page.locator('#howClose').click();
       assert.equal(await page.locator('#howDlg').isVisible(), false);
+    });
+    // The footer About link is the only route to about.html from the planner. Clicks are real navigations,
+    // so these checks would fail if the link were covered, mis-pointed, or made inert.
+    async function generatePair(page) {
+      await page.fill('#courseSearch', 'CSE221'); await page.locator('#courseList .option').first().click();
+      await page.fill('#courseSearch', 'MAT216'); await page.locator('#courseList .option').first().click();
+      await page.click('#genBtn');
+      await page.waitForSelector('#resultsBody .routine', { timeout: 15000 });
+    }
+    async function aboutLinkCoveredBy(page) {
+      return page.locator('footer a[href="./about.html"]').evaluate(a => {
+        const r = a.getBoundingClientRect();
+        const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return el && (el === a || a.contains(el)) ? null : (el ? el.tagName : 'off-screen');
+      });
+    }
+    await run('footer About link opens about.html by mouse click and by keyboard Enter', async page => {
+      await ready(page);
+      await page.locator('footer a[href="./about.html"]').click();
+      await page.waitForURL(/\/about\.html$/, { timeout: 8000 });
+      assert.match(await page.locator('h1').textContent(), /BRACU routine planner/);
+      await page.goBack();
+      await page.waitForFunction(() => !document.querySelector('#courseSearch').disabled);
+      await page.locator('footer a[href="./about.html"]').focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL(/\/about\.html$/, { timeout: 8000 });
+    });
+    await run('footer About link is the element under the pointer after routines are generated (desktop)', async page => {
+      await ready(page);
+      await generatePair(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      assert.equal(await aboutLinkCoveredBy(page), null, 'nothing covers the About link at the bottom of the page');
+      await page.locator('footer a[href="./about.html"]').click();
+      await page.waitForURL(/\/about\.html$/, { timeout: 8000 });
+    });
+    await run('footer About link is tappable on a phone after routines are generated', async page => {
+      await ready(page);
+      await generatePair(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      assert.equal(await aboutLinkCoveredBy(page), null, 'the fixed action bar does not cover the About link at the bottom of the page');
+      await page.locator('footer a[href="./about.html"]').tap();
+      await page.waitForURL(/\/about\.html$/, { timeout: 8000 });
+    }, { width: 360, height: 800 }, { hasTouch: true, isMobile: true });
+    await run('About page links back to the planner', async page => {
+      await page.goto(new URL('about.html', base).href, { waitUntil: 'domcontentloaded' });
+      await page.locator('main a[href="./"]').first().click();
+      await page.waitForURL(url => !/\/about\.html$/.test(url.pathname), { timeout: 8000 });
+      await page.waitForFunction(() => !document.querySelector('#courseSearch').disabled);
     });
   } finally { await browser.close(); }
   if (failures) process.exitCode = 1;

@@ -256,7 +256,7 @@ async function forceStalePoll(I, ms) {
   ok(/mailto:nishadislamutso@gmail\.com/.test(A.q("footer").innerHTML), "a plain mailto fallback is offered too");
   const gh = A.qa("footer a").find((a) => /github/.test(a.href));
   ok(gh && gh.href === "https://github.com/NishadIslamUtso" && gh.target === "_blank", "GitHub link opens the profile directly", gh && gh.href + " " + gh.target);
-  ok(/Unofficial · always confirm in BRACU Connect/.test(A.q("footer").textContent), "the footer is one line", A.q("footer").textContent.replace(/\s+/g, " ").trim().slice(0, 90));
+  ok(/About · always confirm in BRACU Connect/.test(A.q("footer").textContent) && !!A.q('footer a[href="./about.html"]'), "the existing footer links to About and retains the Connect reminder", A.q("footer").textContent.replace(/\s+/g, " ").trim().slice(0, 90));
   ok(/Gmail/.test(A.q("footer").textContent) && A.q("#feedbackLink"), "and still offers feedback");
   ok(A.qa(".step-head h2").map((h) => h.textContent.trim()).join(" | ") === "Pick your courses | Set your preferences | Compare routines", "three plain section titles, no numbering", A.qa(".step-head h2").map(h => h.textContent.trim()).join(" | "));
   ok(!/[123] · /.test(A.d.body.textContent), "no 'N ·' numbering left anywhere on the page", (/[123] · [A-Z][a-z]+/.exec(A.d.body.textContent) || ["none"])[0]);
@@ -1871,11 +1871,12 @@ async function forceStalePoll(I, ms) {
 
   const MX = boot({});
   await MX.ready();
-  ok(MX.q("#calWarn") !== null && MX.q("#calWarn").hidden, "no calendar warning on an empty plan");
+  ok(MX.q("#calWarn") === null, "no calendar warning on an empty plan");
   await MX.add("CSE221");
-  ok(MX.q("#calWarn").hidden, "a single course never warns");
+  ok(MX.q("#calWarn") === null, "a single course never warns");
   await MX.add("LAW307");                                    // starts 2026-09-12; CSE221 starts 2026-10-03
-  ok(!MX.q("#calWarn").hidden && /CSE221/.test(MX.q("#calWarn").textContent) && /LAW307/.test(MX.q("#calWarn").textContent) && /different academic calendars/.test(MX.q("#calWarn").textContent), "mixed academic calendars are called out with the dates", MX.q("#calWarn").textContent.slice(0, 160));
+  ok(MX.q("#calWarn") === null && !/These courses run on/.test(MX.d.body.textContent), "mixed-calendar selection does not display the removed banner");
+  ok(!MX.q("#genBtn").disabled, "mixed-calendar courses can still be generated");
   try { MX.dom.close(); } catch (e) { }
 
   /* ---------------------------- device reset (the wordmark) ---------------------------- */

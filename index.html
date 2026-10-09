@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Prohor — BRACU routine planner</title>
-<meta name="description" content="Build a conflict-free BRAC University class routine in minutes. Live section data, exam-clash checks, faculty and time filters.">
+<title>Prohor — BRACU Routine Planner &amp; Class Schedule Builder</title>
+<meta name="description" content="Plan your BRAC University class routine with Prohor, a free unofficial BRACU planner. Compare sections, avoid class and exam clashes, and export your schedule.">
+<link rel="canonical" href="https://prohor-rg.vercel.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Prohor">
+<meta property="og:title" content="Prohor — BRACU Routine Planner">
+<meta property="og:description" content="Compare BRAC University course sections, avoid class and exam clashes, and export your weekly routine. Free and unofficial.">
+<meta property="og:url" content="https://prohor-rg.vercel.app/">
 <meta name="theme-color" content="#253494">
 <script>
   // Theme before paint (no flash)
@@ -136,8 +142,6 @@ a{color:var(--primary-text)}
 .b-good{background:var(--success-soft);color:var(--success)}
 .b-bad{background:var(--danger-soft);color:var(--danger)}
 .b-warn{background:var(--warning-soft);color:var(--warning)}
-.calwarn{margin:10px 0 0;padding:10px 12px;border:1px solid var(--warning);border-radius:10px;background:var(--warning-soft);color:var(--text-2);font-size:13px;line-height:1.5}
-.calwarn b{color:var(--text)}
 .b-accent{background:var(--accent-soft);color:var(--accent-text)}
 /* the sections a routine is built from, each in its course's colour */
 .r-secs{display:inline-flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;color:var(--text-2);
@@ -847,12 +851,11 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
   <section id="step3" class="results" aria-labelledby="h3" tabindex="-1">
     <div class="step-head"><h2 id="h3" data-tip="Every course keeps its own colour. A hatched block is a lab. A red ring means two of your exams land at the same time. TBA means the faculty has not been published for that section yet.">Compare routines</h2></div>
     <p class="step-desc" id="resultsDesc">Generate to see every conflict-free routine that fits your preferences.</p>
-    <div class="calwarn" id="calWarn" hidden></div>
     <div id="resultsBody"></div>
     <div class="sr-only" aria-live="polite" id="live"></div>
   </section>
   <footer class="wrap">
-  <span data-tip="An unofficial student project, not affiliated with BRAC University. Section data comes from Connect via Connect-CDN and can lag the portal.">Unofficial</span> · always confirm in BRACU Connect ·
+  <a href="./about.html" data-tip="About Prohor, an unofficial BRAC University routine planner">About</a> · always confirm in BRACU Connect ·
   <a href="https://github.com/NishadIslamUtso" target="_blank" rel="noopener noreferrer">GitHub</a> ·
   <a id="feedbackLink" href="https://mail.google.com/mail/?view=cm&fs=1&to=nishadislamutso@gmail.com&su=Prohor%20routine%20planner%20feedback" target="_blank" rel="noopener noreferrer">Gmail</a>
   or <a href="mailto:nishadislamutso@gmail.com?subject=Prohor%20routine%20planner%20feedback">mail app</a>
@@ -1905,31 +1908,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     });
     return ok ? n : -1;
   }
-  // Non-overlapping meetings can still belong to incompatible academic calendars.
-  function calMixHtml() {
-    if (!state.index || state.courses.length < 2) return "";
-    var groups = {}, picked = 0;
-    state.courses.forEach(function (c) {
-      var Cc = K(c.code); if (!Cc) return;
-      picked++;
-      var starts = {};
-      (Cc.sections || []).forEach(function (sc) { if (sc.start) starts[sc.start] = 1; });
-      var ks = Object.keys(starts);
-      if (!ks.length) ks = ["unknown"];
-      ks.forEach(function (k) { (groups[k] = groups[k] || []).push(Cc.code); });
-    });
-    var keys = Object.keys(groups);
-    if (!picked || keys.length < 2) return "";
-    var bits = keys.sort().map(function (k) {
-      var cs = groups[k];
-      var show = cs.slice(0, 3).join(", ") + (cs.length > 3 ? " +" + (cs.length - 3) + " more" : "");
-      return "<b>" + esc(show) + "</b> start" + (cs.length > 1 ? "" : "s") + " " +
-        (k === "unknown" ? "an unknown date" : esc(C.fmtDate(k)));
-    });
-    return "These courses run on <b>different academic calendars</b> — " + bits.join(", while ") +
-      ". BRACU runs such intakes on separate schedules, so a routine mixing them can look valid here " +
-      "but not exist in reality. Confirm the class start dates in BRACU Connect before relying on it.";
-  }
   function updateSummary() {
     var locked = state.courses.reduce(function (n, c) { return n + c.locked.length; }, 0);
     var filters = state.prefs.avoidFac.length + state.prefs.avoidTime.length + state.prefs.avoidDay.length;
@@ -1940,8 +1918,6 @@ html:has(body.view-seats){scroll-padding-top:var(--stick,132px);scroll-padding-b
     if (space > 0) bits += " · <span class=\"tnum\">~" + num(space) + " combination" + (space > 1 ? "s" : "") + "</span>";
     else if (space < 0) bits += " · <span style=\"color:var(--warning)\">a course has no viable pattern left</span>";
     $("#summary").innerHTML = bits;
-    var cw = $("#calWarn"), mix = calMixHtml();
-    if (cw) { cw.hidden = !mix; if (mix) cw.innerHTML = mix; }
     var btn = $("#genBtn");
     if (!state.pending && !state.searchRunning) {
       btn.disabled = !state.ready || !state.courses.length;

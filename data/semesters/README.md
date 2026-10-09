@@ -64,14 +64,15 @@ python3 tools/collect-semesters.py --in snapshot.json --observed-at 2026-09-26T0
 also 00:17, 06:17, 12:17 and 18:17. GitHub scheduling, execution and deployment can add delay.
 This schedule is independent of browser seat polling and does not require visitors.
 
-**Automation is not activated by local files alone.** The workflow currently checks out and
-pushes only `arena/01a10a61-prohor`; no successful remote run or production deployment has been
-verified. Before activation:
+The workflow checks out and pushes to the repository's default branch, named by the
+`COLLECTION_BRANCH` environment variable (`github.event.repository.default_branch`, falling back to
+`github.ref_name` for scheduled runs). It must not depend on a temporary PR branch.
+The reported scheduled runs failed at checkout, before collection; the detailed checkout log
+is still needed to confirm the precise failure. A successful run and deployment must be verified.
 
-1. Review the target branch and make sure the deployed site reads that branch's collection.
-   Merging the workflow does not change its explicit checkout/push target.
-2. Publish the workflow on the default branch for GitHub schedule/manual-dispatch discovery.
-   Select the appropriate published branch when dispatching manually.
+1. Confirm the deployed site reads the default branch's collection.
+2. Publish the updated workflow on the default branch. Start a **new Run workflow** from that
+   branch after merging, rather than rerunning an old failure tied to the previous workflow.
 3. Enable Actions and permit `contents: write`. Branch protection may require PR-based publishing.
 4. Verify a successful fetch, collection commit and host deployment. `GITHUB_TOKEN` commits may
    not trigger downstream GitHub workflows that depend on `push` events.

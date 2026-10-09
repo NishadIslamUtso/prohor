@@ -12,10 +12,11 @@
     "test:fetch": "node tools/fetch-compat-test.js",
     "test:exports": "node tools/export-acceptance-test.js",
     "test:boundaries": "node tools/boundary-acceptance-test.js",
-    "test:acceptance": "npm run test:collector && npm test && npm run test:layout && npm run test:exports && npm run test:boundaries && npm run test:extremes && npm run test:ux && npm run test:archive-fold && npm run test:sweep",
+    "test:acceptance": "npm run test:seo && npm run test:collector && npm test && npm run test:layout && npm run test:exports && npm run test:boundaries && npm run test:extremes && npm run test:ux && npm run test:archive-fold && npm run test:sweep",
     "test:collector": "python3 tools/test-collect-semesters.py",
     "test:extremes": "node tools/extreme-acceptance-test.js",
     "test:ux": "node tools/ux-acceptance-test.js",
-    "test:archive-fold": "node tools/archive-fold-test.js"
+    "test:archive-fold": "node tools/archive-fold-test.js",
+    "test:seo": "node tools/seo-test.js"
   }
 }

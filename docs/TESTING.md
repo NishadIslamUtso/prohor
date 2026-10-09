@@ -20,6 +20,7 @@ A browser launch failure or unavailable dependency is not a passing test.
 
 | Area | Checks |
 |---|---|
+| Search discovery | Static metadata and separate About page, canonical query variants, crawl rules and homepage/About sitemap (`npm run test:seo`) |
 | Catalogue | Live/cache/snapshot paths, timeouts, malformed data, late responses, mixed core/worker versions |
 | Selection/preferences | Search, six-course cap, constrained pickers, maximum days, exclusions, ranking presets, seat modes, exams, migration/reset |
 | Generation/results | Conflict engine, worker fallback, deterministic replay, sorting, saved pagination, duplicate/loss prevention |
@@ -28,7 +29,7 @@ A browser launch failure or unavailable dependency is not a passing test.
 | Seats | Polling/retry/pause, cancellation, updates without replacing rows, pins, split/standalone views |
 | Repository collection | Durable files, non-TBA preservation, faculty history, refreshed seats, missing sections, semester isolation, chronological eight-semester eviction, deletion staging, invalid/failed response protection |
 | Archive browsing | Read-only repository data, collapsed defaults, mouse/keyboard toggling, filtering, semester isolation, unavailable archive recovery |
-| UI | Responsive geometry, unobstructed controls, dialog names, focus restoration, truthful reset/error messages, long warning wrapping |
+| UI | Responsive geometry, unobstructed controls, dialog names, focus restoration, truthful reset/error messages, long warning wrapping, footer About link navigation (mouse, keyboard, phone tap, not covered by the action bar) |
 | Stress probes | Six-course main-thread search at 4× CPU throttling, narrow/short viewports, one seeded interaction sweep |
 
 The aggregate command runs the functional, collector, Chromium layout/recovery, export,
@@ -50,8 +51,8 @@ Record the command, commit, environment and result when running these checks for
 - Passing finite scenarios does not establish that the app is bug-free or handles every search space.
 - The bundled feed and initial collection are dated September 26, 2026. Live requests from the
   development sandbox have failed at TLS; successful offline fallback is not proof of live freshness.
-- Repository automation must be published, permitted and activated. The workflow currently targets
-  `arena/01a10a61-prohor`; review that target and the host's deployment behavior before production use.
+- Repository automation must be published and permitted. The workflow targets the repository's
+  default branch; review write permissions, branch protection and host deployment behavior.
   Verify a real fetch → collection commit (including evictions) → deployed update. Do not infer
   successful automation from the Python tests or the presence of a workflow file.
 - Confirm final section details, faculty, exams and seats in BRACU Connect.
