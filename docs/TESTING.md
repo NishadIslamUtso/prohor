@@ -29,7 +29,7 @@ A browser launch failure or unavailable dependency is not a passing test.
 | Seats | Polling/retry/pause, cancellation, updates without replacing rows, pins, split/standalone views |
 | Repository collection | Durable files, non-TBA preservation, faculty history, refreshed seats, missing sections, semester isolation, chronological eight-semester eviction, deletion staging, invalid/failed response protection |
 | Archive browsing | Read-only repository data, collapsed defaults, mouse/keyboard toggling, filtering, semester isolation, unavailable archive recovery |
-| UI | Responsive geometry, unobstructed controls, dialog names, focus restoration, truthful reset/error messages, long warning wrapping |
+| UI | Responsive geometry, unobstructed controls, dialog names, focus restoration, truthful reset/error messages, long warning wrapping, footer About link navigation (mouse, keyboard, phone tap, not covered by the action bar) |
 | Stress probes | Six-course main-thread search at 4× CPU throttling, narrow/short viewports, one seeded interaction sweep |
 
 The aggregate command runs the functional, collector, Chromium layout/recovery, export,
